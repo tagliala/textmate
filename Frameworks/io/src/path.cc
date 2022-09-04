@@ -798,34 +798,7 @@ namespace path
 
 	passwd* passwd_entry ()
 	{
-		passwd* entry = getpwuid(getuid());
-		while(!entry || !entry->pw_dir || access(entry->pw_dir, R_OK) != 0) // Home folder might be missing <rdar://10261043>
-		{
-			char* errStr = strerror(errno);
-			std::string message = text::format("Unable to obtain basic system information such as your home folder.\n\ngetpwuid(%d): %s", getuid(), errStr);
-
-			CFOptionFlags responseFlags;
-			CFUserNotificationDisplayAlert(0 /* timeout */, kCFUserNotificationStopAlertLevel, nullptr /* iconURL */, nullptr /* soundURL */, nullptr /* localizationURL */, CFSTR("Missing User Database"), cf::wrap(message), CFSTR("Retry"), CFSTR("Show Radar Entry"), nil /* otherButtonTitle */, &responseFlags);
-
-			if((responseFlags & 0x3) == kCFUserNotificationDefaultResponse)
-			{
-				entry = getpwuid(getuid());
-			}
-			else if((responseFlags & 0x3) == kCFUserNotificationAlternateResponse)
-			{
-				if(CFURLRef url = CFURLCreateWithString(kCFAllocatorDefault, cf::wrap("https://openradar.appspot.com/10261043"), nullptr))
-				{
-					if(CFMutableArrayRef urls = CFArrayCreateMutable(kCFAllocatorDefault, 0, &kCFTypeArrayCallBacks))
-					{
-						CFArrayAppendValue(urls, url);
-						LSOpenURLsWithRole(urls, kLSRolesViewer, nullptr, nullptr, nullptr, 0);
-						CFRelease(urls);
-					}
-					CFRelease(url);
-				}
-			}
-		}
-		return entry;
+		return getpwuid(getuid());
 	}
 
 	std::string home ()
