@@ -6,7 +6,9 @@ require 'json'
 require 'set'
 
 VARIABLE_MATCH = /\$(?:\{(.+?)\}|(\w+))/
+
 CP = `uname`.chomp == 'Darwin' ? '/bin/cp -Xp' : '/bin/cp'
+CLANG = `uname`.chomp == 'Darwin' ? 'xcrun --sdk macosx clang' : 'clang'
 
 class Parser
   attr_reader :globs, :targets, :environment
@@ -605,7 +607,7 @@ class CompileClang < Compiler
             in:          header,
             out:         output,
             flags:       [ '-x', info[:type], *flags ].join(' '),
-            command:     'xcrun --sdk macosx clang -c -o $out $flags -MMD -MF $out.d $in',
+            command:     "#{CLANG} -c -o $out $flags -MMD -MF $out.d $in",
             depfile:     '$out.d',
             deps:        'gcc',
             description: 'Precompile ‘${in}’…',
@@ -622,7 +624,7 @@ class CompileClang < Compiler
     super.merge(
       before:       pch,
       flags:        flags.join(' '),
-      command:      'xcrun --sdk macosx clang -c -o $out $flags -MMD -MF $out.d $in',
+      command:      "#{CLANG} -c -o $out $flags -MMD -MF $out.d $in",
       depfile:      '$out.d',
       deps:         'gcc',
       description:  'Compile ‘${in}’…',
@@ -942,7 +944,7 @@ module Target
           in:           objects.sort.uniq,
           out:          executable,
           flags:        ln_flags.join(' '),
-          command:      'xcrun --sdk macosx clang -o $out $flags $in',
+          command:      "#{CLANG} -o $out $flags $in",
           description:  'Link ‘${out}’…',
           dependencies: deps
         }
