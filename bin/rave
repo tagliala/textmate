@@ -669,7 +669,7 @@ class CompileXib < Compiler
   def transform(file, config, builddir)
     super.merge(
       flags:        config['IB_FLAGS'],
-      command:      'xcrun ibtool --compile $out $flags $in',
+      command:      'if hash xcrun; then xcrun ibtool --compile $out $flags $in; else cp $in $out; fi',
       description:  'Xib ‘${in}’…',
       dependencies: config.dig(:inference, 'IB_FLAGS'),
     )
