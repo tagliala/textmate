@@ -6,6 +6,7 @@ require 'json'
 require 'set'
 
 VARIABLE_MATCH = /\$(?:\{(.+?)\}|(\w+))/
+CP = `uname`.chomp == 'Darwin' ? '/bin/cp -Xp' : '/bin/cp'
 
 class Parser
   attr_reader :globs, :targets, :environment
@@ -695,7 +696,12 @@ class ConvertToUTF16 < Compiler
 
   def transform(file, config, builddir)
     super.merge(
-      command:     'if [[ "$(head -c2 $in)" == $\'\\xFF\\xFE\' || "$(head -c2 $in)" == $\'\\xFE\\xFF\' ]]; then /bin/cp -Xp $in $out && touch $out; else iconv -f utf-8 -t utf-16 < $in > $out~ && mv $out~ $out; fi',
+      command: 'bash -c "' + <<-SHELL.gsub(/\s+/, ' ') + '"',
+        if [[ \\"$(head -c2 $in)\\" == $\'\\xFF\\xFE\' || \\"$(head -c2 $in)\\" == $\'\\xFE\\xFF\' ]];
+          then #{CP} $in $out && touch $out;
+          else iconv -f utf-8 -t utf-16 < $in > $out~ && mv $out~ $out;
+        fi
+      SHELL
       description: 'Encode ‘${in}’ as UTF-16…',
     )
   end
@@ -829,7 +835,7 @@ module Target
             name:        'ExportHeader',
             in:          header,
             out:         File.join(include_dir, target[:name], File.basename(header)),
-            command:     '/bin/cp -Xp $in $out && touch $out',
+            command:     "#{CP} $in $out && touch $out",
             description: 'Export ‘${in}’…',
           }
           rules.last[:out]
@@ -1104,7 +1110,7 @@ module Target
                 name:         'CopyFile',
                 in:           src,
                 out:          File.join(target[:builddir], target[:dir], target[:prefix], dst),
-                command:      '/bin/cp -Xp $in $out && touch $out',
+                command:      "#{CP} $in $out && touch $out",
                 description:  'Copy ‘${in}’…',
                 dependencies: deps,
               }
@@ -1156,7 +1162,7 @@ module Target
               {
                 app_name=$(basename $in .app);
                 if pgrep "$$app_name"; then
-                  if [[ -x "$$DIALOG" && $("$$DIALOG" alert --title "Relaunch $$app_name?" --body "Would you like to quit $$app_name and start the newly built version?" --button1 Relaunch --button2 Cancel|pl) != *"buttonClicked = 0"* ]];
+                  if [ -x "$$DIALOG" -a $("$$DIALOG" alert --title "Relaunch $$app_name?" --body "Would you like to quit $$app_name and start the newly built version?" --button1 Relaunch --button2 Cancel|pl) != *"buttonClicked = 0"* ];
                     then exit;
                   fi;
                   pkill "$$app_name";
