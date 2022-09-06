@@ -7,7 +7,7 @@ function error () { printf >&2 "%s\n\nPlease see README.md for build instruction
 # ===============================
 
 for dep in capnp ninja ragel multimarkdown pgrep pkill; do
-	which -s "$dep" || error "*** dependency missing: ‘${dep}’."
+	which >/dev/null "$dep" || error "*** dependency missing: ‘${dep}’."
 done
 
 if [[ -e local.rave ]]; then
