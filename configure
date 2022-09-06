@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # set -u
 function error () { printf >&2 "%s\n\nPlease see README.md for build instructions.\n" "$1"; exit 1; }
 
