@@ -4,7 +4,7 @@
 #include "prelude.c"
 #include "prelude-mac.h"
 
-#import <objc/objc-runtime.h>
+#import <objc/runtime.h>
 #import <AddressBook/AddressBook.h>
 #import <Cocoa/Cocoa.h>
 #import <ExceptionHandling/NSExceptionHandler.h>
