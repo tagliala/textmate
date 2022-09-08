@@ -3,7 +3,7 @@
 
 struct annotation_t
 {
-	annotation_t (size_t bufferSize = 0, size_t numberOfChildren = 0, size_t width = SIZE_T_MAX) : buffer_size(bufferSize), number_of_children(numberOfChildren), width(width == SIZE_T_MAX ? bufferSize : width) { }
+	annotation_t (size_t bufferSize = 0, size_t numberOfChildren = 0, size_t width = SIZE_MAX) : buffer_size(bufferSize), number_of_children(numberOfChildren), width(width == SIZE_MAX ? bufferSize : width) { }
 	bool operator== (annotation_t const& rhs) const { return buffer_size == rhs.buffer_size && number_of_children == rhs.number_of_children && width == rhs.width; }
 
 	annotation_t operator+ (annotation_t const& rhs) const

@@ -39,8 +39,8 @@ namespace regexp
 
 		char const* buffer () const      { return buf; }
 
-		size_t begin () const            { return did_match() ? (size_t)region->beg[0] : SIZE_T_MAX; }
-		size_t end () const              { return did_match() ? (size_t)region->end[0] : SIZE_T_MAX; }
+		size_t begin () const            { return did_match() ? (size_t)region->beg[0] : SIZE_MAX; }
+		size_t end () const              { return did_match() ? (size_t)region->end[0] : SIZE_MAX; }
 		size_t begin (int i) const       { return did_match(i) ? (size_t)region->beg[i] : end(); }
 		size_t end (int i) const         { return did_match(i) ? (size_t)region->end[i] : end(); }
 

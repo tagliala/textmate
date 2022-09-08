@@ -121,7 +121,7 @@ namespace ng
 				size_t col = range.columnar ? 1 : 0;
 				size_t min = range.min().index;
 				size_t off = range.freehanded ? range.min().carry : 0;
-				size_t max = SIZE_T_MAX - range.max().index;
+				size_t max = SIZE_MAX - range.max().index;
 				size_t mOff = range.freehanded ? range.max().carry : 0;
 				return std::make_tuple(col, min, off, max, mOff);
 			}
@@ -224,11 +224,11 @@ namespace ng
 			enclosed_range_t () { }
 			enclosed_range_t (std::pair<pattern_t, pattern_t> const& pair) : opener_ptrn(pair.first), closer_ptrn(pair.second) { }
 
-			operator bool () const { return open_index != SIZE_T_MAX && close_index != 0; }
+			operator bool () const { return open_index != SIZE_MAX && close_index != 0; }
 
 			pattern_t opener_ptrn, closer_ptrn;
 			std::string opener_match, closer_match;
-			size_t open_index = SIZE_T_MAX, close_index = 0;
+			size_t open_index = SIZE_MAX, close_index = 0;
 			ssize_t open_count = 0, close_count = 0;
 		};
 	}
@@ -304,7 +304,7 @@ namespace ng
 			for(auto& r : records)
 			{
 				std::string match;
-				if(0 < left && r.open_index == SIZE_T_MAX)
+				if(0 < left && r.open_index == SIZE_MAX)
 				{
 					if(does_match_left(r.opener_ptrn, buffer, left, &match) && ++r.open_count == 1)
 					{
@@ -864,7 +864,7 @@ namespace ng
 
 			if(lines.size() > 1)
 			{
-				index_t min(SIZE_T_MAX), max(0);
+				index_t min(SIZE_MAX), max(0);
 				for(auto const& range : res)
 				{
 					min = std::min(min, range.min());

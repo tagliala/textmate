@@ -195,7 +195,7 @@ namespace ng
 		ranges_t ranges () const                                              { return _selections; }
 		void set_selections (ranges_t const& r)                               { _selections = r; }
 		bool has_selection () const                                           { return not_empty(_buffer, _selections); }
-		std::string as_string (size_t from = 0, size_t to = SIZE_T_MAX) const { return _buffer.substr(from, to != SIZE_T_MAX ? to : _buffer.size()); }
+		std::string as_string (size_t from = 0, size_t to = SIZE_MAX) const { return _buffer.substr(from, to != SIZE_MAX ? to : _buffer.size()); }
 		void sanitize_selection ();
 
 		void perform_replacements (std::multimap<std::pair<size_t, size_t>, std::string> const& replacements);

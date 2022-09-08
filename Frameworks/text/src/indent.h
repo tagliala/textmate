@@ -5,9 +5,9 @@ namespace text
 {
 	struct indent_t
 	{
-		indent_t (size_t tabSize = 8, size_t indentSize = SIZE_T_MAX, bool softTabs = false, bool tabFollowsIndent = true) : _tab_size(tabSize), _indent_size(indentSize), _soft_tabs(softTabs), _tab_follows_indent(tabFollowsIndent)
+		indent_t (size_t tabSize = 8, size_t indentSize = SIZE_MAX, bool softTabs = false, bool tabFollowsIndent = true) : _tab_size(tabSize), _indent_size(indentSize), _soft_tabs(softTabs), _tab_follows_indent(tabFollowsIndent)
 		{
-			if(indentSize == SIZE_T_MAX)
+			if(indentSize == SIZE_MAX)
 				_indent_size = _tab_size;
 		}
 

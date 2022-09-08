@@ -281,7 +281,7 @@ struct document_view_t : ng::buffer_api_t
 
 	bool has_marks (std::string const& type = NULL_STR) const
 	{
-		return [_document_editor buffer].prev_mark(SIZE_T_MAX, type).second != NULL_STR;
+		return [_document_editor buffer].prev_mark(SIZE_MAX, type).second != NULL_STR;
 	}
 
 	bool current_line_has_marks (std::string const& type) const
@@ -347,8 +347,8 @@ struct document_view_t : ng::buffer_api_t
 	size_t size () const { return [_document_editor buffer].size(); }
 	size_t revision () const { return [_document_editor buffer].revision(); }
 	std::string operator[] (size_t i) const { return [_document_editor buffer][i]; }
-	std::string substr (size_t from = 0, size_t to = SIZE_T_MAX) const { return [_document_editor buffer].substr(from, to != SIZE_T_MAX ? to : size()); }
-	std::string xml_substr (size_t from = 0, size_t to = SIZE_T_MAX) const { return [_document_editor buffer].xml_substr(from, to); }
+	std::string substr (size_t from = 0, size_t to = SIZE_MAX) const { return [_document_editor buffer].substr(from, to != SIZE_MAX ? to : size()); }
+	std::string xml_substr (size_t from = 0, size_t to = SIZE_MAX) const { return [_document_editor buffer].xml_substr(from, to); }
 	bool visit_data (std::function<void(char const*, size_t, size_t, bool*)> const& f) const { return [_document_editor buffer].visit_data(f); }
 	size_t begin (size_t n) const { return [_document_editor buffer].begin(n); }
 	size_t eol (size_t n) const { return [_document_editor buffer].eol(n); }
@@ -361,7 +361,7 @@ struct document_view_t : ng::buffer_api_t
 	size_t tab_size () const { return _document.tabSize; }
 	void set_soft_tabs (bool flag) { _document.softTabs = flag; }
 	bool soft_tabs () const { return _document.softTabs; }
-	text::indent_t indent () const { return text::indent_t(tab_size(), SIZE_T_MAX, soft_tabs()); }
+	text::indent_t indent () const { return text::indent_t(tab_size(), SIZE_MAX, soft_tabs()); }
 	scope::context_t scope (size_t i, bool includeDynamic = true) const { return [_document_editor buffer].scope(i, includeDynamic); }
 	std::map<size_t, scope::scope_t> scopes (size_t from, size_t to) const { return [_document_editor buffer].scopes(from, to); }
 	void set_live_spelling (bool flag) { [_document_editor buffer].set_live_spelling(flag); }

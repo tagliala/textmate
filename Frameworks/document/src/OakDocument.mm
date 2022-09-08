@@ -859,7 +859,7 @@ static void* kDocumentEditedObserverContext = &kDocumentEditedObserverContext;
 		auto idx = attributes.find("com.macromates.visibleIndex");
 		if(idx != attributes.end())
 		{
-			size_t index = SIZE_T_MAX, carry = 0;
+			size_t index = SIZE_MAX, carry = 0;
 			sscanf(idx->second.c_str(), "%zu:%zu", &index, &carry);
 			_visibleIndex = ng::index_t(_buffer->sanitize_index(index), carry);
 		}

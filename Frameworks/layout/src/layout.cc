@@ -912,7 +912,7 @@ namespace ng
 
 	void layout_t::toggle_all_folds_at_level (size_t level)
 	{
-		size_t first = SIZE_T_MAX, second = 0;
+		size_t first = SIZE_MAX, second = 0;
 		for(auto const& range : _folds->toggle_all_at_level(level))
 		{
 			first  = std::min(range.first, first);

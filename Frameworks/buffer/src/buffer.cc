@@ -352,7 +352,7 @@ namespace ng
 
 	std::string to_s (buffer_t const& buf, size_t from, size_t to)
 	{
-		to = to != SIZE_T_MAX ? to : buf.size();
+		to = to != SIZE_MAX ? to : buf.size();
 		std::string res = "";
 
 		auto first = buf._scopes.upper_bound(from);
@@ -375,7 +375,7 @@ namespace ng
 
 	std::string buffer_t::xml_substr (size_t from, size_t to) const
 	{
-		to = to != SIZE_T_MAX ? to : size();
+		to = to != SIZE_MAX ? to : size();
 		std::string res = "";
 
 		auto first = _scopes.upper_bound(from);

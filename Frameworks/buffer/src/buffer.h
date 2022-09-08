@@ -64,7 +64,7 @@ namespace ng
 		virtual size_t size () const = 0;
 		virtual std::string operator[] (size_t i) const = 0;
 		virtual std::string substr (size_t from, size_t to) const = 0;
-		virtual std::string xml_substr (size_t from = 0, size_t to = SIZE_T_MAX) const = 0;
+		virtual std::string xml_substr (size_t from = 0, size_t to = SIZE_MAX) const = 0;
 		virtual bool visit_data (std::function<void(char const*, size_t, size_t, bool*)> const& f) const = 0;
 		virtual size_t begin (size_t n) const = 0;
 		virtual size_t eol (size_t n) const = 0;
@@ -94,7 +94,7 @@ namespace ng
 
 		std::string operator[] (size_t i) const;
 		std::string substr (size_t from, size_t to) const;
-		std::string xml_substr (size_t from = 0, size_t to = SIZE_T_MAX) const;
+		std::string xml_substr (size_t from = 0, size_t to = SIZE_MAX) const;
 		bool visit_data (std::function<void(char const*, size_t, size_t, bool*)> const& f) const;
 
 		detail::storage_t const& storage () const { return _storage; }
@@ -239,7 +239,7 @@ namespace ng
 		friend struct symbols_t;  // _scopes
 	};
 
-	std::string to_s (buffer_t const& buf, size_t first = 0, size_t last = SIZE_T_MAX);
+	std::string to_s (buffer_t const& buf, size_t first = 0, size_t last = SIZE_MAX);
 
 } /* ng */
 

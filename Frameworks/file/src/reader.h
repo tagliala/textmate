@@ -25,7 +25,7 @@ namespace file
 		encoding::type _encoding;
 	};
 
-	std::string read_utf8 (std::string const& path, std::string* charset = nullptr, size_t limit = SIZE_T_MAX);
+	std::string read_utf8 (std::string const& path, std::string* charset = nullptr, size_t limit = SIZE_MAX);
 
 } /* file */
 

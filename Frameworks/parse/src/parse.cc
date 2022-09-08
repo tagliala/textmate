@@ -486,7 +486,7 @@ namespace parse
 				stack->apply_end_last = rule->apply_end_last == "1";
 				stack->anchor         = i;
 				stack->zw_begin_match = m.match.empty();
-				stack->parent->anchor = SIZE_T_MAX;
+				stack->parent->anchor = SIZE_MAX;
 
 				if(!rule->while_pattern && rule->while_string != NULL_STR)
 					stack->while_pattern = expand_back_references(rule->while_string, m.match);
@@ -518,7 +518,7 @@ namespace parse
 
 			collect_rules(first, last, i, firstLine, stack, rules, match_cache);
 		}
-		stack->anchor = first + stack->anchor == last ? 0 : SIZE_T_MAX;
+		stack->anchor = first + stack->anchor == last ? 0 : SIZE_MAX;
 		return stack;
 	}
 

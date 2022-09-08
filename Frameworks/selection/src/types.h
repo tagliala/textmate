@@ -8,10 +8,10 @@ namespace ng
 {
 	struct index_t
 	{
-		index_t () : index(SIZE_T_MAX), carry(SIZE_T_MAX) { }
+		index_t () : index(SIZE_MAX), carry(SIZE_MAX) { }
 		index_t (size_t index, size_t carry = 0) : index(index), carry(carry) { }
 
-		explicit operator bool () const            { return index != SIZE_T_MAX; }
+		explicit operator bool () const            { return index != SIZE_MAX; }
 		bool operator== (index_t const& rhs) const { return index == rhs.index && carry == rhs.carry; }
 		bool operator!= (index_t const& rhs) const { return !(*this == rhs); }
 		bool operator< (index_t const& rhs) const  { return index < rhs.index || index == rhs.index && carry < rhs.carry; }

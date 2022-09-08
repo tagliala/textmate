@@ -53,7 +53,7 @@ static std::string URLtoString (CFURLRef url)
 	return filePath;
 }
 
-static std::string setup_buffer (CFURLRef url, ng::buffer_t& buffer, size_t maxSize = 20480, size_t maxLines = SIZE_T_MAX)
+static std::string setup_buffer (CFURLRef url, ng::buffer_t& buffer, size_t maxSize = 20480, size_t maxLines = SIZE_MAX)
 {
 	std::string filePath = URLtoString(url);
 
@@ -73,7 +73,7 @@ static std::string setup_buffer (CFURLRef url, ng::buffer_t& buffer, size_t maxS
 	if(fileContents == NULL_STR)
 		fileContents = file::read_utf8(filePath, nullptr, maxSize);
 
-	if(maxLines != SIZE_T_MAX)
+	if(maxLines != SIZE_MAX)
 		fileContents.erase(std::find_if(fileContents.begin(), fileContents.end(), [&maxLines](char ch) { return ch == '\n' && --maxLines == 0; }), fileContents.end());
 
 	buffer.insert(0, fileContents);
