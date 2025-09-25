@@ -1,14 +1,12 @@
 name: Build TextMate Package
 
-"on":
+on:
   push:
     branches:
-      - master
       - main
       - develop
   pull_request:
     branches:
-      - master
       - main
       - develop
   workflow_dispatch:
@@ -22,50 +20,53 @@ name: Build TextMate Package
         - release
         - debug
 
+permissions:
+  contents: read
+
 jobs:
   build:
-    runs-on: macOS-latest
+    runs-on: macos-latest
 
     steps:
     - uses: actions/checkout@v4
       with:
         submodules: recursive
-    
+
     - name: Setup Ruby
       uses: ruby/setup-ruby@v1
       with:
         ruby-version: '3.2'
         bundler-cache: false
-    
+
     - name: Install Homebrew dependencies
       run: |
         brew update
         brew install boost capnp google-sparsehash multimarkdown ninja ragel gdbm
-    
+
     - name: Install Ruby DBM gem
       run: |
         # Install DBM gem with gdbm support
         gem install dbm
         # Verify dbm gem installation
         ruby -e "require 'dbm'; puts 'DBM gem loaded successfully'"
-    
+
     - name: Configure
       run: |
         echo "Starting configuration..."
         ./configure
         echo "Configuration completed."
-    
+
     - name: Build TextMate Package
       run: |
         echo "Starting build process..."
         echo "Build type: ${{ inputs.build_type || 'release' }}"
-        
+
         # Build with error handling but ignore warnings
         set +e  # Don't fail on non-zero exit codes temporarily
         ninja TextMate
         build_status=$?
         set -e  # Re-enable failing on non-zero exit codes
-        
+
         if [ $build_status -ne 0 ]; then
           echo "Build failed with exit code: $build_status"
           echo "Checking for partial build artifacts..."
@@ -74,7 +75,7 @@ jobs:
         else
           echo "Build completed successfully."
         fi
-    
+
     - name: List build output
       run: |
         echo "Contents of build directory:"
@@ -82,11 +83,11 @@ jobs:
         find ~/build -type d -name "*.app" 2>/dev/null || echo "No .app directories found"
         echo "Full build directory structure:"
         ls -la ~/build/ || echo "~/build not found"
-    
+
     - name: Create package directory and collect artifacts
       run: |
         mkdir -p textmate-package
-        
+
         # Find and copy the TextMate.app bundle
         if [ -d ~/build/TextMate/Applications/TextMate.app ]; then
           echo "Found TextMate.app in expected location"
@@ -95,14 +96,14 @@ jobs:
           echo "Searching for TextMate.app in build directory..."
           find ~/build -name "TextMate.app" -type d -exec cp -R {} textmate-package/ \; 2>/dev/null || echo "TextMate.app not found"
         fi
-        
+
         # Copy any other built applications that might be useful
         find ~/build -name "*.app" -type d -not -path "*/textmate-package/*" -exec cp -R {} textmate-package/ \; 2>/dev/null || true
-        
+
         # List what we packaged
         echo "Package contents:"
         ls -la textmate-package/ || echo "Package directory empty"
-    
+
     - name: Upload TextMate Package
       uses: actions/upload-artifact@v4
       with:
