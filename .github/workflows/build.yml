@@ -55,13 +55,24 @@ jobs:
 
       - name: Install Homebrew dependencies
         run: |
-          # Check if packages are already installed from cache
-          if ! brew list boost capnp google-sparsehash multimarkdown ninja ragel gdbm > /dev/null 2>&1; then
-            echo "Installing missing Homebrew dependencies..."
+          # Install each package individually to avoid warnings about already installed packages
+          packages="boost capnp google-sparsehash multimarkdown ninja ragel gdbm"
+          missing_packages=""
+          
+          for package in $packages; do
+            if ! brew list "$package" > /dev/null 2>&1; then
+              missing_packages="$missing_packages $package"
+            else
+              echo "$package is already installed"
+            fi
+          done
+          
+          if [ -n "$missing_packages" ]; then
+            echo "Installing missing packages:$missing_packages"
             brew update
-            brew install boost capnp google-sparsehash multimarkdown ninja ragel gdbm
+            brew install $missing_packages
           else
-            echo "All Homebrew dependencies already installed (from cache)"
+            echo "All Homebrew dependencies already installed"
           fi
 
       - name: Install Ruby DBM gem
@@ -110,16 +121,17 @@ jobs:
           mkdir -p textmate-package
           if [ -d ~/build/TextMate/Applications/TextMate.app ]; then
             cp -R ~/build/TextMate/Applications/TextMate.app textmate-package/
+            echo "Collected TextMate.app from ~/build/TextMate/Applications/"
           else
-            find ~/build -name "TextMate.app" -type d -exec cp -R {} textmate-package/ \; 2>/dev/null || true
+            # Fallback: search for TextMate.app anywhere in build directory
+            find ~/build -name "TextMate.app" -type d -exec cp -R {} textmate-package/ \; 2>/dev/null && echo "Collected TextMate.app from fallback search" || echo "TextMate.app not found"
           fi
-          find ~/build -name "*.app" -type d -not -path "*/textmate-package/*" -exec cp -R {} textmate-package/ \; 2>/dev/null || true
           echo "Package contents:"
           ls -la textmate-package/ || echo "Package directory empty"
 
       - name: Upload TextMate Package
         uses: actions/upload-artifact@v4
         with:
-          name: textmate-package-${{ github.sha }}
+          name: TextMate-app-${{ github.sha }}
           path: textmate-package/
           if-no-files-found: warn
