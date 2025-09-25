@@ -39,15 +39,46 @@ jobs:
           ruby-version: '3.4'
           bundler-cache: false
 
+      - name: Cache Homebrew packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            /usr/local/Cellar
+            /usr/local/opt
+            /usr/local/bin
+            /usr/local/lib
+            /usr/local/include
+            ~/Library/Caches/Homebrew
+          key: ${{ runner.os }}-homebrew-${{ hashFiles('**/configure', '**/README.md') }}-v1
+          restore-keys: |
+            ${{ runner.os }}-homebrew-
+
       - name: Install Homebrew dependencies
         run: |
-          brew update
-          brew install boost capnp google-sparsehash multimarkdown ninja ragel gdbm
+          # Check if packages are already installed from cache
+          if ! brew list boost capnp google-sparsehash multimarkdown ninja ragel gdbm > /dev/null 2>&1; then
+            echo "Installing missing Homebrew dependencies..."
+            brew update
+            brew install boost capnp google-sparsehash multimarkdown ninja ragel gdbm
+          else
+            echo "All Homebrew dependencies already installed (from cache)"
+          fi
 
       - name: Install Ruby DBM gem
         run: |
           gem install dbm
           ruby -e "require 'dbm'; puts 'DBM gem loaded successfully'"
+
+      - name: Cache intermediate build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/build
+            ~/.cache
+          key: ${{ runner.os }}-build-${{ hashFiles('**/*.rave', '**/configure', 'Frameworks/**/*.cc', 'Frameworks/**/*.mm', 'Frameworks/**/*.h', 'Applications/**/*.cc', 'Applications/**/*.mm', 'Applications/**/*.h') }}-${{ inputs.build_type || 'release' }}-v1
+          restore-keys: |
+            ${{ runner.os }}-build-${{ inputs.build_type || 'release' }}-
+            ${{ runner.os }}-build-
 
       - name: Configure
         run: |
