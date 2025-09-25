@@ -17,6 +17,7 @@
 #import <Preferences/Keys.h>
 #import <OakTextView/OakDocumentView.h>
 #import <FileBrowser/FileBrowserViewController.h>
+#import <theme/theme.h>
 #import <OakCommand/OakCommand.h>
 #import <HTMLOutputWindow/HTMLOutputWindow.h>
 #import <OakFilterList/FileChooser.h>
@@ -192,6 +193,9 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 		self.documentView = [[OakDocumentView alloc] init];
 		self.textView = self.documentView.textView;
 		self.textView.delegate = self;
+		
+		// Observe theme changes to update FileBrowser
+		[self.textView addObserver:self forKeyPath:@"themeUUID" options:NSKeyValueObservingOptionInitial context:nil];
 
 		self.layoutView = [[ProjectLayoutView alloc] initWithFrame:NSZeroRect];
 		self.layoutView.documentView = self.documentView;
@@ -235,6 +239,8 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 {
 	for(NSString* keyPath in kObservedKeyPaths)
 		[self removeObserver:self forKeyPath:keyPath];
+
+	[self.textView removeObserver:self forKeyPath:@"themeUUID"];
 
 	[NSNotificationCenter.defaultCenter removeObserver:self];
 
@@ -790,6 +796,23 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 	{
 		[self.tabBarView reloadData];
 		[[self class] scheduleSessionBackup:self];
+	}
+	
+	// Update FileBrowser theme when textView theme changes
+	if([keyPath isEqualToString:@"themeUUID"])
+	{
+		[self updateFileBrowserTheme];
+	}
+}
+
+- (void)updateFileBrowserTheme
+{
+	if(self.fileBrowser && self.textView.theme)
+	{
+		theme_ptr theme = self.textView.theme;
+		auto const& gutterStyles = theme->gutter_styles();
+		NSColor* backgroundColor = [NSColor colorWithCGColor:gutterStyles.background];
+		[self.fileBrowser updateThemeWithBackgroundColor:backgroundColor];
 	}
 }
 

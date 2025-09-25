@@ -2325,4 +2325,9 @@ static NSDragOperation filter (NSDragOperation mask)
 {
 	[self.activeUndoManager redo];
 }
+
+- (void)updateThemeWithBackgroundColor:(NSColor*)backgroundColor
+{
+	[self.fileBrowserView setBackgroundColor:backgroundColor];
+}
 @end

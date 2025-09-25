@@ -22,6 +22,7 @@
 
 - (void)setupViewWithState:(id)state;
 - (std::map<std::string, std::string>)variables;
+- (void)updateThemeWithBackgroundColor:(NSColor*)backgroundColor;
 
 - (void)goToURL:(NSURL*)url;
 - (void)selectURL:(NSURL*)url withParentURL:(NSURL*)parentURL;

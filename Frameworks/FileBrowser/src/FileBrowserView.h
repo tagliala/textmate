@@ -7,4 +7,7 @@
 @property (nonatomic) OFBHeaderView*  headerView;
 @property (nonatomic) NSOutlineView*  outlineView;
 @property (nonatomic) OFBActionsView* actionsView;
+
+- (void)updateAppearance;
+- (void)setBackgroundColor:(NSColor*)backgroundColor;
 @end

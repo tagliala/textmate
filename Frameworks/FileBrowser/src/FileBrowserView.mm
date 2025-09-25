@@ -69,9 +69,37 @@
 		_scrollView.automaticallyAdjustsContentInsets = NO;
 		_scrollView.contentInsets = insets;
 
-		_outlineView.backgroundColor = NSColor.clearColor;
-		_scrollView.drawsBackground  = NO;
+		// Set up appearance-aware background colors
+		[self updateAppearance];
 	}
 	return self;
+}
+
+- (void)updateAppearance
+{
+	// Set a default background color that works with system appearance
+	// This will be overridden by setBackgroundColor: when themes are available
+	if(@available(macOS 10.14, *))
+	{
+		// Use semantic system colors that adapt to appearance
+		_scrollView.backgroundColor = [NSColor.controlBackgroundColor colorWithAlphaComponent:1.0];
+		_outlineView.backgroundColor = NSColor.clearColor;
+		_scrollView.drawsBackground = YES;
+	}
+	else
+	{
+		// Fallback for older macOS versions
+		_scrollView.backgroundColor = NSColor.controlBackgroundColor;
+		_outlineView.backgroundColor = NSColor.clearColor;
+		_scrollView.drawsBackground = YES;
+	}
+}
+
+- (void)setBackgroundColor:(NSColor*)backgroundColor
+{
+	_scrollView.backgroundColor = backgroundColor;
+	_outlineView.backgroundColor = NSColor.clearColor;
+	_scrollView.drawsBackground = YES;
+}
 }
 @end
