@@ -1830,6 +1830,10 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 			self.fileBrowser = [[FileBrowserViewController alloc] init];
 			self.fileBrowser.delegate = self;
 			[self.fileBrowser setupViewWithState:_fileBrowserHistory];
+			
+			// Apply current theme to the newly created FileBrowser
+			[self updateFileBrowserTheme];
+			
 			if(!_fileBrowserHistory)
 			{
 				if(NSString* path = self.projectPath ?: self.defaultProjectPath)
