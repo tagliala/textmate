@@ -14,7 +14,7 @@ This is the TextMate text editor codebase - a sophisticated macOS text editor wi
 
 - **Languages**: C++20, Objective-C++, Objective-C
 - **Build System**: Ninja (via custom rave build system)
-- **Platform**: macOS (minimum 10.12)
+- **Platform**: macOS (minimum 14.0)
 - **Architecture**: Framework-based modular design
 
 ## Coding Conventions
