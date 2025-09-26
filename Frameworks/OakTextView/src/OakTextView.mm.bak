@@ -826,6 +826,9 @@ static std::string shell_quote (std::vector<std::string> paths)
 	// Auto appearance detection is always available on macOS 14.0+
 	if(!darkMode && ![appearance isEqualToString:@"light"]) // If it is not 'light' then assume 'auto'
 		darkMode = [[self.effectiveAppearance bestMatchFromAppearancesWithNames:@[ NSAppearanceNameAqua, NSAppearanceNameDarkAqua ]] isEqualToString:NSAppearanceNameDarkAqua];
+		if(!darkMode && ![appearance isEqualToString:@"light"]) // If it is not ‘light’ then assume ‘auto’
+			darkMode = [[self.effectiveAppearance bestMatchFromAppearancesWithNames:@[ NSAppearanceNameAqua, NSAppearanceNameDarkAqua ]] isEqualToString:NSAppearanceNameDarkAqua];
+	}
 
 	return [NSUserDefaults.standardUserDefaults stringForKey:darkMode ? @"darkModeThemeUUID" : @"universalThemeUUID"];
 }
