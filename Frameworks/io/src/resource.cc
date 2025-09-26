@@ -16,9 +16,9 @@ namespace path
 		{
 			CFStringRef contentType = nullptr;
 			if (CFURLCopyResourcePropertyForKey(url, kCFURLContentTypeKey, &contentType, nullptr) && contentType) {
-				// Check if the content type conforms to text clipping
-				// Modern approach using UTType instead of deprecated Launch Services
-				res = UTTypeConformsTo(contentType, CFSTR("com.apple.text-clipping"));
+				// Check if the UTI matches text clipping
+				CFStringRef textClippingUTI = CFSTR("com.apple.text-clipping");
+				res = CFStringCompare(contentType, textClippingUTI, 0) == kCFCompareEqualTo;
 				CFRelease(contentType);
 			}
 			CFRelease(url);
