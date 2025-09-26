@@ -1,6 +1,7 @@
 #include "resource.h"
 #include "path.h"
 #include <cf/cf.h>
+#include <CoreServices/CoreServices.h>
 
 namespace path
 {
@@ -13,9 +14,13 @@ namespace path
 		}
 		else if(CFURLRef url = CFURLCreateFromFileSystemRepresentation(kCFAllocatorDefault, (UInt8 const*)path.data(), path.size(), false))
 		{
-			LSItemInfoRecord info;
-			if(noErr == LSCopyItemInfoForURL(url, kLSRequestTypeCreator, &info))
-				res = info.filetype == kClippingTextType;
+			CFStringRef contentType = nullptr;
+			if (CFURLCopyResourcePropertyForKey(url, kCFURLContentTypeKey, &contentType, nullptr) && contentType) {
+				// Check if the content type conforms to text clipping
+				// Modern approach using UTType instead of deprecated Launch Services
+				res = UTTypeConformsTo(contentType, CFSTR("com.apple.text-clipping"));
+				CFRelease(contentType);
+			}
 			CFRelease(url);
 		}
 		return res;
