@@ -1,7 +1,6 @@
 #include "resource.h"
 #include "path.h"
 #include <cf/cf.h>
-#include <CoreServices/CoreServices.h>
 
 namespace path
 {
@@ -14,13 +13,12 @@ namespace path
 		}
 		else if(CFURLRef url = CFURLCreateFromFileSystemRepresentation(kCFAllocatorDefault, (UInt8 const*)path.data(), path.size(), false))
 		{
-			CFStringRef contentType = nullptr;
-			if (CFURLCopyResourcePropertyForKey(url, kCFURLContentTypeKey, &contentType, nullptr) && contentType) {
-				// Check if the UTI matches text clipping
-				CFStringRef textClippingUTI = CFSTR("com.apple.text-clipping");
-				res = CFStringCompare(contentType, textClippingUTI, 0) == kCFCompareEqualTo;
-				CFRelease(contentType);
-			}
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+			LSItemInfoRecord info;
+			if(noErr == LSCopyItemInfoForURL(url, kLSRequestTypeCreator, &info))
+				res = info.filetype == kClippingTextType;
+#pragma clang diagnostic pop
 			CFRelease(url);
 		}
 		return res;

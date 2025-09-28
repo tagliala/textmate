@@ -8,7 +8,6 @@
 #include <regexp/regexp.h>
 #include <regexp/format_string.h>
 #include <cf/cf.h>
-#include <CoreServices/CoreServices.h>
 
 namespace path
 {
@@ -816,8 +815,15 @@ namespace path
 			{
 				if(CFURLRef url = CFURLCreateWithString(kCFAllocatorDefault, cf::wrap("https://openradar.appspot.com/10261043"), nullptr))
 				{
-					// Use LSOpenCFURLRef instead of deprecated LSOpenURLsWithRole
-					LSOpenCFURLRef(url, nullptr);
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+					if(CFMutableArrayRef urls = CFArrayCreateMutable(kCFAllocatorDefault, 0, &kCFTypeArrayCallBacks))
+					{
+						CFArrayAppendValue(urls, url);
+						LSOpenURLsWithRole(urls, kLSRolesViewer, nullptr, nullptr, nullptr, 0);
+						CFRelease(urls);
+					}
+#pragma clang diagnostic pop
 					CFRelease(url);
 				}
 			}
