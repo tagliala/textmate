@@ -2,6 +2,14 @@ Title: Release Notes
 
 # Changes
 
+## 2025-10-03 (v3.0.0)
+
+* See [all changes since v2.0.23](https://github.com/tagliala/textmate/compare/v2.0.23...develop)
+
+## 2021-10-12 (v2.0.23)
+
+* Miscellaneous improvements, [see changes since v2.0.22 on GitHub](https://github.com/textmate/textmate/compare/v2.0.22...v2.0.23)
+
 ## 2021-04-16 (v2.0.22)
 
 * A few more tweaks to improve things on macOS 11 including dropping use of floating header rows in file browser (SCM Status) and search results, as these appear to cause problems on Big Sur.
@@ -412,13 +420,13 @@ I normally do not mention fixes in the release notes but since this is a regular
 
 		# .tm_properties
 		setting = «value» # 1. Untargeted
-		
+
 		[ text ]
 		setting = «value» # 2a. Scope selector match
-		
+
 		[ text.plain ]    # 2b. More specific scope selector match
 		setting = «value»
-		
+
 		[ *.txt ]
 		setting = «value» # 3. File type match
 
@@ -428,15 +436,15 @@ I normally do not mention fixes in the release notes but since this is a regular
 
 		# .tm_properties
 		Foo = "This is $Foo"
-		
+
 		[ text ]
 		Foo = "a text file"
-		
+
 		[ source ]
 		Foo = "source code"
-	
+
 	If you press ⌃R on a line containing `echo $foo` it should show either _“This is a text file”_ or _“This is source code”_.
-	
+
 	Hint: To see the value of all settings for your current document you can either press ⌃R on a line containing `"$TM_QUERY"` or you can use _Bundles → Select Bundle Item…_ (⌃⌘T) and switch to _Settings_ (⌘}). The latter will show how the settings are ordered.
 
 * Improve folder search performance for large documents with few newlines and lots of matches.
@@ -782,7 +790,7 @@ I normally do not mention fixes in the release notes but since this is a regular
 
 		[ *.go ]
 		relatedFilePath = "${TM_FILEPATH/(?=\.go$)/_test/}"
-	
+
 		[ *_test.go ]
 		relatedFilePath = "${TM_FILEPATH/_test(?=\.go$)//}"
 
