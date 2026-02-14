@@ -45,6 +45,10 @@ let package = Package(
 			name: "TMDocumentWindow",
 			targets: ["TMDocumentWindow"],
 		),
+		.library(
+			name: "TMCompatibility",
+			targets: ["TMCompatibility"],
+		),
 		.executable(
 			name: "TextMateApp",
 			targets: ["TMApp"],
@@ -131,6 +135,13 @@ let package = Package(
 			],
 		),
 
+		// MARK: - Compatibility Layer
+
+		.target(
+			name: "TMCompatibility",
+			path: "Sources/TMCompatibility",
+		),
+
 		// MARK: - Test Targets
 
 		.testTarget(
@@ -179,6 +190,12 @@ let package = Package(
 			name: "TMGrammarTests",
 			dependencies: ["TMGrammar", "TMBundle"],
 			path: "Tests/TMGrammarTests",
+		),
+
+		.testTarget(
+			name: "TMCompatibilityTests",
+			dependencies: ["TMCompatibility"],
+			path: "Tests/TMCompatibilityTests",
 		),
 	],
 )
