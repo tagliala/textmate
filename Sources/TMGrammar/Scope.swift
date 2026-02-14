@@ -16,12 +16,12 @@ public struct Scope: Sendable, Hashable {
 		init(atoms: String, parent: Node?) {
 			self.atoms = atoms
 			self.parent = parent
-			self.depth = (parent?.depth ?? 0) + 1
+			depth = (parent?.depth ?? 0) + 1
 			// Hash combining atoms with parent hash (mirrors C++ implementation)
 			var hasher = Hasher()
 			hasher.combine(atoms)
 			hasher.combine(parent?.cachedHash ?? 0)
-			self.cachedHash = hasher.finalize()
+			cachedHash = hasher.finalize()
 		}
 
 		/// Whether this is an auxiliary scope (attr.* or dyn.*).
@@ -39,7 +39,7 @@ public struct Scope: Sendable, Hashable {
 
 	/// Creates an empty scope.
 	public init() {
-		self.node = nil
+		node = nil
 	}
 
 	/// Creates a scope from a space-delimited string.
@@ -85,7 +85,7 @@ public struct Scope: Sendable, Hashable {
 		var lhs = self
 		let diff = lhs.size - prefix.size
 		guard diff >= 0 else { return false }
-		for _ in 0..<diff {
+		for _ in 0 ..< diff {
 			lhs.popScope()
 		}
 		return lhs == prefix
@@ -105,7 +105,9 @@ public struct Scope: Sendable, Hashable {
 	// MARK: - Internal Access
 
 	/// Exposes the internal node for scope selector matching.
-	var currentNode: Node? { node }
+	var currentNode: Node? {
+		node
+	}
 
 	// MARK: - Hashable
 
@@ -132,7 +134,9 @@ public struct Scope: Sendable, Hashable {
 // MARK: - CustomStringConvertible
 
 extension Scope: CustomStringConvertible {
-	public var description: String { toString() }
+	public var description: String {
+		toString()
+	}
 }
 
 // MARK: - ExpressibleByStringLiteral
@@ -154,8 +158,8 @@ public struct ScopeContext: Sendable, Hashable {
 	public let right: Scope
 
 	public init(_ scope: Scope) {
-		self.left = scope
-		self.right = scope
+		left = scope
+		right = scope
 	}
 
 	public init(left: Scope, right: Scope) {
@@ -165,7 +169,7 @@ public struct ScopeContext: Sendable, Hashable {
 
 	public init(_ string: String) {
 		let scope = Scope(string)
-		self.left = scope
-		self.right = scope
+		left = scope
+		right = scope
 	}
 }

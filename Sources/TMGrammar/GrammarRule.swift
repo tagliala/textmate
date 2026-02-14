@@ -81,7 +81,7 @@ public final class GrammarRule: @unchecked Sendable {
 
 	// MARK: - ID counter
 
-	nonisolated(unsafe) private static var nextID = 0
+	private nonisolated(unsafe) static var nextID = 0
 	private static let idLock = NSLock()
 
 	private static func allocateID() -> Int {
@@ -93,7 +93,7 @@ public final class GrammarRule: @unchecked Sendable {
 	}
 
 	public init() {
-		self.ruleID = Self.allocateID()
+		ruleID = Self.allocateID()
 	}
 }
 
@@ -104,7 +104,6 @@ public final class GrammarRule: @unchecked Sendable {
 ///
 /// Mirrors C++ `convert_plist()` and `compile_patterns()`.
 public enum GrammarCompiler {
-
 	/// Converts a `GrammarDefinition` into a root `GrammarRule`.
 	public static func compile(_ grammar: GrammarDefinition) -> GrammarRule {
 		let root = convertPatternToRule(grammar)
@@ -173,7 +172,7 @@ public enum GrammarCompiler {
 
 	/// Converts capture definitions to capture rules.
 	private static func convertCaptures(
-		_ captures: [String: GrammarDefinition.CaptureAttributes]?
+		_ captures: [String: GrammarDefinition.CaptureAttributes]?,
 	) -> [String: GrammarRule]? {
 		guard let captures, !captures.isEmpty else { return nil }
 
@@ -276,7 +275,7 @@ public enum GrammarCompiler {
 			for child in rule.children {
 				setupIncludes(
 					rule: child, base: base, self: selfRule,
-					stack: RuleStack(rule: rule, parent: stack)
+					stack: RuleStack(rule: rule, parent: stack),
 				)
 			}
 
@@ -290,7 +289,7 @@ public enum GrammarCompiler {
 				for (_, subrule) in map {
 					setupIncludes(
 						rule: subrule, base: base, self: selfRule,
-						stack: RuleStack(rule: rule, parent: stack)
+						stack: RuleStack(rule: rule, parent: stack),
 					)
 				}
 			}

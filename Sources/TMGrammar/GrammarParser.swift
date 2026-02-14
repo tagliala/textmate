@@ -29,7 +29,7 @@ struct ScopeTracker {
 	}
 
 	/// Removes a scope at the given position.
-	mutating func remove(_ position: Int, scope: String, endRule: Bool = false) {
+	mutating func remove(_ position: Int, scope: String, endRule _: Bool = false) {
 		// For end rules, append at the end; otherwise insert at sorted position
 		records.append((position: position, record: Record(scope: scope, isAdd: false)))
 
@@ -64,7 +64,7 @@ struct ScopeTracker {
 				} else {
 					// Must search for and remove the scope
 					var tempStack: [String] = []
-					while scope.back != entry.record.scope && !scope.isEmpty {
+					while scope.back != entry.record.scope, !scope.isEmpty {
 						tempStack.append(scope.back!)
 						scope.popScope()
 					}
@@ -113,7 +113,6 @@ struct RankedMatch: Comparable {
 ///
 /// Mirrors the C++ `parse::parse()` function.
 public enum GrammarParser {
-
 	/// Parses a single line of text.
 	///
 	/// - Parameters:
@@ -132,7 +131,7 @@ public enum GrammarParser {
 		if buffer.count > kParserMaxLineSize {
 			// Find a safe UTF-8 boundary
 			var end = kParserMaxLineSize
-			while end > 0 && (buffer[end] & 0xC0) == 0x80 {
+			while end > 0, (buffer[end] & 0xC0) == 0x80 {
 				end -= 1
 			}
 			buffer = Array(buffer[..<end])
@@ -141,7 +140,7 @@ public enum GrammarParser {
 		var scopes = ScopeTracker()
 		let newState = parse(
 			buffer: buffer, state: state,
-			scopes: &scopes, firstLine: firstLine, startOffset: 0
+			scopes: &scopes, firstLine: firstLine, startOffset: 0,
 		)
 
 		var scopeMap: [Int: Scope] = [:]
@@ -188,7 +187,7 @@ public enum GrammarParser {
 			guard let whilePattern = ruleState.whilePattern else { break }
 
 			if let m = whilePattern.search(
-				in: buffer, range: i..<buffer.count
+				in: buffer, range: i ..< buffer.count,
 			) {
 				let rule = ruleState.rule
 				if let ss = rule.scopeString {
@@ -200,7 +199,7 @@ public enum GrammarParser {
 				applyCaptures(
 					scope: scope, match: m,
 					captures: rule.whileCaptures ?? rule.captures,
-					buffer: buffer, scopes: &scopes, firstLine: firstLine
+					buffer: buffer, scopes: &scopes, firstLine: firstLine,
 				)
 
 				if let css = rule.contentScopeString {
@@ -229,7 +228,7 @@ public enum GrammarParser {
 		// ======================
 
 		var rules = collectAndMatchRules(
-			buffer: buffer, offset: i, firstLine: firstLine, state: stack
+			buffer: buffer, offset: i, firstLine: firstLine, state: stack,
 		)
 
 		while let best = rules.min() {
@@ -238,15 +237,14 @@ public enum GrammarParser {
 
 			if m.match.matchBegin < i {
 				// Match is behind current position — re-search
-				let ptrn: OnigmoPattern?
-				if m.isEndPattern {
-					ptrn = stack.endPattern
+				let ptrn: OnigmoPattern? = if m.isEndPattern {
+					stack.endPattern
 				} else {
-					ptrn = m.rule.matchPattern
+					m.rule.matchPattern
 				}
 
 				if let ptrn,
-					let newMatch = ptrn.search(in: buffer, range: i..<buffer.count)
+				   let newMatch = ptrn.search(in: buffer, range: i ..< buffer.count)
 				{
 					var updated = m
 					updated.match = newMatch
@@ -266,7 +264,7 @@ public enum GrammarParser {
 				applyCaptures(
 					scope: scope, match: m.match,
 					captures: m.rule.endCaptures ?? m.rule.captures,
-					buffer: buffer, scopes: &scopes, firstLine: firstLine
+					buffer: buffer, scopes: &scopes, firstLine: firstLine,
 				)
 
 				if let ss = stack.scopeString {
@@ -285,12 +283,12 @@ public enum GrammarParser {
 				}
 			} else if m.rule.whileString != nil || m.rule.endString != nil {
 				// Begin part of a begin/end or begin/while rule
-				if m.match.isEmpty && hasCycle(m.rule.ruleID, offset: i, state: stack) {
+				if m.match.isEmpty, hasCycle(m.rule.ruleID, offset: i, state: stack) {
 					break
 				}
 
 				let newState = ParserState(
-					rule: m.rule, scope: Scope(), parent: stack
+					rule: m.rule, scope: Scope(), parent: stack,
 				)
 
 				if let ss = m.rule.scopeString {
@@ -302,12 +300,12 @@ public enum GrammarParser {
 				applyCaptures(
 					scope: scope, match: m.match,
 					captures: m.rule.beginCaptures ?? m.rule.captures,
-					buffer: buffer, scopes: &scopes, firstLine: firstLine
+					buffer: buffer, scopes: &scopes, firstLine: firstLine,
 				)
 
 				if let css = m.rule.contentScopeString {
 					newState.contentScopeString = expandScopeName(
-						css, match: m.match
+						css, match: m.match,
 					)
 					scope.pushScope(newState.contentScopeString!)
 					scopes.add(m.match.matchEnd, scope: newState.contentScopeString!)
@@ -324,12 +322,12 @@ public enum GrammarParser {
 				// Expand back references for while/end patterns if needed
 				if newState.whilePattern == nil, let ws = m.rule.whileString {
 					newState.whilePattern = OnigmoPattern(
-						expandBackReferences(ws, match: m.match)
+						expandBackReferences(ws, match: m.match),
 					)
 				}
 				if newState.endPattern == nil, let es = m.rule.endString {
 					newState.endPattern = OnigmoPattern(
-						expandBackReferences(es, match: m.match)
+						expandBackReferences(es, match: m.match),
 					)
 				}
 
@@ -337,7 +335,7 @@ public enum GrammarParser {
 			} else {
 				// Simple match rule
 				if m.match.isEmpty {
-					continue  // Don't re-apply zero-width matches
+					continue // Don't re-apply zero-width matches
 				}
 
 				if let ss = m.rule.scopeString {
@@ -349,24 +347,24 @@ public enum GrammarParser {
 				applyCaptures(
 					scope: scope, match: m.match,
 					captures: m.rule.captures,
-					buffer: buffer, scopes: &scopes, firstLine: firstLine
+					buffer: buffer, scopes: &scopes, firstLine: firstLine,
 				)
 
 				// Re-search for the same pattern after the match
 				if let newMatch = m.rule.matchPattern?.search(
-					in: buffer, range: i..<buffer.count
+					in: buffer, range: i ..< buffer.count,
 				) {
 					var updated = m
 					updated.match = newMatch
 					rules.append(updated)
 				}
 
-				continue  // No context change, skip rule collection
+				continue // No context change, skip rule collection
 			}
 
 			// Context changed — collect new rules
 			rules = collectAndMatchRules(
-				buffer: buffer, offset: i, firstLine: firstLine, state: stack
+				buffer: buffer, offset: i, firstLine: firstLine, state: stack,
 			)
 		}
 
@@ -394,7 +392,7 @@ public enum GrammarParser {
 		var injectedPost: [GrammarRule] = []
 		collectInjections(
 			state: state, scope: state.scope, groups: groups,
-			pre: &injectedPre, post: &injectedPost
+			pre: &injectedPre, post: &injectedPost,
 		)
 
 		// Reset included flags
@@ -410,7 +408,7 @@ public enum GrammarParser {
 		rank = applyRules(
 			injectedPre, buffer: buffer, offset: i,
 			firstLine: firstLine, state: state, startRank: rank,
-			results: &results
+			results: &results,
 		)
 
 		let endPatternRank = rank + 1
@@ -420,16 +418,16 @@ public enum GrammarParser {
 		rank = applyRules(
 			childRules, buffer: buffer, offset: i,
 			firstLine: firstLine, state: state, startRank: rank,
-			results: &results
+			results: &results,
 		)
 
 		// End pattern
 		if let endPattern = state.endPattern {
-			if let m = endPattern.search(in: buffer, range: i..<buffer.count) {
+			if let m = endPattern.search(in: buffer, range: i ..< buffer.count) {
 				results.append(RankedMatch(
 					rule: state.rule, match: m,
 					rank: state.applyEndLast ? rank + 1 : endPatternRank,
-					isEndPattern: true
+					isEndPattern: true,
 				))
 				if state.applyEndLast { rank += 1 }
 			}
@@ -439,7 +437,7 @@ public enum GrammarParser {
 		rank = applyRules(
 			injectedPost, buffer: buffer, offset: i,
 			firstLine: firstLine, state: state, startRank: rank,
-			results: &results
+			results: &results,
 		)
 
 		return results
@@ -451,8 +449,8 @@ public enum GrammarParser {
 		_ rules: [GrammarRule],
 		buffer: [UInt8],
 		offset i: Int,
-		firstLine: Bool,
-		state: ParserState,
+		firstLine _: Bool,
+		state _: ParserState,
 		startRank: Int,
 		results: inout [RankedMatch],
 	) -> Int {
@@ -461,10 +459,10 @@ public enum GrammarParser {
 			rule.included = false
 
 			guard let pattern = rule.matchPattern else { continue }
-			if let m = pattern.search(in: buffer, range: i..<buffer.count) {
+			if let m = pattern.search(in: buffer, range: i ..< buffer.count) {
 				rank += 1
 				results.append(RankedMatch(
-					rule: rule, match: m, rank: rank, isEndPattern: false
+					rule: rule, match: m, rank: rank, isEndPattern: false,
 				))
 			}
 		}
@@ -585,18 +583,18 @@ public enum GrammarParser {
 
 			if !rule.children.isEmpty {
 				let captureState = ParserState(
-					rule: rule, scope: scope, parent: ParserState(rule: rule, scope: "")
+					rule: rule, scope: scope, parent: ParserState(rule: rule, scope: ""),
 				)
 				captureState.anchor = from
 
 				let savedStack = scopes.stack
 				scopes.tracking += 1
 				_ = parse(
-					buffer: Array(buffer[0..<to]),
+					buffer: Array(buffer[0 ..< to]),
 					state: captureState,
 					scopes: &scopes,
 					firstLine: firstLine,
-					startOffset: from
+					startOffset: from,
 				)
 				// Remove any scopes that were opened but not closed
 				while !scopes.stack.isEmpty {
@@ -612,7 +610,7 @@ public enum GrammarParser {
 
 	/// Checks for infinite recursion in begin/end rules.
 	private static func hasCycle(
-		_ ruleID: Int, offset i: Int, state: ParserState
+		_ ruleID: Int, offset i: Int, state: ParserState,
 	) -> Bool {
 		if !state.zwBeginMatch || state.anchor != i {
 			return false
@@ -628,7 +626,7 @@ public enum GrammarParser {
 
 	/// Expands format string references in a scope name.
 	private static func expandScopeName(
-		_ name: String, match: OnigmoMatch
+		_ name: String, match: OnigmoMatch,
 	) -> String {
 		guard patternIsFormatString(name) else { return name }
 		return expandFormatString(name, captures: match.captures)

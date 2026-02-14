@@ -18,7 +18,7 @@ public final class IncrementalParser: @unchecked Sendable {
 	private var lineScopeMaps: [[Int: Scope]] = []
 
 	/// Lines that need re-parsing (sorted, unique).
-	private var dirtyLines: IndexSet = IndexSet()
+	private var dirtyLines: IndexSet = .init()
 
 	/// The text lines of the document.
 	private var lines: [String] = []
@@ -38,17 +38,17 @@ public final class IncrementalParser: @unchecked Sendable {
 		lock.lock()
 		defer { lock.unlock() }
 
-		lines = text.components(separatedBy: "\n").enumerated().map { (i, line) in
+		lines = text.components(separatedBy: "\n").enumerated().map { i, line in
 			i < text.components(separatedBy: "\n").count - 1 ? line + "\n" : line
 		}
 		// Remove trailing empty line if it resulted from a trailing newline
-		if lines.last == "" && text.hasSuffix("\n") {
+		if lines.last == "", text.hasSuffix("\n") {
 			lines.removeLast()
 		}
 
 		lineStates = []
 		lineScopeMaps = []
-		dirtyLines = IndexSet(integersIn: 0..<lines.count)
+		dirtyLines = IndexSet(integersIn: 0 ..< lines.count)
 	}
 
 	/// Replaces a range of lines with new content.
@@ -70,21 +70,21 @@ public final class IncrementalParser: @unchecked Sendable {
 			let delta = newLines.count - range.count
 			if delta > 0 {
 				let emptyStates = [ParserState?](
-					repeating: nil, count: delta
+					repeating: nil, count: delta,
 				)
 				lineStates.insert(
-					contentsOf: emptyStates.compactMap { $0 },
-					at: min(range.lowerBound, lineStates.count)
+					contentsOf: emptyStates.compactMap(\.self),
+					at: min(range.lowerBound, lineStates.count),
 				)
 				lineScopeMaps.insert(
 					contentsOf: [[Int: Scope]](
-						repeating: [:], count: delta
+						repeating: [:], count: delta,
 					),
-					at: min(range.lowerBound, lineScopeMaps.count)
+					at: min(range.lowerBound, lineScopeMaps.count),
 				)
 			} else {
-				let removeRange = range.lowerBound..<min(
-					range.lowerBound - delta, lineStates.count
+				let removeRange = range.lowerBound ..< min(
+					range.lowerBound - delta, lineStates.count,
 				)
 				if !removeRange.isEmpty {
 					lineStates.removeSubrange(removeRange)
@@ -96,7 +96,7 @@ public final class IncrementalParser: @unchecked Sendable {
 		// Mark affected lines as dirty
 		let dirtyStart = range.lowerBound
 		let dirtyEnd = min(dirtyStart + newLines.count, lines.count)
-		dirtyLines.insert(integersIn: dirtyStart..<max(dirtyEnd, dirtyStart + 1))
+		dirtyLines.insert(integersIn: dirtyStart ..< max(dirtyEnd, dirtyStart + 1))
 	}
 
 	/// Marks a range of lines as needing re-parsing.
@@ -127,7 +127,7 @@ public final class IncrementalParser: @unchecked Sendable {
 		lock.lock()
 		while lineStates.count < lines.count {
 			lineStates.append(
-				ParserState(rule: grammar, scope: grammar.scopeString ?? "")
+				ParserState(rule: grammar, scope: grammar.scopeString ?? ""),
 			)
 		}
 		while lineScopeMaps.count < lines.count {
@@ -140,10 +140,10 @@ public final class IncrementalParser: @unchecked Sendable {
 			let isDirty = dirtyLines.contains(lineIndex)
 			lock.unlock()
 
-			if !isDirty && lineIndex > firstDirty {
+			if !isDirty, lineIndex > firstDirty {
 				// Not dirty and past the first dirty line — we've converged
 				if changeStart < lineIndex {
-					changedRanges.append(changeStart..<lineIndex)
+					changedRanges.append(changeStart ..< lineIndex)
 				}
 				break
 			}
@@ -156,13 +156,13 @@ public final class IncrementalParser: @unchecked Sendable {
 				lock.unlock()
 			} else {
 				prevState = ParserState(
-					rule: grammar, scope: grammar.scopeString ?? ""
+					rule: grammar, scope: grammar.scopeString ?? "",
 				)
 			}
 
 			let line = lines[lineIndex]
 			let (newState, newScopes) = GrammarParser.parseLine(
-				line, state: prevState, firstLine: lineIndex == 0
+				line, state: prevState, firstLine: lineIndex == 0,
 			)
 
 			lock.lock()
@@ -174,15 +174,15 @@ public final class IncrementalParser: @unchecked Sendable {
 			dirtyLines.remove(lineIndex)
 
 			// If state changed, the next line needs re-parsing too
-			if stateChanged && lineIndex + 1 < lines.count {
+			if stateChanged, lineIndex + 1 < lines.count {
 				dirtyLines.insert(lineIndex + 1)
 			}
 			lock.unlock()
 
-			if !stateChanged && !isDirty {
+			if !stateChanged, !isDirty {
 				// Converged — no more changes propagate
 				if changeStart < lineIndex {
-					changedRanges.append(changeStart..<lineIndex)
+					changedRanges.append(changeStart ..< lineIndex)
 				}
 				changeStart = lineIndex + 1
 			}
@@ -191,8 +191,8 @@ public final class IncrementalParser: @unchecked Sendable {
 		}
 
 		// Handle case where we parsed to end of document
-		if changeStart < lineIndex && lineIndex >= lines.count {
-			changedRanges.append(changeStart..<lineIndex)
+		if changeStart < lineIndex, lineIndex >= lines.count {
+			changedRanges.append(changeStart ..< lineIndex)
 		}
 
 		return changedRanges
@@ -203,7 +203,7 @@ public final class IncrementalParser: @unchecked Sendable {
 	/// - Parameter completion: Called on the main queue with ranges of
 	///   lines whose scopes changed.
 	public func parseAsync(
-		completion: @escaping @Sendable ([Range<Int>]) -> Void
+		completion: @escaping @Sendable ([Range<Int>]) -> Void,
 	) {
 		DispatchQueue.global(qos: .userInitiated).async {
 			let changes = self.parseSync()

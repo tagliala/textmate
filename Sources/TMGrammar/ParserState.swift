@@ -27,7 +27,7 @@ public final class ParserState: @unchecked Sendable, Equatable {
 	public var endPattern: OnigmoPattern?
 
 	/// Byte offset of the anchor position for `\G`.
-	public var anchor: Int = Int.max
+	public var anchor: Int = .max
 
 	/// Whether the begin pattern was zero-width.
 	public var zwBeginMatch: Bool = false
@@ -37,7 +37,7 @@ public final class ParserState: @unchecked Sendable, Equatable {
 
 	/// Creates a root parser state with the given rule and scope.
 	public init(rule: GrammarRule, scope: String) {
-		self.parent = nil
+		parent = nil
 		self.rule = rule
 		self.scope = Scope(scope)
 	}

@@ -72,7 +72,7 @@ public final class GrammarRegistry: @unchecked Sendable {
 		let baseRule = base ?? rule
 		GrammarCompiler.setupIncludes(
 			rule: rule, base: baseRule, self: rule,
-			stack: RuleStack(rule: rule)
+			stack: RuleStack(rule: rule),
 		)
 
 		// Resolve external grammar references
@@ -85,29 +85,29 @@ public final class GrammarRegistry: @unchecked Sendable {
 	/// (those containing a scope name like `"source.swift"` or
 	/// `"source.swift#name"`).
 	private func resolveExternalIncludes(
-		rule: GrammarRule, base: GrammarRule
+		rule: GrammarRule, base: GrammarRule,
 	) {
 		var visited = Set<Int>()
 		resolveExternalIncludesRecursive(rule: rule, base: base, visited: &visited)
 	}
 
 	private func resolveExternalIncludesRecursive(
-		rule: GrammarRule, base: GrammarRule, visited: inout Set<Int>
+		rule: GrammarRule, base: GrammarRule, visited: inout Set<Int>,
 	) {
 		guard !visited.contains(rule.ruleID) else { return }
 		visited.insert(rule.ruleID)
 
 		if let includeStr = rule.includeString, rule.include == nil,
-			!includeStr.isEmpty,
-			!includeStr.hasPrefix("#"),
-			includeStr != "$self", includeStr != "$base"
+		   !includeStr.isEmpty,
+		   !includeStr.hasPrefix("#"),
+		   includeStr != "$self", includeStr != "$base"
 		{
 			// External reference: "scope" or "scope#name"
 			let parts = includeStr.split(separator: "#", maxSplits: 1)
 			let scopeName = String(parts[0])
 
 			if let externalGrammar = findOrLoadGrammar(
-				scope: scopeName, base: base
+				scope: scopeName, base: base,
 			) {
 				if parts.count > 1 {
 					// scope#name — look up in repository
@@ -122,7 +122,7 @@ public final class GrammarRegistry: @unchecked Sendable {
 		// Recurse
 		for child in rule.children {
 			resolveExternalIncludesRecursive(
-				rule: child, base: base, visited: &visited
+				rule: child, base: base, visited: &visited,
 			)
 		}
 
@@ -134,7 +134,7 @@ public final class GrammarRegistry: @unchecked Sendable {
 			guard let map else { continue }
 			for (_, subrule) in map {
 				resolveExternalIncludesRecursive(
-					rule: subrule, base: base, visited: &visited
+					rule: subrule, base: base, visited: &visited,
 				)
 			}
 		}
@@ -142,7 +142,7 @@ public final class GrammarRegistry: @unchecked Sendable {
 
 	/// Finds a cached grammar or loads it from definitions.
 	private func findOrLoadGrammar(
-		scope: String, base: GrammarRule
+		scope: String, base: GrammarRule,
 	) -> GrammarRule? {
 		lock.lock()
 		if let cached = grammars[scope] {
@@ -162,14 +162,12 @@ public final class GrammarRegistry: @unchecked Sendable {
 
 	/// Returns all grammar rules that have injection selectors.
 	public func injectionGrammars() -> [(selector: ScopeSelector, rule: GrammarRule)] {
-		let result: [(selector: ScopeSelector, rule: GrammarRule)] = []
+		[]
 
 		// Look for grammars with injectionSelector in their definition
 		// (This would require extending GrammarDefinition to include
 		// injectionSelector; for now, injections come from the grammar's
 		// own injection_rules which are handled during compilation.)
-
-		return result
 	}
 
 	// MARK: - Seed State

@@ -1,12 +1,12 @@
-/// Swift-native regular expression engine for TextMate grammar parsing.
-///
-/// Uses `NSRegularExpression` (ICU engine) instead of the vendored Onigmo C
-/// library. This gives us pure Swift with no unsafe C interop, while covering
-/// ~98% of TextMate grammar patterns. The ICU engine supports lookahead,
-/// lookbehind, backreferences, named captures, possessive quantifiers, and
-/// Unicode properties — everything most grammars need.
-///
-/// Architecture Decision: ADR-005 (see docs/architecture/)
+// Swift-native regular expression engine for TextMate grammar parsing.
+//
+// Uses `NSRegularExpression` (ICU engine) instead of the vendored Onigmo C
+// library. This gives us pure Swift with no unsafe C interop, while covering
+// ~98% of TextMate grammar patterns. The ICU engine supports lookahead,
+// lookbehind, backreferences, named captures, possessive quantifiers, and
+// Unicode properties — everything most grammars need.
+//
+// Architecture Decision: ADR-005 (see docs/architecture/)
 
 import Foundation
 
@@ -27,7 +27,9 @@ public struct OnigmoMatch: Sendable {
 	let buffer: [UInt8]
 
 	/// Number of capture groups (including group 0 = full match).
-	public var count: Int { region.count }
+	public var count: Int {
+		region.count
+	}
 
 	/// Whether capture group `i` participated in the match.
 	public func didMatch(_ i: Int = 0) -> Bool {
@@ -50,13 +52,19 @@ public struct OnigmoMatch: Sendable {
 	}
 
 	/// Byte offset of the start of the full match.
-	public var matchBegin: Int { begin(0) }
+	public var matchBegin: Int {
+		begin(0)
+	}
 
 	/// Byte offset past the end of the full match.
-	public var matchEnd: Int { end(0) }
+	public var matchEnd: Int {
+		end(0)
+	}
 
 	/// Whether the match is zero-width.
-	public var isEmpty: Bool { matchBegin == matchEnd }
+	public var isEmpty: Bool {
+		matchBegin == matchEnd
+	}
 
 	/// Extracts the matched string for capture group `i`.
 	public func captureString(_ i: Int = 0) -> String? {
@@ -64,7 +72,7 @@ public struct OnigmoMatch: Sendable {
 		let b = begin(i)
 		let e = end(i)
 		guard e > b else { return "" }
-		return String(bytes: buffer[b..<e], encoding: .utf8)
+		return String(bytes: buffer[b ..< e], encoding: .utf8)
 	}
 
 	/// Returns all capture values as a dictionary (numeric + named keys).
@@ -72,14 +80,14 @@ public struct OnigmoMatch: Sendable {
 		var result: [String: String] = [:]
 		for (name, ranges) in namedCaptures {
 			for r in ranges {
-				if r.begin >= 0 && r.end > r.begin {
+				if r.begin >= 0, r.end > r.begin {
 					result[name] = String(
-						bytes: buffer[r.begin..<r.end], encoding: .utf8
+						bytes: buffer[r.begin ..< r.end], encoding: .utf8,
 					)
 				}
 			}
 		}
-		for i in 0..<count {
+		for i in 0 ..< count {
 			if didMatch(i), let s = captureString(i) {
 				result[String(i)] = s
 			}
@@ -90,7 +98,7 @@ public struct OnigmoMatch: Sendable {
 	/// Returns capture indices as a list of (key, begin, end) tuples.
 	public var captureIndices: [(key: String, begin: Int, end: Int)] {
 		var result: [(key: String, begin: Int, end: Int)] = []
-		for i in 0..<count where didMatch(i) {
+		for i in 0 ..< count where didMatch(i) {
 			result.append((key: String(i), begin: begin(i), end: end(i)))
 		}
 		for (name, ranges) in namedCaptures {
@@ -116,7 +124,9 @@ public final class OnigmoPattern: @unchecked Sendable {
 	public let patternString: String
 
 	/// Whether the pattern compiled successfully.
-	public var isValid: Bool { regex != nil }
+	public var isValid: Bool {
+		regex != nil
+	}
 
 	/// Pre-extracted named capture group names for efficient lookup.
 	private let namedGroups: [String]
@@ -126,21 +136,21 @@ public final class OnigmoPattern: @unchecked Sendable {
 	/// TextMate grammars use Oniguruma syntax. Most patterns work directly
 	/// with ICU/NSRegularExpression. A small translation layer handles the
 	/// most common Oniguruma-isms (e.g. `\h` -> `[\t\p{Zs}]`).
-	public init(_ pattern: String, options: UInt32 = 0) {
-		self.patternString = pattern
+	public init(_ pattern: String, options _: UInt32 = 0) {
+		patternString = pattern
 
 		let translated = OnigmoPattern.translatePattern(pattern)
 
 		do {
-			self.regex = try NSRegularExpression(
-				pattern: translated, options: [.anchorsMatchLines]
+			regex = try NSRegularExpression(
+				pattern: translated, options: [.anchorsMatchLines],
 			)
-			self.namedGroups = OnigmoPattern.extractNamedGroups(
-				from: translated
+			namedGroups = OnigmoPattern.extractNamedGroups(
+				from: translated,
 			)
 		} catch {
-			self.regex = nil
-			self.namedGroups = []
+			regex = nil
+			namedGroups = []
 		}
 	}
 
@@ -152,7 +162,7 @@ public final class OnigmoPattern: @unchecked Sendable {
 	/// - Returns: An `OnigmoMatch` if found, or `nil`.
 	public func search(
 		in buffer: [UInt8],
-		range searchRange: Range<Int>? = nil
+		range searchRange: Range<Int>? = nil,
 	) -> OnigmoMatch? {
 		guard let regex else { return nil }
 
@@ -161,32 +171,32 @@ public final class OnigmoPattern: @unchecked Sendable {
 			return nil
 		}
 
-		let byteRange = searchRange ?? 0..<buffer.count
+		let byteRange = searchRange ?? 0 ..< buffer.count
 
 		// Convert byte range to String.Index range
 		guard let startIdx = string.utf8.index(
 			string.utf8.startIndex,
 			offsetBy: byteRange.lowerBound,
-			limitedBy: string.utf8.endIndex
+			limitedBy: string.utf8.endIndex,
 		) else { return nil }
 
 		guard let endIdx = string.utf8.index(
 			string.utf8.startIndex,
 			offsetBy: byteRange.upperBound,
-			limitedBy: string.utf8.endIndex
+			limitedBy: string.utf8.endIndex,
 		) else { return nil }
 
 		// Convert to NSRange (UTF-16 offsets)
-		let nsRange = NSRange(startIdx..<endIdx, in: string)
+		let nsRange = NSRange(startIdx ..< endIdx, in: string)
 
 		guard let result = regex.firstMatch(
-			in: string, range: nsRange
+			in: string, range: nsRange,
 		) else { return nil }
 
 		// Build regions: convert each capture group from NSRange (UTF-16)
 		// back to byte offsets (UTF-8)
 		var regions: [ClosedRange<Int>?] = []
-		for i in 0..<result.numberOfRanges {
+		for i in 0 ..< result.numberOfRanges {
 			let r = result.range(at: i)
 			if r.location == NSNotFound {
 				regions.append(nil)
@@ -196,12 +206,12 @@ public final class OnigmoPattern: @unchecked Sendable {
 					continue
 				}
 				let byteBegin = string.utf8.distance(
-					from: string.utf8.startIndex, to: rStart.lowerBound
+					from: string.utf8.startIndex, to: rStart.lowerBound,
 				)
 				let byteEnd = string.utf8.distance(
-					from: string.utf8.startIndex, to: rStart.upperBound
+					from: string.utf8.startIndex, to: rStart.upperBound,
 				)
-				regions.append(byteBegin...byteEnd)
+				regions.append(byteBegin ... byteEnd)
 			}
 		}
 
@@ -211,17 +221,17 @@ public final class OnigmoPattern: @unchecked Sendable {
 			let r = result.range(withName: name)
 			if r.location != NSNotFound, let rStart = Range(r, in: string) {
 				let byteBegin = string.utf8.distance(
-					from: string.utf8.startIndex, to: rStart.lowerBound
+					from: string.utf8.startIndex, to: rStart.lowerBound,
 				)
 				let byteEnd = string.utf8.distance(
-					from: string.utf8.startIndex, to: rStart.upperBound
+					from: string.utf8.startIndex, to: rStart.upperBound,
 				)
 				named[name] = [(begin: byteBegin, end: byteEnd)]
 			}
 		}
 
 		return OnigmoMatch(
-			region: regions, namedCaptures: named, buffer: buffer
+			region: regions, namedCaptures: named, buffer: buffer,
 		)
 	}
 
@@ -242,7 +252,7 @@ public final class OnigmoPattern: @unchecked Sendable {
 
 		while i < pattern.endIndex {
 			let ch = pattern[i]
-			if ch == "\\" && pattern.index(after: i) < pattern.endIndex {
+			if ch == "\\", pattern.index(after: i) < pattern.endIndex {
 				let next = pattern[pattern.index(after: i)]
 				switch next {
 				case "h":
@@ -287,7 +297,7 @@ public final class OnigmoPattern: @unchecked Sendable {
 	private static func extractNamedGroups(from pattern: String) -> [String] {
 		// Match (?<name> or (?P<name> or (?'name'
 		guard let extractor = try? NSRegularExpression(
-			pattern: #"\(\?(?:<([^>]+)>|P<([^>]+)>|'([^']+)')"#
+			pattern: #"\(\?(?:<([^>]+)>|P<([^>]+)>|'([^']+)')"#,
 		) else { return [] }
 
 		let nsRange = NSRange(pattern.startIndex..., in: pattern)
@@ -295,7 +305,7 @@ public final class OnigmoPattern: @unchecked Sendable {
 
 		var names: [String] = []
 		for match in matches {
-			for i in 1...3 {
+			for i in 1 ... 3 {
 				let r = match.range(at: i)
 				if r.location != NSNotFound, let range = Range(r, in: pattern) {
 					names.append(String(pattern[range]))
@@ -316,7 +326,7 @@ public final class OnigmoPattern: @unchecked Sendable {
 /// to the first capture group of the match.
 public func expandFormatString(
 	_ format: String,
-	captures: [String: String]
+	captures: [String: String],
 ) -> String {
 	var result = ""
 	var it = format.startIndex
@@ -333,7 +343,7 @@ public func expandFormatString(
 				} else if format[next] == "{" {
 					let braceStart = format.index(after: next)
 					if let braceEnd = format[braceStart...].firstIndex(of: "}") {
-						let name = String(format[braceStart..<braceEnd])
+						let name = String(format[braceStart ..< braceEnd])
 						result += captures[name] ?? ""
 						it = format.index(after: braceEnd)
 						continue
@@ -354,7 +364,7 @@ public func expandFormatString(
 public func patternHasBackReference(_ pattern: String) -> Bool {
 	var escape = false
 	for ch in pattern {
-		if escape && ch.isNumber {
+		if escape, ch.isNumber {
 			return true
 		}
 		escape = !escape && ch == "\\"
@@ -366,7 +376,7 @@ public func patternHasBackReference(_ pattern: String) -> Bool {
 public func patternHasAnchor(_ pattern: String) -> Bool {
 	var escape = false
 	for ch in pattern {
-		if escape && ch == "G" {
+		if escape, ch == "G" {
 			return true
 		}
 		escape = !escape && ch == "\\"
@@ -385,13 +395,13 @@ public func patternIsFormatString(_ pattern: String) -> Bool {
 /// regex-escaping the replacement.
 public func expandBackReferences(
 	_ pattern: String,
-	match: OnigmoMatch
+	match: OnigmoMatch,
 ) -> String {
 	var result = ""
 	var escape = false
 
 	for ch in pattern {
-		if escape && ch.isNumber {
+		if escape, ch.isNumber {
 			let i = ch.wholeNumberValue!
 			if let captured = match.captureString(i) {
 				for c in captured {
@@ -408,7 +418,7 @@ public func expandBackReferences(
 		if escape {
 			result.append("\\")
 		}
-		if ch == "\\" && !escape {
+		if ch == "\\", !escape {
 			escape = true
 		} else {
 			result.append(ch)

@@ -1,16 +1,16 @@
-/// TextMate scope selector parser and matcher.
-///
-/// Grammar (from C++ `scope/src/parse.cc`):
-/// ```
-/// atom:        «string» | '*'
-/// scope:       «atom» ('.' «atom»)*
-/// path:        '^'? «scope» ('>'? «scope»)* '$'?
-/// group:       '(' «selector» ')'
-/// filter:      ("L:"|"R:"|"B:") («group» | «path»)
-/// expression:  '-'? («filter» | «group» | «path»)
-/// composite:   «expression» ([|&-] «expression»)*
-/// selector:    «composite» (',' «composite»)*
-/// ```
+// TextMate scope selector parser and matcher.
+//
+// Grammar (from C++ `scope/src/parse.cc`):
+// ```
+// atom:        «string» | '*'
+// scope:       «atom» ('.' «atom»)*
+// path:        '^'? «scope» ('>'? «scope»)* '$'?
+// group:       '(' «selector» ')'
+// filter:      ("L:"|"R:"|"B:") («group» | «path»)
+// expression:  '-'? («filter» | «group» | «path»)
+// composite:   «expression» ([|&-] «expression»)*
+// selector:    «composite» (',' «composite»)*
+// ```
 
 import Foundation
 
@@ -42,7 +42,7 @@ final class PathMatcher: SelectorMatchable, @unchecked Sendable {
 		self.path = path
 	}
 
-	func doesMatch(left: Scope, right: Scope, rank: inout Double) -> Bool {
+	func doesMatch(left _: Scope, right: Scope, rank: inout Double) -> Bool {
 		pathDoesMatch(path, scope: right, rank: &rank)
 	}
 }
@@ -87,7 +87,7 @@ final class FilterMatcher: SelectorMatchable, @unchecked Sendable {
 			var r2: Double = 0
 			let m1 = selector.doesMatch(left: left, right: left, rank: &r1)
 			let m2 = selector.doesMatch(left: right, right: right, rank: &r2)
-			if m1 && m2 {
+			if m1, m2 {
 				rank = max(r1, r2)
 				return true
 			}
@@ -182,13 +182,13 @@ private func prefixMatch(_ selector: String, _ scope: String) -> Bool {
 	var si = selector.startIndex
 	var ri = scope.startIndex
 
-	while si < selector.endIndex && ri < scope.endIndex {
+	while si < selector.endIndex, ri < scope.endIndex {
 		if selector[si] == scope[ri] {
 			si = selector.index(after: si)
 			ri = scope.index(after: ri)
 		} else if selector[si] == "*" {
 			si = selector.index(after: si)
-			while ri < scope.endIndex && scope[ri] != "." {
+			while ri < scope.endIndex, scope[ri] != "." {
 				ri = scope.index(after: ri)
 			}
 		} else {
@@ -232,7 +232,7 @@ private func pathDoesMatch(_ path: SelectorPath, scope: Scope, rank: inout Doubl
 		let isRedundantNonBOLMatch = path.anchorToBOL && n.parent != nil
 			&& selIdx == 0
 
-		if !isRedundantNonBOLMatch && prefixMatch(sel.atoms, n.atoms) {
+		if !isRedundantNonBOLMatch, prefixMatch(sel.atoms, n.atoms) {
 			if sel.anchorToPrevious {
 				if btSelIdx < 0 {
 					btNode = n
@@ -274,15 +274,15 @@ private struct SelectorParser {
 	let source: String
 
 	init(_ string: String) {
-		self.source = string
-		self.it = string.startIndex
-		self.last = string.endIndex
+		source = string
+		it = string.startIndex
+		last = string.endIndex
 	}
 
 	// MARK: Utilities
 
 	mutating func skipWS() {
-		while it < last && (source[it] == " " || source[it] == "\t") {
+		while it < last, source[it] == " " || source[it] == "\t" {
 			it = source.index(after: it)
 		}
 	}
@@ -323,7 +323,7 @@ private struct SelectorParser {
 			}
 		} while parseChar(".")
 
-		res.atoms = String(source[from..<it])
+		res.atoms = String(source[from ..< it])
 		return from != it
 	}
 
@@ -350,9 +350,13 @@ private struct SelectorParser {
 		let bt = it
 		guard parseChar("(") else { return false }
 		var selector = SelectorData()
-		guard parseSelector(&selector) else { it = bt; return false }
+		guard parseSelector(&selector) else { it = bt
+			return false
+		}
 		skipWS()
-		guard parseChar(")") else { it = bt; return false }
+		guard parseChar(")") else { it = bt
+			return false
+		}
 		res = GroupMatcher(selector)
 		return true
 	}
@@ -371,11 +375,10 @@ private struct SelectorParser {
 				}
 				return false
 			}() {
-				let s: FilterMatcher.Side
-				switch side {
-				case "L": s = .left
-				case "R": s = .right
-				default: s = .both
+				let s: FilterMatcher.Side = switch side {
+				case "L": .left
+				case "R": .right
+				default: .both
 				}
 				res = FilterMatcher(side: s, selector: inner!)
 				return true
@@ -440,7 +443,9 @@ private struct SelectorParser {
 			res.composites.append(composite)
 			rc = true
 			skipWS()
-		} while parseChar(",") && { skipWS(); return true }()
+		} while parseChar(",") && { skipWS()
+			return true
+		}()
 		return rc
 	}
 }
@@ -464,21 +469,21 @@ public struct ScopeSelector: Sendable {
 	/// Creates a selector from a selector string.
 	public init(_ string: String) {
 		guard !string.isEmpty else {
-			self.data = nil
+			data = nil
 			return
 		}
 		var parser = SelectorParser(string)
 		var selector = SelectorData()
 		if parser.parseSelector(&selector) {
-			self.data = selector
+			data = selector
 		} else {
-			self.data = nil
+			data = nil
 		}
 	}
 
 	/// Creates an empty selector that matches everything with rank 0.
 	public init() {
-		self.data = nil
+		data = nil
 	}
 
 	/// Tests whether this selector matches the given scope context.
