@@ -30,6 +30,10 @@ let package = Package(
 			targets: ["TMEditor"]
 		),
 		.library(
+			name: "TMGrammar",
+			targets: ["TMGrammar"]
+		),
+		.library(
 			name: "TMAppKit",
 			targets: ["TMAppKit"]
 		),
@@ -61,6 +65,14 @@ let package = Package(
 		),
 
 		// MARK: - Iteration 1: Visual Shell
+
+		.target(
+			name: "TMGrammar",
+			dependencies: [
+				"TMBundle",
+			],
+			path: "Sources/TMGrammar"
+		),
 
 		.target(
 			name: "TMEditor",
@@ -140,6 +152,12 @@ let package = Package(
 			name: "TMEditorTests",
 			dependencies: ["TMEditor"],
 			path: "Tests/TMEditorTests"
+		),
+
+		.testTarget(
+			name: "TMGrammarTests",
+			dependencies: ["TMGrammar", "TMBundle"],
+			path: "Tests/TMGrammarTests"
 		),
 	]
 )
