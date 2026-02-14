@@ -2,8 +2,9 @@ import AppKit
 import TMDocumentWindow
 import TMTheme
 
-/// The main application delegate. Sets up the menu bar, creates the initial
-/// document window, and loads the default theme.
+/// The main application delegate. Sets up the menu bar, loads the default
+/// theme, installs key bindings, creates the initial document window, and
+/// manages window state restoration.
 ///
 /// Matches TextMate's initial launch behaviour: one untitled document window
 /// with the default theme applied.
@@ -11,11 +12,29 @@ import TMTheme
 class AppDelegate: NSObject, NSApplicationDelegate {
 	private var windowControllers: [DocumentWindowController] = []
 
+	/// The currently loaded theme, applied to every new window.
+	private var currentTheme: Theme?
+
+	/// Custom key bindings loaded from `KeyBindings.dict`.
+	private var keyBindings: [KeyBindingsLoader.KeyBinding] = []
+
+	/// Event monitor for custom key bindings.
+	private var keyEventMonitor: Any?
+
 	// MARK: - Application Lifecycle
 
 	func applicationDidFinishLaunching(_: Notification) {
 		NSApp.mainMenu = MainMenuBuilder.buildMainMenu()
-		newDocument(nil)
+		loadDefaultTheme()
+		loadKeyBindings()
+		restoreWindowState() ?? newDocument(nil)
+	}
+
+	func applicationWillTerminate(_: Notification) {
+		saveWindowState()
+		if let monitor = keyEventMonitor {
+			NSEvent.removeMonitor(monitor)
+		}
 	}
 
 	func applicationShouldTerminateAfterLastWindowClosed(_: NSApplication) -> Bool {
@@ -29,10 +48,61 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 		return true
 	}
 
+	// MARK: - Theme
+
+	private func loadDefaultTheme() {
+		guard let url = Bundle.module.url(
+			forResource: "Mac Classic",
+			withExtension: "tmTheme",
+		) else {
+			return
+		}
+		do {
+			currentTheme = try ThemeLoader.load(from: url)
+		} catch {
+			NSLog("Failed to load default theme: \(error)")
+		}
+	}
+
+	private func applyTheme(to controller: DocumentWindowController) {
+		if let theme = currentTheme {
+			controller.applyTheme(theme)
+		}
+	}
+
+	// MARK: - Key Bindings
+
+	private func loadKeyBindings() {
+		if let url = Bundle.module.url(
+			forResource: "KeyBindings",
+			withExtension: "dict",
+		) {
+			keyBindings = KeyBindingsLoader.load(from: url)
+		}
+
+		guard !keyBindings.isEmpty else { return }
+
+		let bindings = keyBindings
+		keyEventMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+			let parsed = KeyBindingsLoader.parseEvent(event)
+			if let binding = bindings.first(where: { $0.keyString == parsed }) {
+				let selector = NSSelectorFromString(binding.action)
+				if let responder = NSApp.keyWindow?.firstResponder,
+				   responder.responds(to: selector)
+				{
+					responder.perform(selector, with: nil)
+					return nil // event consumed
+				}
+			}
+			return event // not consumed
+		}
+	}
+
 	// MARK: - File Actions
 
 	@objc func newDocument(_: Any?) {
 		let controller = DocumentWindowController()
+		applyTheme(to: controller)
 		windowControllers.append(controller)
 		controller.showWindow(nil)
 	}
@@ -59,8 +129,22 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 		// Placeholder — Open Quickly panel (Iteration 3).
 	}
 
+	@objc func saveDocument(_: Any?) {
+		guard let controller = currentWindowController() else { return }
+		controller.saveDocument()
+	}
+
+	@objc func saveDocumentAs(_: Any?) {
+		guard let controller = currentWindowController() else { return }
+		controller.saveDocumentAs()
+	}
+
 	@objc func saveAllDocuments(_: Any?) {
-		// Placeholder — iterate open documents and save each.
+		for controller in windowControllers {
+			if controller.documentModel.fileURL != nil {
+				controller.saveDocument()
+			}
+		}
 	}
 
 	@objc func performCloseWindow(_: Any?) {
@@ -73,6 +157,37 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 		// Placeholder — Preferences window (Iteration 3).
 	}
 
+	// MARK: - Window State Restoration
+
+	private static let restorationKey = "TMOpenDocumentURLs"
+
+	private func saveWindowState() {
+		let urls = windowControllers.compactMap(\.documentModel.fileURL?.absoluteString)
+		UserDefaults.standard.set(urls, forKey: Self.restorationKey)
+	}
+
+	/// Restore previously open document windows. Calls `newDocument` if
+	/// no state is saved, and returns non-nil to indicate restoration occurred.
+	@discardableResult
+	private func restoreWindowState() -> Void? {
+		guard let urls = UserDefaults.standard.stringArray(forKey: Self.restorationKey),
+		      !urls.isEmpty
+		else {
+			return nil
+		}
+
+		var restoredAny = false
+		for string in urls {
+			if let url = URL(string: string),
+			   FileManager.default.fileExists(atPath: url.path)
+			{
+				openURL(url)
+				restoredAny = true
+			}
+		}
+		return restoredAny ? () : nil
+	}
+
 	// MARK: - Helpers
 
 	private func openURL(_ url: URL) {
@@ -80,15 +195,19 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 		FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir)
 
 		let controller = DocumentWindowController()
+		applyTheme(to: controller)
+
 		if isDir.boolValue {
 			controller.setProjectRoot(url)
 		} else {
-			if let text = try? String(contentsOf: url, encoding: .utf8) {
-				controller.textView.string = text
-				controller.window?.title = url.lastPathComponent
-			}
+			controller.openFile(at: url)
 		}
 		windowControllers.append(controller)
 		controller.showWindow(nil)
+	}
+
+	private func currentWindowController() -> DocumentWindowController? {
+		guard let window = NSApp.keyWindow else { return nil }
+		return windowControllers.first { $0.window === window }
 	}
 }

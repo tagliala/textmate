@@ -4,7 +4,7 @@ import AppKit
 /// appearance and behavior.
 ///
 /// Supports:
-/// - Draggable tab reordering
+/// - Drag-to-reorder tabs
 /// - Close buttons on each tab
 /// - Overflow menu when tabs exceed visible width
 /// - ⌘1–⌘8 to switch to a tab by index, ⌘9 for the last tab
@@ -36,6 +36,9 @@ public class TabBarView: NSView {
 	private let stackView = NSStackView()
 	private let overflowButton = NSButton()
 
+	/// The drag pasteboard type used for tab reordering.
+	static let tabDragType = NSPasteboard.PasteboardType("com.macromates.textmate.tab")
+
 	public var tabBarHeight: CGFloat = 24
 
 	override public var isFlipped: Bool {
@@ -45,6 +48,7 @@ public class TabBarView: NSView {
 	override public init(frame: NSRect) {
 		super.init(frame: frame)
 		setupViews()
+		registerForDraggedTypes([Self.tabDragType])
 	}
 
 	@available(*, unavailable)
@@ -65,6 +69,64 @@ public class TabBarView: NSView {
 		selectedIndex = index
 		updateSelection()
 		delegate?.tabBarView(self, didSelectTabAt: index)
+	}
+
+	// MARK: - Drag & Drop (Destination)
+
+	override public func draggingEntered(_ sender: any NSDraggingInfo) -> NSDragOperation {
+		guard sender.draggingPasteboard.availableType(from: [Self.tabDragType]) != nil else {
+			return []
+		}
+		return .move
+	}
+
+	override public func draggingUpdated(_ sender: any NSDraggingInfo) -> NSDragOperation {
+		guard sender.draggingPasteboard.availableType(from: [Self.tabDragType]) != nil else {
+			return []
+		}
+		return .move
+	}
+
+	override public func performDragOperation(_ sender: any NSDraggingInfo) -> Bool {
+		guard let data = sender.draggingPasteboard.data(forType: Self.tabDragType),
+		      let fromIndex = try? JSONDecoder().decode(Int.self, from: data)
+		else {
+			return false
+		}
+
+		let dropPoint = convert(sender.draggingLocation, from: nil)
+		var toIndex = tabs.count - 1
+
+		for (i, button) in tabButtons.enumerated() {
+			let mid = button.frame.midX
+			if dropPoint.x < mid {
+				toIndex = i
+				break
+			}
+		}
+
+		guard fromIndex != toIndex, fromIndex >= 0, fromIndex < tabs.count else {
+			return false
+		}
+
+		// Reorder the model
+		let tab = tabs.remove(at: fromIndex)
+		let insertAt = toIndex > fromIndex ? toIndex - 1 : toIndex
+		let clampedInsert = max(0, min(insertAt, tabs.count))
+		tabs.insert(tab, at: clampedInsert)
+
+		// Update selected index to follow the dragged tab
+		if fromIndex == selectedIndex {
+			selectedIndex = clampedInsert
+		} else if fromIndex < selectedIndex, clampedInsert >= selectedIndex {
+			selectedIndex -= 1
+		} else if fromIndex > selectedIndex, clampedInsert <= selectedIndex {
+			selectedIndex += 1
+		}
+
+		rebuildTabButtons()
+		delegate?.tabBarView(self, didReorderTabFrom: fromIndex, to: clampedInsert)
+		return true
 	}
 
 	// MARK: - Private
@@ -195,8 +257,39 @@ private class TabButton: NSView {
 		closeAction?()
 	}
 
-	override func mouseDown(with _: NSEvent) {
+	override func mouseDown(with event: NSEvent) {
 		selectAction?(tabIndex)
+		// Start drag tracking — if the mouse moves more than 3px, begin drag
+		dragStartLocation = convert(event.locationInWindow, from: nil)
+	}
+
+	private var dragStartLocation: NSPoint = .zero
+
+	override func mouseDragged(with event: NSEvent) {
+		let current = convert(event.locationInWindow, from: nil)
+		let dx = abs(current.x - dragStartLocation.x)
+		let dy = abs(current.y - dragStartLocation.y)
+		guard dx > 3 || dy > 3 else { return }
+
+		let pasteboardItem = NSPasteboardItem()
+		if let data = try? JSONEncoder().encode(tabIndex) {
+			pasteboardItem.setData(data, forType: TabBarView.tabDragType)
+		}
+
+		let draggingItem = NSDraggingItem(pasteboardWriter: pasteboardItem)
+		draggingItem.setDraggingFrame(bounds, contents: snapshot())
+		beginDraggingSession(with: [draggingItem], event: event, source: self)
+	}
+
+	/// Create a snapshot image of this view for the drag image.
+	private func snapshot() -> NSImage {
+		let image = NSImage(size: bounds.size)
+		image.lockFocus()
+		if let ctx = NSGraphicsContext.current?.cgContext {
+			layer?.render(in: ctx)
+		}
+		image.unlockFocus()
+		return image
 	}
 
 	override func draw(_ dirtyRect: NSRect) {
@@ -206,5 +299,16 @@ private class TabButton: NSView {
 			bounds.fill()
 		}
 		titleLabel.textColor = isSelected ? .labelColor : .secondaryLabelColor
+	}
+}
+
+// MARK: - TabButton + NSDraggingSource
+
+extension TabButton: NSDraggingSource {
+	func draggingSession(
+		_: NSDraggingSession,
+		sourceOperationMaskFor _: NSDraggingContext,
+	) -> NSDragOperation {
+		.move
 	}
 }

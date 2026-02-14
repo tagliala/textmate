@@ -66,7 +66,11 @@ let package = Package(
 				"TMAppKit",
 				"TMDocumentWindow",
 			],
-			path: "Sources/TMApp"
+			path: "Sources/TMApp",
+			resources: [
+				.copy("Resources/Mac Classic.tmTheme"),
+				.copy("Resources/KeyBindings.dict"),
+			]
 		),
 
 		// MARK: - Test Targets
@@ -81,6 +85,12 @@ let package = Package(
 			name: "TMThemeTests",
 			dependencies: ["TMTheme"],
 			path: "Tests/TMThemeTests"
+		),
+
+		.testTarget(
+			name: "TMDocumentWindowTests",
+			dependencies: ["TMDocumentWindow"],
+			path: "Tests/TMDocumentWindowTests"
 		),
 	]
 )

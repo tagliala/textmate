@@ -140,12 +140,12 @@ enum MainMenuBuilder {
 		menu.addItem(.separator())
 		menu.addItem(
 			title: String(localized: "Save", comment: "File menu item"),
-			action: #selector(NSDocument.save(_:)),
+			action: #selector(AppDelegate.saveDocument(_:)),
 			key: "s",
 		)
 		menu.addItem(
 			title: String(localized: "Save As…", comment: "File menu item"),
-			action: #selector(NSDocument.saveAs(_:)),
+			action: #selector(AppDelegate.saveDocumentAs(_:)),
 			key: "s",
 			modifiers: [.command, .shift],
 		)

@@ -10,17 +10,21 @@
 |---------|------|--------|
 | **TMCore** | `TextPosition.swift`, `TextRange.swift`, `SelectionState.swift` | ✅ Pre-existing |
 | **TMTheme** | `ThemeColor.swift`, `ThemeStyleRule.swift` | ✅ Pre-existing |
-| **TMTheme** | `Theme.swift` — global/gutter settings, `isDark`, `effectiveAppearance` | ✅ New |
-| **TMTheme** | `ThemeLoader.swift` — `.tmTheme` plist parser | ✅ New |
-| **TMAppKit** | `TabBarView.swift` — tab buttons, selection, close, theme | ✅ New |
-| **TMAppKit** | `StatusBarView.swift` — line/col, grammar, encoding labels | ✅ New |
-| **TMAppKit** | `GutterView.swift` — line numbers, theme-aware colors | ✅ New |
-| **TMAppKit** | `FileBrowserView.swift` — `NSOutlineView` file tree, icons | ✅ New |
-| **TMDocumentWindow** | `DocumentWindowController.swift` — complete layout | ✅ New |
-| **TMApp** | `KeyBindingsLoader.swift` — `KeyBindings.dict` plist loader | ✅ New |
-| **TMApp** | `MainMenuBuilder.swift` — all 10 menus with shortcuts | ✅ New |
-| **TMApp** | `AppDelegate.swift` — lifecycle, open/save, window mgmt | ✅ New |
-| **TMApp** | `main.swift` — entry point | ✅ New |
+| **TMTheme** | `Theme.swift` — global/gutter settings, `isDark`, `effectiveAppearance` | ✅ Pre-existing |
+| **TMTheme** | `ThemeLoader.swift` — `.tmTheme` plist parser | ✅ Pre-existing |
+| **TMAppKit** | `TabBarView.swift` — tab buttons, selection, close, drag-to-reorder | ✅ Updated |
+| **TMAppKit** | `StatusBarView.swift` — line/col, grammar, encoding labels | ✅ Pre-existing |
+| **TMAppKit** | `GutterView.swift` — line numbers, theme-aware colors | ✅ Pre-existing |
+| **TMAppKit** | `FileBrowserView.swift` — `NSOutlineView` file tree, icons | ✅ Pre-existing |
+| **TMDocumentWindow** | `DocumentWindowController.swift` — layout, save/open, theme | ✅ Updated |
+| **TMDocumentWindow** | `DocumentModel.swift` — file I/O, encoding detection, BOM | ✅ New |
+| **TMApp** | `KeyBindingsLoader.swift` — plist loader + event parsing | ✅ Updated |
+| **TMApp** | `MainMenuBuilder.swift` — all 10 menus with shortcuts | ✅ Updated |
+| **TMApp** | `AppDelegate.swift` — lifecycle, theme load, key bindings, window state | ✅ Updated |
+| **TMApp** | `main.swift` — entry point | ✅ Pre-existing |
+| **TMApp** | `Resources/Mac Classic.tmTheme` — bundled default theme | ✅ New |
+| **TMApp** | `Resources/KeyBindings.dict` — bundled key bindings | ✅ New |
+| **CI** | `.github/workflows/swift.yml` — lint → build → test pipeline | ✅ New |
 
 ### Tests
 
@@ -28,12 +32,13 @@
 |-------|-------|--------|
 | TMCoreTests (TextPosition, TextRange, SelectionState) | 18 | ✅ Pass |
 | TMThemeTests (ThemeColor, ThemeLoader) | 15 | ✅ Pass |
-| **Total** | **33** | **✅ All pass** |
+| TMDocumentWindowTests (DocumentModel) | 9 | ✅ Pass |
+| **Total** | **42** | **✅ All pass** |
 
 ### Build & Lint
 
 - `swift build` — clean build ✅
-- `swift test` — 33/33 pass ✅
+- `swift test` — 42/42 pass ✅
 - `swiftformat Sources/ Tests/` — 0 files need formatting ✅
 
 ---
@@ -43,33 +48,34 @@
 These items are needed to fully complete Phase 1 (Visual Shell) per
 [07-execution-plan.md](07-execution-plan.md):
 
-### High Priority
+### High Priority — ✅ All done
 
-1. **Load a real `.tmTheme` on launch**
-   - Bundle a default theme (e.g. Mac Classic or Monokai) in the app resources
-   - `AppDelegate` should call `ThemeLoader.load()` and `applyTheme()` on the
-     initial window
+1. ~~**Load a real `.tmTheme` on launch**~~ ✅
+   - Bundled "Mac Classic.tmTheme" in app resources
+   - `AppDelegate` calls `ThemeLoader.load()` and `applyTheme()` on every window
 
-2. **File open/save with encoding detection**
-   - `AppDelegate.openDocument` currently loads via `String(contentsOf:)` — add
-     `encoding/` framework integration or ICU detection
-   - Wire `NSDocument.save`/`saveAs` to write files from `NSTextView.string`
+2. ~~**File open/save with encoding detection**~~ ✅
+   - `DocumentModel` with BOM detection (UTF-8, UTF-16 BE/LE, UTF-32)
+   - Fallback encoding chain: UTF-8 → ISO Latin 1 → Windows 1252 → Mac Roman → EUC-JP → Shift JIS
+   - `DocumentWindowController.openFile(at:)` and `saveDocument()` / `saveDocumentAs()`
+   - Menu items wired to `AppDelegate.saveDocument(_:)` / `saveDocumentAs(_:)`
 
-3. **Window state restoration**
-   - Persist open windows/tabs/project roots via `NSWindowRestoration`
-   - Reopen last session on launch
+3. ~~**Window state restoration**~~ ✅
+   - `UserDefaults`-based persistence of open document URLs
+   - Restored on next launch; falls back to new untitled document
 
-4. **Tab bar drag reordering**
-   - `TabBarView` currently supports select/close but not drag-to-reorder
-   - Implement `NSDraggingSource`/`NSDraggingDestination` on `TabButton`
+4. ~~**Tab bar drag reordering**~~ ✅
+   - `TabButton` implements `NSDraggingSource` with `mouseDragged` threshold
+   - `TabBarView` implements `draggingEntered`/`draggingUpdated`/`performDragOperation`
+   - Model reordering + selection tracking + delegate notification
 
-5. **Wire `KeyBindingsLoader` into the responder chain**
-   - Load `KeyBindings.dict` at launch and install an `NSEvent.addLocalMonitor`
-     or override `performKeyEquivalent:` to dispatch bindings
+5. ~~**Wire `KeyBindingsLoader` into the responder chain**~~ ✅
+   - `parseEvent(_:)` converts `NSEvent` to TextMate key notation
+   - `NSEvent.addLocalMonitorForEvents` dispatches matched bindings to first responder
 
-6. **CI pipeline**
-   - GitHub Actions workflow targeting `swift` branch
-   - Steps: `swiftformat --lint Sources/ Tests/` → `swift build` → `swift test`
+6. ~~**CI pipeline**~~ ✅
+   - `.github/workflows/swift.yml` targeting `swift` branch
+   - Steps: `swiftformat --lint` → `swift build` → `swift test`
    - Runner: `macos-latest`
 
 ### Medium Priority

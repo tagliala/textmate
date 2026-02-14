@@ -25,6 +25,9 @@ public class DocumentWindowController: NSWindowController {
 	public let statusBarView = StatusBarView()
 	public let textView = NSTextView()
 
+	/// The document model for the currently displayed file.
+	public let documentModel = DocumentModel()
+
 	private let splitView = NSSplitView()
 	private let editorContainer = NSView()
 	private let scrollView = NSScrollView()
@@ -82,6 +85,62 @@ public class DocumentWindowController: NSWindowController {
 	public func setProjectRoot(_ url: URL) {
 		fileBrowserView.rootURL = url
 		window?.title = url.lastPathComponent
+	}
+
+	/// Open a file, detecting its encoding automatically.
+	public func openFile(at url: URL) {
+		do {
+			let text = try documentModel.readFile(at: url)
+			textView.string = text
+			window?.title = documentModel.displayTitle
+			statusBarView.setEncoding(documentModel.encodingDisplayName)
+			documentModel.isModified = false
+			updateWindowTitle()
+		} catch {
+			let alert = NSAlert(error: error)
+			alert.runModal()
+		}
+	}
+
+	/// Save the current document. Returns `true` if the save succeeded.
+	@discardableResult
+	public func saveDocument() -> Bool {
+		guard documentModel.fileURL != nil else {
+			return saveDocumentAs()
+		}
+		do {
+			try documentModel.writeFile(text: textView.string)
+			updateWindowTitle()
+			return true
+		} catch {
+			let alert = NSAlert(error: error)
+			alert.runModal()
+			return false
+		}
+	}
+
+	/// Present a Save panel and save the document. Returns `true` on success.
+	@discardableResult
+	public func saveDocumentAs() -> Bool {
+		let panel = NSSavePanel()
+		panel.canCreateDirectories = true
+		panel.nameFieldStringValue = documentModel.displayTitle
+
+		guard panel.runModal() == .OK, let url = panel.url else {
+			return false
+		}
+
+		documentModel.fileURL = url
+		do {
+			try documentModel.writeFile(text: textView.string)
+			window?.title = documentModel.displayTitle
+			updateWindowTitle()
+			return true
+		} catch {
+			let alert = NSAlert(error: error)
+			alert.runModal()
+			return false
+		}
 	}
 
 	/// Toggle file browser visibility.
@@ -196,5 +255,10 @@ public class DocumentWindowController: NSWindowController {
 			scrollView.trailingAnchor.constraint(equalTo: editorContainer.trailingAnchor),
 			scrollView.bottomAnchor.constraint(equalTo: editorContainer.bottomAnchor),
 		])
+	}
+
+	private func updateWindowTitle() {
+		let title = documentModel.displayTitle
+		window?.title = documentModel.isModified ? "● \(title)" : title
 	}
 }
