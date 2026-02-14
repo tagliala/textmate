@@ -2,8 +2,8 @@
 
 ## Requirements
 
-- **macOS 26.3** or later
-- **Xcode 18** or later (ships with Swift 6.2)
+- **macOS 26.2** or later
+- **Xcode 26.2** or later (ships with Swift 6.2)
 - Alternatively: Swift 6.2+ toolchain from [swift.org](https://swift.org/install/)
 
 ## Quick Start

@@ -1,7 +1,7 @@
 # TextMate Swift Rewrite — Architecture Documentation
 
 This directory contains the strategic roadmap for a complete rewrite of TextMate
-as a modern macOS application written entirely in Swift, targeting **macOS 26.3+**
+as a modern macOS application written entirely in Swift, targeting **macOS 26.2+**
 with **Swift 6.2+**.
 
 ## Documents
@@ -21,7 +21,7 @@ with **Swift 6.2+**.
 ## Key Decisions
 
 - **Language:** Swift 6.2+ (strict concurrency, `Sendable` enforcement)
-- **Minimum OS:** macOS 26.3
+- **Minimum OS:** macOS 26.2
 - **Build system:** Swift Package Manager
 - **Testing:** Swift Testing framework (`@Test`, `#expect`)
 - **Linting:** SwiftFormat

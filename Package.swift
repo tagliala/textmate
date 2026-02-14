@@ -6,7 +6,7 @@ import PackageDescription
 let package = Package(
 	name: "TextMate",
 	platforms: [
-		.macOS("26.3"),
+		.macOS("26.2"),
 	],
 	products: [
 		.library(
