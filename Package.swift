@@ -26,6 +26,10 @@ let package = Package(
 			targets: ["TMTheme"]
 		),
 		.library(
+			name: "TMEditor",
+			targets: ["TMEditor"]
+		),
+		.library(
 			name: "TMAppKit",
 			targets: ["TMAppKit"]
 		),
@@ -57,6 +61,14 @@ let package = Package(
 		),
 
 		// MARK: - Iteration 1: Visual Shell
+
+		.target(
+			name: "TMEditor",
+			dependencies: [
+				"TMCore",
+			],
+			path: "Sources/TMEditor"
+		),
 
 		.target(
 			name: "TMTheme",
@@ -122,6 +134,12 @@ let package = Package(
 			name: "TMSettingsTests",
 			dependencies: ["TMSettings"],
 			path: "Tests/TMSettingsTests"
+		),
+
+		.testTarget(
+			name: "TMEditorTests",
+			dependencies: ["TMEditor"],
+			path: "Tests/TMEditorTests"
 		),
 	]
 )
