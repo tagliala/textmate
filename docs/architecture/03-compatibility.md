@@ -144,3 +144,33 @@ Existing bundles require **no migration**. The new bundle loader reads
 | Scope selector matching differences | **High** | Port scope selector tests + fuzzing |
 | Theme rendering differences | **Low** | Visual comparison via screenshot diffing |
 | `tm_dialog2` incompatibility | **Medium** | Document breaking changes; migration guide |
+
+## Localization & Theme Scope
+
+### Policy
+
+- **All** user-facing strings in the application must use Swift localization best-practices (for example, `String(localized:comment:)`) so the UI is localizable and translators receive context. Hard-coded English UI strings are prohibited.
+- The system appearance (light/dark) determines application chrome (menus, tab bar, gutter, sidebar, status bar, controls). Chrome must use AppKit system colors and respect `effectiveAppearance` rather than being driven by bundle themes.
+- `.tmTheme` files (legacy TextMate theme plists) apply **only** to editor content (syntax colors, editor background, insertion point, selection). A theme must not change chrome colors or window appearance.
+
+### Implementation Guidance
+
+- Use `String(localized:comment:)` for all menu titles, control labels, accessibility labels, status text, and any string shown to the user. Add meaningful `comment:` text for translators.
+- Chrome components (tab bar, gutter, status bar, file browser) should use AppKit system colors such as `NSColor.labelColor`, `NSColor.secondaryLabelColor`, `NSColor.controlBackgroundColor`, and `NSColor.controlAccentColor` so they automatically follow system appearance.
+- `DocumentWindowController.applyTheme(_:)` (or equivalent) must be implemented to modify only the editor `NSTextView` visual properties: `backgroundColor`, `textColor`, `insertionPointColor`, and `selectedTextAttributes`. Do not set `window.appearance` or mutate chrome view colors from theme application.
+- When parsing legacy `.tmTheme` files, map their color settings to editor style rules and explicitly ignore any "global" or "ui" chrome color keys; emit a non-fatal logged warning if such keys are present so bundle authors can be notified to migrate.
+
+### Validation and Tests
+
+- Add automated checks to detect hard-coded UI strings in menu-building code and major chrome components. A CI job should fail if new literal UI strings are added without localization.
+- Add light/dark snapshot tests for chrome components to ensure the UI follows `effectiveAppearance` across macOS appearances.
+- Add editor snapshot tests that confirm `.tmTheme` color mappings affect only the editor view and do not alter chrome elements.
+
+### Accessibility Notes
+
+- All interactive controls must include localized accessibility labels and hints where appropriate (for example, the tab close button `accessibilityLabel`/`accessibilityHelp`).
+
+### Migration Notes
+
+- When migrating user-installed themes, copy their color values into the editor-style model only. If a theme attempted to style chrome in the legacy app, prefer keeping the existing system chrome and notify the user that only editor colors were imported.
+
