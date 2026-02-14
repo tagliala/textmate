@@ -1,5 +1,4 @@
 import Testing
-
 @testable import TMCore
 
 @Suite("SelectionState")
@@ -42,11 +41,11 @@ struct SelectionStateTests {
 		let ranges = [
 			TextRange(
 				anchor: TextPosition(line: 0, column: 0, offset: 0),
-				head: TextPosition(line: 0, column: 10, offset: 10)
+				head: TextPosition(line: 0, column: 10, offset: 10),
 			),
 			TextRange(
 				anchor: TextPosition(line: 0, column: 5, offset: 5),
-				head: TextPosition(line: 0, column: 15, offset: 15)
+				head: TextPosition(line: 0, column: 15, offset: 15),
 			),
 		]
 		let state = SelectionState(ranges)
@@ -60,11 +59,11 @@ struct SelectionStateTests {
 		let ranges = [
 			TextRange(
 				anchor: TextPosition(line: 0, column: 0, offset: 0),
-				head: TextPosition(line: 0, column: 5, offset: 5)
+				head: TextPosition(line: 0, column: 5, offset: 5),
 			),
 			TextRange(
 				anchor: TextPosition(line: 0, column: 5, offset: 5),
-				head: TextPosition(line: 0, column: 10, offset: 10)
+				head: TextPosition(line: 0, column: 10, offset: 10),
 			),
 		]
 		let state = SelectionState(ranges)
@@ -84,7 +83,7 @@ struct SelectionStateTests {
 	func singleRange() {
 		let range = TextRange(
 			anchor: TextPosition(line: 0, column: 0, offset: 0),
-			head: TextPosition(line: 1, column: 0, offset: 10)
+			head: TextPosition(line: 1, column: 0, offset: 10),
 		)
 		let state = SelectionState([range])
 		#expect(state.count == 1)

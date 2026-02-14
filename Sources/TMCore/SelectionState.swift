@@ -10,12 +10,12 @@ public struct SelectionState: Sendable, Hashable {
 	///
 	/// Ranges are sorted and overlapping ranges are merged automatically.
 	public init(_ ranges: [TextRange]) {
-		self.selections = Self.normalized(ranges)
+		selections = Self.normalized(ranges)
 	}
 
 	/// Creates a selection state with a single caret at the given position.
 	public init(caret position: TextPosition) {
-		self.selections = [TextRange(caret: position)]
+		selections = [TextRange(caret: position)]
 	}
 
 	/// The number of active selections (carets or ranges).
@@ -49,7 +49,7 @@ public struct SelectionState: Sendable, Hashable {
 				merged[merged.count - 1] = TextRange(
 					anchor: newStart,
 					head: newEnd,
-					isColumnar: last.isColumnar || range.isColumnar
+					isColumnar: last.isColumnar || range.isColumnar,
 				)
 			} else {
 				merged.append(range)

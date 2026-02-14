@@ -21,9 +21,9 @@ public struct TextRange: Sendable, Hashable {
 
 	/// Creates a caret (zero-width selection) at the given position.
 	public init(caret position: TextPosition) {
-		self.anchor = position
-		self.head = position
-		self.isColumnar = false
+		anchor = position
+		head = position
+		isColumnar = false
 	}
 
 	/// The earlier of anchor and head.

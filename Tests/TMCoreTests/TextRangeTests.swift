@@ -1,5 +1,4 @@
 import Testing
-
 @testable import TMCore
 
 @Suite("TextRange")
@@ -43,7 +42,7 @@ struct TextRangeTests {
 		let range = TextRange(
 			anchor: TextPosition(line: 0, column: 0, offset: 0),
 			head: TextPosition(line: 3, column: 5, offset: 30),
-			isColumnar: true
+			isColumnar: true,
 		)
 		#expect(range.isColumnar)
 	}
