@@ -151,10 +151,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 		NSApp.keyWindow?.close()
 	}
 
-	// MARK: - Preferences
+	// MARK: - About & Preferences
+
+	@objc func showAboutPanel(_: Any?) {
+		AboutPanelController.shared.showAboutPanel()
+	}
 
 	@objc func showPreferences(_: Any?) {
-		// Placeholder — Preferences window (Iteration 3).
+		PreferencesWindowController.shared.showPreferences()
 	}
 
 	// MARK: - Window State Restoration

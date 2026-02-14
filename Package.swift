@@ -67,6 +67,7 @@ let package = Package(
 				"TMDocumentWindow",
 			],
 			path: "Sources/TMApp",
+			exclude: ["Info.plist"],
 			resources: [
 				.copy("Resources/Mac Classic.tmTheme"),
 				.copy("Resources/KeyBindings.dict"),

@@ -38,7 +38,7 @@ enum MainMenuBuilder {
 
 		menu.addItem(
 			title: String(localized: "About TextMate", comment: "App menu: about"),
-			action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)),
+			action: #selector(AppDelegate.showAboutPanel(_:)),
 		)
 		menu.addItem(.separator())
 		menu.addItem(

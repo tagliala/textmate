@@ -56,6 +56,11 @@ public class TabBarView: NSView {
 		fatalError("init(coder:) not supported")
 	}
 
+	override public func layout() {
+		super.layout()
+		updateOverflowButton()
+	}
+
 	// MARK: - Public API
 
 	public func setTabs(_ newTabs: [Tab], selectedIndex: Int) {
@@ -145,12 +150,70 @@ public class TabBarView: NSView {
 		scrollView.translatesAutoresizingMaskIntoConstraints = false
 		addSubview(scrollView)
 
+		// Overflow button — shown when tabs exceed visible width
+		overflowButton.bezelStyle = .inline
+		overflowButton.isBordered = false
+		overflowButton.title = "»"
+		overflowButton.font = .systemFont(ofSize: 13, weight: .medium)
+		overflowButton.target = self
+		overflowButton.action = #selector(showOverflowMenu(_:))
+		overflowButton.translatesAutoresizingMaskIntoConstraints = false
+		overflowButton.isHidden = true
+		overflowButton.toolTip = String(localized: "Show hidden tabs", comment: "Tab bar overflow button tooltip")
+		addSubview(overflowButton)
+
 		NSLayoutConstraint.activate([
 			scrollView.leadingAnchor.constraint(equalTo: leadingAnchor),
-			scrollView.trailingAnchor.constraint(equalTo: trailingAnchor),
+			scrollView.trailingAnchor.constraint(equalTo: overflowButton.leadingAnchor),
 			scrollView.topAnchor.constraint(equalTo: topAnchor),
 			scrollView.bottomAnchor.constraint(equalTo: bottomAnchor),
+
+			overflowButton.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -4),
+			overflowButton.centerYAnchor.constraint(equalTo: centerYAnchor),
+			overflowButton.widthAnchor.constraint(equalToConstant: 24),
+			overflowButton.heightAnchor.constraint(equalToConstant: 20),
 		])
+	}
+
+	/// Show/hide the overflow button based on whether tabs exceed visible width.
+	private func updateOverflowButton() {
+		let contentWidth = stackView.fittingSize.width
+		let visibleWidth = scrollView.bounds.width
+		overflowButton.isHidden = contentWidth <= visibleWidth
+	}
+
+	@objc private func showOverflowMenu(_: Any?) {
+		let menu = NSMenu()
+		let visibleWidth = scrollView.bounds.width
+		var accumulatedWidth: CGFloat = 0
+
+		for (index, tab) in tabs.enumerated() {
+			let buttonWidth = tabButtons.indices.contains(index) ? tabButtons[index].bounds.width : 100
+			accumulatedWidth += buttonWidth
+
+			// Only show tabs that are partially or fully hidden
+			if accumulatedWidth > visibleWidth {
+				let item = NSMenuItem(title: tab.title, action: #selector(overflowTabSelected(_:)), keyEquivalent: "")
+				item.target = self
+				item.tag = index
+				if index == selectedIndex {
+					item.state = .on
+				}
+				menu.addItem(item)
+			}
+		}
+
+		if !menu.items.isEmpty {
+			menu.popUp(
+				positioning: nil,
+				at: NSPoint(x: 0, y: overflowButton.bounds.height),
+				in: overflowButton,
+			)
+		}
+	}
+
+	@objc private func overflowTabSelected(_ sender: NSMenuItem) {
+		selectTab(at: sender.tag)
 	}
 
 	private func rebuildTabButtons() {
