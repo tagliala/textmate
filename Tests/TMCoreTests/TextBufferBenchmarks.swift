@@ -1,6 +1,5 @@
 import Foundation
 import Testing
-
 @testable import TMCore
 
 /// Benchmarks for `TextBuffer` piece-table operations.
@@ -11,7 +10,6 @@ import Testing
 /// quadratic regressions).
 @Suite("TextBuffer — Benchmarks")
 struct TextBufferBenchmarks {
-
 	// MARK: - Helpers
 
 	/// Generates a string of the given byte count filled with printable ASCII
@@ -37,12 +35,12 @@ struct TextBufferBenchmarks {
 		let chunk = "Hello, world!\n"
 
 		let elapsed = clock.measure {
-			for _ in 0 ..< 10_000 {
+			for _ in 0 ..< 10000 {
 				buf.insert(at: buf.size, string: chunk)
 			}
 		}
 
-		#expect(buf.lines > 10_000)
+		#expect(buf.lines > 10000)
 		// Release-mode: should complete well under 1 second.
 		#expect(elapsed < .seconds(1))
 	}
@@ -66,18 +64,18 @@ struct TextBufferBenchmarks {
 
 	@Test func randomInsert_2k() {
 		let clock = ContinuousClock()
-		let buf = TextBuffer(generateText(size: 1_000))
+		let buf = TextBuffer(generateText(size: 1000))
 
 		// Use a simple deterministic "random" position.
 		var pos = 0
 		let elapsed = clock.measure {
-			for _ in 0 ..< 2_000 {
+			for _ in 0 ..< 2000 {
 				pos = (pos * 31 + 7) % max(buf.size, 1)
 				buf.insert(at: pos, string: "a")
 			}
 		}
 
-		#expect(buf.size == 3_000)
+		#expect(buf.size == 3000)
 		// Release-mode: piece table random insert should be fast.
 		#expect(elapsed < .seconds(2))
 	}
@@ -86,12 +84,12 @@ struct TextBufferBenchmarks {
 
 	@Test func randomErase_2k() {
 		let clock = ContinuousClock()
-		let initialSize = 5_000
+		let initialSize = 5000
 		let buf = TextBuffer(generateText(size: initialSize))
 
 		var pos = 0
 		let elapsed = clock.measure {
-			for _ in 0 ..< 2_000 {
+			for _ in 0 ..< 2000 {
 				let sz = buf.size
 				if sz <= 1 { break }
 				pos = (pos * 31 + 7) % (sz - 1)
@@ -99,7 +97,7 @@ struct TextBufferBenchmarks {
 			}
 		}
 
-		#expect(buf.size == initialSize - 2_000)
+		#expect(buf.size == initialSize - 2000)
 		#expect(elapsed < .seconds(2))
 	}
 
@@ -111,7 +109,7 @@ struct TextBufferBenchmarks {
 		let clock = ContinuousClock()
 
 		let elapsed = clock.measure {
-			for i in stride(from: 0, to: 100_000, by: 1_000) {
+			for i in stride(from: 0, to: 100_000, by: 1000) {
 				let end = min(i + 500, buf.size)
 				_ = buf.substring(from: i, to: end)
 			}
@@ -123,7 +121,7 @@ struct TextBufferBenchmarks {
 	// MARK: - Line Operations
 
 	@Test func lineStartEnd_large() {
-		let text = generateText(size: 50_000)
+		let text = generateText(size: 50000)
 		let buf = TextBuffer(text)
 		let clock = ContinuousClock()
 
@@ -141,7 +139,7 @@ struct TextBufferBenchmarks {
 	// MARK: - Offset ↔ Position Conversion
 
 	@Test func offsetPositionConversion_large() {
-		let text = generateText(size: 50_000)
+		let text = generateText(size: 50000)
 		let buf = TextBuffer(text)
 		let clock = ContinuousClock()
 
@@ -160,10 +158,10 @@ struct TextBufferBenchmarks {
 
 	@Test func mixedOperations_stress() {
 		let clock = ContinuousClock()
-		let buf = TextBuffer(generateText(size: 10_000))
+		let buf = TextBuffer(generateText(size: 10000))
 
 		let elapsed = clock.measure {
-			for i in 0 ..< 5_000 {
+			for i in 0 ..< 5000 {
 				let sz = buf.size
 				if sz < 10 {
 					buf.insert(at: 0, string: "padding text\n")

@@ -11,39 +11,43 @@ let package = Package(
 	products: [
 		.library(
 			name: "TMCore",
-			targets: ["TMCore"]
+			targets: ["TMCore"],
 		),
 		.library(
 			name: "TMBundle",
-			targets: ["TMBundle"]
+			targets: ["TMBundle"],
 		),
 		.library(
 			name: "TMSettings",
-			targets: ["TMSettings"]
+			targets: ["TMSettings"],
 		),
 		.library(
 			name: "TMTheme",
-			targets: ["TMTheme"]
+			targets: ["TMTheme"],
 		),
 		.library(
 			name: "TMEditor",
-			targets: ["TMEditor"]
+			targets: ["TMEditor"],
 		),
 		.library(
 			name: "TMGrammar",
-			targets: ["TMGrammar"]
+			targets: ["TMGrammar"],
 		),
 		.library(
 			name: "TMAppKit",
-			targets: ["TMAppKit"]
+			targets: ["TMAppKit"],
+		),
+		.library(
+			name: "TMEditorUI",
+			targets: ["TMEditorUI"],
 		),
 		.library(
 			name: "TMDocumentWindow",
-			targets: ["TMDocumentWindow"]
+			targets: ["TMDocumentWindow"],
 		),
 		.executable(
 			name: "TextMateApp",
-			targets: ["TMApp"]
+			targets: ["TMApp"],
 		),
 	],
 	targets: [
@@ -51,17 +55,17 @@ let package = Package(
 
 		.target(
 			name: "TMCore",
-			path: "Sources/TMCore"
+			path: "Sources/TMCore",
 		),
 
 		.target(
 			name: "TMBundle",
-			path: "Sources/TMBundle"
+			path: "Sources/TMBundle",
 		),
 
 		.target(
 			name: "TMSettings",
-			path: "Sources/TMSettings"
+			path: "Sources/TMSettings",
 		),
 
 		// MARK: - Iteration 1: Visual Shell
@@ -71,7 +75,7 @@ let package = Package(
 			dependencies: [
 				"TMBundle",
 			],
-			path: "Sources/TMGrammar"
+			path: "Sources/TMGrammar",
 		),
 
 		.target(
@@ -79,17 +83,27 @@ let package = Package(
 			dependencies: [
 				"TMCore",
 			],
-			path: "Sources/TMEditor"
+			path: "Sources/TMEditor",
 		),
 
 		.target(
 			name: "TMTheme",
-			path: "Sources/TMTheme"
+			path: "Sources/TMTheme",
 		),
 
 		.target(
 			name: "TMAppKit",
-			path: "Sources/TMAppKit"
+			path: "Sources/TMAppKit",
+		),
+
+		.target(
+			name: "TMEditorUI",
+			dependencies: [
+				"TMCore",
+				"TMEditor",
+				"TMTheme",
+			],
+			path: "Sources/TMEditorUI",
 		),
 
 		.target(
@@ -97,8 +111,9 @@ let package = Package(
 			dependencies: [
 				"TMTheme",
 				"TMAppKit",
+				"TMEditorUI",
 			],
-			path: "Sources/TMDocumentWindow"
+			path: "Sources/TMDocumentWindow",
 		),
 
 		.executableTarget(
@@ -113,7 +128,7 @@ let package = Package(
 			resources: [
 				.copy("Resources/Mac Classic.tmTheme"),
 				.copy("Resources/KeyBindings.dict"),
-			]
+			],
 		),
 
 		// MARK: - Test Targets
@@ -121,43 +136,49 @@ let package = Package(
 		.testTarget(
 			name: "TMCoreTests",
 			dependencies: ["TMCore"],
-			path: "Tests/TMCoreTests"
+			path: "Tests/TMCoreTests",
 		),
 
 		.testTarget(
 			name: "TMThemeTests",
 			dependencies: ["TMTheme"],
-			path: "Tests/TMThemeTests"
+			path: "Tests/TMThemeTests",
 		),
 
 		.testTarget(
 			name: "TMDocumentWindowTests",
 			dependencies: ["TMDocumentWindow"],
-			path: "Tests/TMDocumentWindowTests"
+			path: "Tests/TMDocumentWindowTests",
 		),
 
 		.testTarget(
 			name: "TMBundleTests",
 			dependencies: ["TMBundle"],
-			path: "Tests/TMBundleTests"
+			path: "Tests/TMBundleTests",
 		),
 
 		.testTarget(
 			name: "TMSettingsTests",
 			dependencies: ["TMSettings"],
-			path: "Tests/TMSettingsTests"
+			path: "Tests/TMSettingsTests",
 		),
 
 		.testTarget(
 			name: "TMEditorTests",
 			dependencies: ["TMEditor"],
-			path: "Tests/TMEditorTests"
+			path: "Tests/TMEditorTests",
+		),
+
+		.testTarget(
+			name: "TMEditorUITests",
+			dependencies: ["TMEditorUI"],
+			path: "Tests/TMEditorUITests",
 		),
 
 		.testTarget(
 			name: "TMGrammarTests",
 			dependencies: ["TMGrammar", "TMBundle"],
-			path: "Tests/TMGrammarTests"
+			path: "Tests/TMGrammarTests",
 		),
-	]
+	],
 )

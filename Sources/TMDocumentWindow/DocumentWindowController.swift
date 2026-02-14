@@ -1,5 +1,6 @@
 import AppKit
 import TMAppKit
+import TMEditorUI
 import TMTheme
 
 /// The main document window controller, managing the layout that matches
@@ -9,7 +10,7 @@ import TMTheme
 /// ┌─────────────────────────────────────────┐
 /// │ Tab Bar                                 │
 /// ├────────────┬────────────────────────────┤
-/// │ File       │ Gutter │ Editor (NSTextView) │
+/// │ File       │ Gutter │ Editor (EditorView) │
 /// │ Browser    │        │                   │
 /// │ (sidebar)  │        │                   │
 /// │            │        │                   │
@@ -23,7 +24,7 @@ public class DocumentWindowController: NSWindowController {
 	public let fileBrowserView = FileBrowserView()
 	public let gutterView = GutterView()
 	public let statusBarView = StatusBarView()
-	public let textView = NSTextView()
+	public let editorView = EditorView()
 
 	/// The document model for the currently displayed file.
 	public let documentModel = DocumentModel()
@@ -72,12 +73,10 @@ public class DocumentWindowController: NSWindowController {
 		// Editor content
 		let bg = theme.globalSettings.background.nsColor
 		let fg = theme.globalSettings.foreground.nsColor
-		textView.backgroundColor = bg
-		textView.textColor = fg
-		textView.insertionPointColor = theme.globalSettings.caret.nsColor
-		textView.selectedTextAttributes = [
-			.backgroundColor: theme.globalSettings.selection.nsColor,
-		]
+		editorView.layoutManager.backgroundColor = bg
+		editorView.layoutManager.foregroundColor = fg
+		editorView.caretColor = theme.globalSettings.caret.nsColor
+		editorView.selectionColor = theme.globalSettings.selection.nsColor
 		scrollView.backgroundColor = bg
 	}
 
@@ -91,7 +90,7 @@ public class DocumentWindowController: NSWindowController {
 	public func openFile(at url: URL) {
 		do {
 			let text = try documentModel.readFile(at: url)
-			textView.string = text
+			editorView.setText(text)
 			window?.title = documentModel.displayTitle
 			statusBarView.setEncoding(documentModel.encodingDisplayName)
 			documentModel.isModified = false
@@ -109,7 +108,7 @@ public class DocumentWindowController: NSWindowController {
 			return saveDocumentAs()
 		}
 		do {
-			try documentModel.writeFile(text: textView.string)
+			try documentModel.writeFile(text: editorView.text)
 			updateWindowTitle()
 			return true
 		} catch {
@@ -132,7 +131,7 @@ public class DocumentWindowController: NSWindowController {
 
 		documentModel.fileURL = url
 		do {
-			try documentModel.writeFile(text: textView.string)
+			try documentModel.writeFile(text: editorView.text)
 			window?.title = documentModel.displayTitle
 			updateWindowTitle()
 			return true
@@ -176,7 +175,7 @@ public class DocumentWindowController: NSWindowController {
 		editorContainer.wantsLayer = true
 		editorContainer.translatesAutoresizingMaskIntoConstraints = false
 
-		setupTextView()
+		setupEditorView()
 		setupEditorContainer()
 
 		splitView.addArrangedSubview(fileBrowserView)
@@ -214,23 +213,11 @@ public class DocumentWindowController: NSWindowController {
 		splitView.setPosition(fileBrowserWidth, ofDividerAt: 0)
 	}
 
-	private func setupTextView() {
-		textView.isEditable = true
-		textView.isSelectable = true
-		textView.allowsUndo = true
-		textView.isRichText = false
-		textView.usesFontPanel = true
-		textView.isAutomaticQuoteSubstitutionEnabled = false
-		textView.isAutomaticDashSubstitutionEnabled = false
-		textView.isAutomaticTextReplacementEnabled = false
-		textView.font = .monospacedSystemFont(ofSize: 13, weight: .regular)
-		textView.textContainerInset = NSSize(width: 0, height: 4)
-		textView.isVerticallyResizable = true
-		textView.isHorizontallyResizable = false
-		textView.autoresizingMask = [.width]
-		textView.textContainer?.widthTracksTextView = true
+	private func setupEditorView() {
+		editorView.layoutManager.setFont(.monospacedSystemFont(ofSize: 13, weight: .regular))
+		editorView.translatesAutoresizingMaskIntoConstraints = false
 
-		scrollView.documentView = textView
+		scrollView.documentView = editorView
 		scrollView.hasVerticalScroller = true
 		scrollView.hasHorizontalScroller = false
 		scrollView.autohidesScrollers = true

@@ -132,6 +132,100 @@ Per [07-execution-plan.md](07-execution-plan.md), Phase 3 targets:
 
 ---
 
+## Iteration 4: Syntax & Language System — ✅ COMPLETE
+
+Per [07-execution-plan.md](07-execution-plan.md), Phase 4 targets:
+
+### Deliverables
+
+| Package | File | Status |
+|---------|------|--------|
+| **TMGrammar** | `Scope.swift` — linked-list scope representation, pushScope/popScope, hasPrefix | ✅ |
+| **TMGrammar** | `ScopeSelector.swift` — recursive-descent parser, path/group/filter/expression matching, scoring | ✅ |
+| **TMGrammar** | `OnigmoRegex.swift` — NSRegularExpression wrapper with Oniguruma pattern translation (see [ADR-005](adr-005-native-regex.md)) | ✅ |
+| **TMGrammar** | `GrammarRule.swift` — grammar rule tree, GrammarCompiler, include resolution | ✅ |
+| **TMGrammar** | `GrammarParser.swift` — line-by-line parser, scope tracking, injection support | ✅ |
+| **TMGrammar** | `IncrementalParser.swift` — incremental/async parsing with convergence detection | ✅ |
+| **TMGrammar** | `GrammarRegistry.swift` — grammar loading, caching, external include resolution | ✅ |
+| **TMGrammar** | `ParserState.swift` — parser state for cross-line continuity | ✅ |
+
+### Architecture Decision: Native Regex (ADR-005)
+
+Dropped vendored Onigmo C library in favor of Swift-native `NSRegularExpression`
+with a translation layer for Oniguruma-specific patterns (`\h`, `\H`, `\v`, `\R`, `\X`).
+See [adr-005-native-regex.md](adr-005-native-regex.md) for full rationale.
+
+### Tests (105 tests, 12 suites — 6 pending for Onigmo-only features)
+
+| Suite | Tests | Status |
+|-------|-------|--------|
+| Scope | 10 | ✅ |
+| ScopeContext | 2 | ✅ |
+| ScopeSelector | 16 | ✅ |
+| OnigmoPattern | 14 (+6 pending) | ✅ |
+| PatternTranslation | 8 | ✅ |
+| PatternUtilities | 8 | ✅ |
+| GrammarRule | 2 | ✅ |
+| GrammarCompiler | 7 | ✅ |
+| ParserState | 4 | ✅ |
+| GrammarParser | 6 | ✅ |
+| GrammarRegistry | 6 | ✅ |
+| IncrementalParser | 6 | ✅ |
+
+Pending tests (`.disabled`) for Onigmo-only features per ADR-005:
+`\G` anchor, absent operator `(?~...)`, conditional backrefs,
+Oniguruma Unicode property names, subexpression calls `\g<name>`, `\K` keep operator.
+
+---
+
+## Iteration 5: Custom Rendering Engine — ✅ COMPLETE
+
+Per [07-execution-plan.md](07-execution-plan.md), Phase 5 targets:
+
+### Deliverables
+
+| Package | File | Status |
+|---------|------|--------|
+| **TMEditorUI** | `FontMetrics.swift` — CoreText font measurement (ascent, descent, leading, xHeight, capHeight, columnWidth, baseline, lineHeight) | ✅ |
+| **TMEditorUI** | `LayoutLine.swift` — StyleRun struct + LayoutLine class wrapping CTLine with hit-testing, foreground/background drawing | ✅ |
+| **TMEditorUI** | `EditorLayoutManager.swift` — viewport-based layout engine, coordinate conversion, invalidation, attributed string creation with tab stops and style runs | ✅ |
+| **TMEditorUI** | `EditorView.swift` — custom NSView replacing NSTextView: CoreText rendering, caret blinking, selection highlighting, mouse handling, NSTextInputClient (IME), NSAccessibility, EditorViewDelegate protocol, EditorViewAction enum (32 actions) | ✅ |
+
+### Integration
+
+| Target | Change | Status |
+|--------|--------|--------|
+| **Package.swift** | Added TMEditorUI library + TMEditorUITests target | ✅ |
+| **TMDocumentWindow** | `DocumentWindowController` now uses `EditorView` instead of `NSTextView` | ✅ |
+
+### Key Features Implemented
+
+- **CoreText rendering** — direct `CTLine` creation and drawing, replacing NSTextView
+- **Viewport-based layout** — only lays out visible lines + overscan, caches results
+- **Style runs** — per-character foreground/background, bold, italic, underline, strikethrough
+- **Caret blinking** — 0.5s timer, resets on input, multi-cursor support
+- **Selection highlighting** — single-line and multi-line selection rendering
+- **Line highlighting** — optional current-line highlight
+- **Invisible characters** — spaces (·), tabs (‣), newlines (¬) with toggle
+- **Wrap column indicator** — vertical line at configured column
+- **Mouse interaction** — click-to-position, drag-to-select, Option-click multi-cursor, double/triple-click
+- **NSTextInputClient** — full IME support (insertText, setMarkedText, unmarkText, markedRange, selectedRange, attributedSubstring, firstRect, characterIndex)
+- **NSAccessibility** — textArea role, value, selectedText, lineForIndex, rangeForLine, frameForRange, visibleCharacterRange
+- **NSStandardKeyBindingResponding** — 32 key binding actions (12 movement, 10 selection extension, 6 deletion, 3 insertion, 1 selectAll)
+- **Coordinate conversion** — lineIndex↔Y, characterIndex↔point, caretRect
+- **Invalidation** — per-line, range, style-only, full invalidation
+
+### Tests (78 tests, 4 suites)
+
+| Suite | Tests | Status |
+|-------|-------|--------|
+| FontMetrics | 11 | ✅ |
+| LayoutLine | 7 | ✅ |
+| EditorLayoutManager | 27 | ✅ |
+| EditorView | 33 | ✅ |
+
+---
+
 ## Architecture Reminder
 
 All code follows the iteration strategy from
@@ -140,8 +234,9 @@ All code follows the iteration strategy from
 - **Iteration 1** — Visual Shell ✅
 - **Iteration 2** — Foundation Layer ✅
 - **Iteration 3** — Core Editor Engine ✅
-- **Iteration 4** — Bundle & Command System (next)
-- **Iteration 5** — Advanced Features (snippets, macros, SCM)
+- **Iteration 4** — Syntax & Language System ✅
+- **Iteration 5** — Custom Rendering Engine ✅
+- **Iteration 6** — Compatibility Layer (next)
 
 ## Workflow Rules
 
