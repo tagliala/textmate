@@ -13,7 +13,7 @@
 | **Preferences (.tmPreferences)** | `TMSettings` loads plist preferences | ✅ Full |
 | **Settings (.tm_properties)** | `TMSettings` parses with identical semantics | ✅ Full |
 | **Environment variables (TM_*)** | `TMBundleRuntime` provides identical vars | ✅ Full |
-| **Key bindings** | AppKit key binding mechanism (NSTextInputClient) | ✅ Full |
+| **Key bindings & shortcuts** | AppKit key binding mechanism (NSTextInputClient) — **must be identical** | ✅ Full |
 | **Scope selectors** | `TMGrammar` scope selector matching | ✅ Full |
 | **Find & Replace (regex)** | Onigmo regex engine (identical) | ✅ Full |
 | **Project/folder search** | Reimplemented with same UI patterns | ✅ Full |
@@ -62,6 +62,46 @@ custom nibs will need updating.
 The current `PrivilegedTool` uses the deprecated `SMJobBless` API. The new
 architecture uses `SMAppService` (modern replacement available since macOS 13).
 
+## Keyboard Shortcuts
+
+**Keyboard shortcuts MUST be preserved identically.** This is a non-negotiable
+requirement. TextMate users have deep muscle memory for its shortcuts, and any
+deviation is a migration blocker.
+
+### Sources of Key Bindings
+
+Keyboard shortcuts come from multiple sources, loaded in this priority order
+(highest priority first):
+
+1. **User key bindings** — `~/Library/Application Support/TextMate/KeyBindings.dict`
+2. **Application key bindings** — `TextMate.app/Contents/Resources/KeyBindings.dict`
+3. **User system key bindings** — `~/Library/KeyBindings/DefaultKeyBinding.dict`
+4. **System key bindings** — `/Library/KeyBindings/DefaultKeyBinding.dict`
+5. **AppKit standard key bindings** — `AppKit.framework/Resources/StandardKeyBinding.dict`
+6. **Bundle key equivalents** — Per-bundle item `keyEquivalent` fields
+
+### Implementation Requirements
+
+- The application **must** load and honor `KeyBindings.dict` files using the
+  same plist format and key notation as the current TextMate (modifiers:
+  `^` Control, `~` Option, `$` Shift, `@` Command, `#` Numeric Pad).
+- All actions referenced in `KeyBindings.dict` (e.g., `moveSubWordLeft:`,
+  `selectCurrentScope:`, `changeCaseOfWord:`, `reformatText:`) must be
+  implemented and wired to the same selectors.
+- Bundle item key equivalents must work identically — the same bundle item must
+  trigger from the same shortcut.
+- Menu key equivalents must match the current menu structure exactly.
+- Tab-switching shortcuts (`⌘1`–`⌘8`, `⌘9` for last tab) must be preserved.
+
+### Validation
+
+- Automated test comparing all resolved key bindings from the current TextMate
+  against the new application.
+- The `BundleItemChooser` (or its equivalent) must show the same key bindings
+  list as the current version.
+- Manual testing of all shortcuts defined in `KeyBindings.dict` (currently ~30
+  custom bindings).
+
 ## Migration Strategy
 
 ### Settings Migration
@@ -96,6 +136,7 @@ Existing bundles require **no migration**. The new bundle loader reads
 
 | Risk | Severity | Mitigation |
 |---|---|---|
+| Keyboard shortcut divergence | **Critical** | Load identical `KeyBindings.dict`; automated comparison test |
 | Grammar parsing divergence | **High** | Test suite comparing output for 50+ languages |
 | Snippet behavior differences | **Medium** | Port existing test cases + edge-case tests |
 | Command environment differences | **Medium** | Automated comparison of TM_* variables |

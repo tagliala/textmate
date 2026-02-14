@@ -1,15 +1,59 @@
 # 07 — Phased Execution Plan
 
-## Phase 1: Foundation Layer (8 weeks)
+> **Strategy:** The phases below follow a **UI-first** approach. The first phase
+> delivers a visually complete application shell before building the custom
+> editor engine. This ensures early visual validation, keyboard shortcut
+> testing, and stakeholder feedback. See
+> [01 — System Architecture](01-system-architecture.md#iteration-strategy) for
+> the iteration overview.
+
+## Phase 1: Visual Shell (8 weeks)
 
 **Goals:**
-- Establish Swift Package Manager project structure
+- Build a launchable Swift/AppKit application that visually matches TextMate
+- Implement document window layout (sidebar, editor, gutter, status bar)
+- Implement tab bar (draggable, closeable, overflow menu, `⌘1`–`⌘9` switching)
+- Implement file browser sidebar with directory tree, icons, disclosure
+- Use `NSTextView` as a temporary text editing backend
+- Implement `.tmTheme` plist loading for visual theming
+- Load and honor `KeyBindings.dict` — all keyboard shortcuts identical
+- Implement main menu structure with all key equivalents
+- Implement file open/save with encoding detection
+- Implement window state restoration (reopen last session)
+- Set up CI with SwiftFormat linting and Swift Testing
+
+**Risks:**
+- Tab bar custom rendering complexity
+- `KeyBindings.dict` format edge cases
+- Theme color mapping to AppKit views outside the editor area
+
+**Deliverables:**
+- `TMApp` application target — launchable, themed, with menu and shortcuts
+- `TMTheme` package with `.tmTheme` plist loading and style resolution
+- `TMAppKit` package with tab bar, filter list, shared components
+- `TMFileBrowser` package with sidebar file browser
+- `TMDocumentWindow` package with window management and tabs
+- `KeyBindings.dict` loader with all custom actions wired
+
+**Validation:**
+- Side-by-side visual comparison against current TextMate (screenshot diffing)
+- All keyboard shortcuts in `KeyBindings.dict` work identically
+- All menu items present with correct key equivalents
+- Tab switching (`⌘1`–`⌘9`) works
+- Theme loading produces correct colors for editor background, gutter, sidebar
+- Window restoration reopens previous session
+
+---
+
+## Phase 2: Foundation Layer (8 weeks)
+
+**Goals:**
 - Implement core data types: `TextPosition`, `TextRange`, `SelectionState`
+  *(partially done — already in `Sources/TMCore/`)*
 - Implement `TextBuffer` (piece table) with full test coverage
 - Implement `UndoManager` with coalescing
 - Implement plist parser for `.tmLanguage`, `.tmTheme`, `.tmSnippet`,
   `.tmCommand`, `.tmPreferences`
-- Set up CI with SwiftFormat linting and Swift Testing
 
 **Risks:**
 - Piece table edge cases with Unicode combining characters
@@ -29,7 +73,7 @@
 
 ---
 
-## Phase 2: Core Editor Engine (10 weeks)
+## Phase 3: Core Editor Engine (10 weeks)
 
 **Goals:**
 - Implement `Editor` with all action types from `ng::editor_t`
@@ -55,7 +99,7 @@
 
 ---
 
-## Phase 3: Syntax & Language System (8 weeks)
+## Phase 4: Syntax & Language System (8 weeks)
 
 **Goals:**
 - Implement TextMate grammar parser (`TMGrammar`)
@@ -82,16 +126,15 @@
 
 ---
 
-## Phase 4: UI Layer (12 weeks)
+## Phase 5: Custom Rendering Engine (12 weeks)
 
 **Goals:**
-- Custom text rendering engine (CoreText + CALayer)
-- `NSTextInputClient` for input handling
-- `NSAccessibility` for accessibility
-- Gutter view, status bar, document tab bar
-- File browser sidebar, find panel
-- Preferences window, document window management
-- `mate` CLI tool
+- Replace `NSTextView` (from Phase 1) with custom CoreText + CALayer engine
+- Implement `NSTextInputClient` for input handling (IME, CJK, dictation)
+- Implement `NSAccessibility` for accessibility (VoiceOver)
+- Multi-cursor rendering and columnar selection visuals
+- Code folding UI
+- Custom gutter rendering (line numbers, fold markers, SCM indicators)
 
 **Risks:**
 - Input method (IME) integration complexity
@@ -99,9 +142,9 @@
 - Custom rendering must match native scrolling behavior
 
 **Deliverables:**
-- `TMEditorUI`, `TMAppKit`, `TMFileBrowser`, `TMDocumentWindow`, `TMPreferences`
-- `TMApp` application target
-- `mate` CLI tool
+- `TMEditorUI` with custom rendering engine replacing `NSTextView`
+- `NSTextInputClient` integration with full IME support
+- `NSAccessibility` implementation
 
 **Validation:**
 - Visual comparison against current TextMate
@@ -111,7 +154,7 @@
 
 ---
 
-## Phase 5: Compatibility Layer (6 weeks)
+## Phase 6: Compatibility Layer (6 weeks)
 
 **Goals:**
 - Settings migration from current TextMate
@@ -138,7 +181,7 @@
 
 ---
 
-## Phase 6: Bundle Execution System (6 weeks)
+## Phase 7: Bundle Execution System (6 weeks)
 
 **Goals:**
 - XPC-based command runner (`TMCommandRunner.xpc`)
@@ -162,7 +205,7 @@
 
 ---
 
-## Phase 7: MCP Integration Layer (8 weeks)
+## Phase 8: MCP Integration Layer (8 weeks)
 
 **Goals:**
 - MCP protocol handling using official MCP Swift SDK
@@ -189,7 +232,7 @@
 
 ---
 
-## Phase 8: Performance Hardening (6 weeks)
+## Phase 9: Performance Hardening (6 weeks)
 
 **Goals:**
 - Profile and optimize startup (< 200ms empty, < 500ms project)
@@ -216,7 +259,7 @@
 
 ---
 
-## Phase 9: Beta Migration (8 weeks)
+## Phase 10: Beta Migration (8 weeks)
 
 **Goals:**
 - Public beta with migration assistant

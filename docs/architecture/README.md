@@ -8,9 +8,9 @@ with **Swift 6.2+**.
 
 | # | Document | Description |
 |---|----------|-------------|
-| 01 | [System Architecture](01-system-architecture.md) | Layers, modules, core abstractions, document model |
+| 01 | [System Architecture](01-system-architecture.md) | Iteration strategy, layers, modules, core abstractions |
 | 02 | [Rendering & Text Engine](02-rendering-engine.md) | NSTextView evaluation, incremental layout, syntax highlighting |
-| 03 | [Compatibility](03-compatibility.md) | Feature mapping, migration strategy, breaking changes |
+| 03 | [Compatibility](03-compatibility.md) | Feature mapping, keyboard shortcuts, migration strategy |
 | 04 | [Performance](04-performance.md) | Concurrency model, caching, profiling, startup optimization |
 | 05 | [Bundle & Plugin System](05-bundle-system.md) | Bundle loading, command execution, security, Swift extension API |
 | 06 | [MCP Integration](06-mcp-integration.md) | Model Context Protocol architecture and integration |
@@ -20,6 +20,8 @@ with **Swift 6.2+**.
 
 ## Key Decisions
 
+- **Strategy:** UI-first — visual shell before engine internals
+- **Keyboard shortcuts:** Must be preserved identically (non-negotiable)
 - **Language:** Swift 6.2+ (strict concurrency, `Sendable` enforcement)
 - **Minimum OS:** macOS 26.2
 - **Build system:** Swift Package Manager
