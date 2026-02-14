@@ -13,6 +13,22 @@ let package = Package(
 			name: "TMCore",
 			targets: ["TMCore"]
 		),
+		.library(
+			name: "TMTheme",
+			targets: ["TMTheme"]
+		),
+		.library(
+			name: "TMAppKit",
+			targets: ["TMAppKit"]
+		),
+		.library(
+			name: "TMDocumentWindow",
+			targets: ["TMDocumentWindow"]
+		),
+		.executable(
+			name: "TextMateApp",
+			targets: ["TMApp"]
+		),
 	],
 	targets: [
 		// MARK: - Core Layer
@@ -22,12 +38,49 @@ let package = Package(
 			path: "Sources/TMCore"
 		),
 
+		// MARK: - Iteration 1: Visual Shell
+
+		.target(
+			name: "TMTheme",
+			path: "Sources/TMTheme"
+		),
+
+		.target(
+			name: "TMAppKit",
+			path: "Sources/TMAppKit"
+		),
+
+		.target(
+			name: "TMDocumentWindow",
+			dependencies: [
+				"TMTheme",
+				"TMAppKit",
+			],
+			path: "Sources/TMDocumentWindow"
+		),
+
+		.executableTarget(
+			name: "TMApp",
+			dependencies: [
+				"TMTheme",
+				"TMAppKit",
+				"TMDocumentWindow",
+			],
+			path: "Sources/TMApp"
+		),
+
 		// MARK: - Test Targets
 
 		.testTarget(
 			name: "TMCoreTests",
 			dependencies: ["TMCore"],
 			path: "Tests/TMCoreTests"
+		),
+
+		.testTarget(
+			name: "TMThemeTests",
+			dependencies: ["TMTheme"],
+			path: "Tests/TMThemeTests"
 		),
 	]
 )
