@@ -2,6 +2,8 @@
 
 This is the TextMate text editor codebase - a sophisticated macOS text editor with extensible architecture.
 
+Note: this workspace contains the Swift rewrite branch for the TextMate application. The application name remains "TextMate"; these instructions and the code in `Sources/` reflect the Swift-based rewrite (UI-first Iteration 1).
+
 ## Project Structure
 
 - **Applications/**: Contains the main TextMate app and helper utilities
