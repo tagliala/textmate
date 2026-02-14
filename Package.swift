@@ -14,6 +14,14 @@ let package = Package(
 			targets: ["TMCore"]
 		),
 		.library(
+			name: "TMBundle",
+			targets: ["TMBundle"]
+		),
+		.library(
+			name: "TMSettings",
+			targets: ["TMSettings"]
+		),
+		.library(
 			name: "TMTheme",
 			targets: ["TMTheme"]
 		),
@@ -36,6 +44,16 @@ let package = Package(
 		.target(
 			name: "TMCore",
 			path: "Sources/TMCore"
+		),
+
+		.target(
+			name: "TMBundle",
+			path: "Sources/TMBundle"
+		),
+
+		.target(
+			name: "TMSettings",
+			path: "Sources/TMSettings"
 		),
 
 		// MARK: - Iteration 1: Visual Shell
@@ -92,6 +110,18 @@ let package = Package(
 			name: "TMDocumentWindowTests",
 			dependencies: ["TMDocumentWindow"],
 			path: "Tests/TMDocumentWindowTests"
+		),
+
+		.testTarget(
+			name: "TMBundleTests",
+			dependencies: ["TMBundle"],
+			path: "Tests/TMBundleTests"
+		),
+
+		.testTarget(
+			name: "TMSettingsTests",
+			dependencies: ["TMSettings"],
+			path: "Tests/TMSettingsTests"
 		),
 	]
 )
