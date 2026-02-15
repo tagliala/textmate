@@ -49,6 +49,14 @@ let package = Package(
 			name: "TMCompatibility",
 			targets: ["TMCompatibility"],
 		),
+		.library(
+			name: "TMBundleRuntime",
+			targets: ["TMBundleRuntime"],
+		),
+		.library(
+			name: "TMBundleUI",
+			targets: ["TMBundleUI"],
+		),
 		.executable(
 			name: "TextMateApp",
 			targets: ["TMApp"],
@@ -142,6 +150,21 @@ let package = Package(
 			path: "Sources/TMCompatibility",
 		),
 
+		// MARK: - Bundle Execution System
+
+		.target(
+			name: "TMBundleRuntime",
+			path: "Sources/TMBundleRuntime",
+		),
+
+		.target(
+			name: "TMBundleUI",
+			dependencies: [
+				"TMBundleRuntime",
+			],
+			path: "Sources/TMBundleUI",
+		),
+
 		// MARK: - Test Targets
 
 		.testTarget(
@@ -196,6 +219,18 @@ let package = Package(
 			name: "TMCompatibilityTests",
 			dependencies: ["TMCompatibility"],
 			path: "Tests/TMCompatibilityTests",
+		),
+
+		.testTarget(
+			name: "TMBundleRuntimeTests",
+			dependencies: ["TMBundleRuntime"],
+			path: "Tests/TMBundleRuntimeTests",
+		),
+
+		.testTarget(
+			name: "TMBundleUITests",
+			dependencies: ["TMBundleUI", "TMBundleRuntime"],
+			path: "Tests/TMBundleUITests",
 		),
 	],
 )

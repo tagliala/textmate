@@ -226,6 +226,81 @@ Per [07-execution-plan.md](07-execution-plan.md), Phase 5 targets:
 
 ---
 
+## Iteration 6: Compatibility Layer — ✅ COMPLETE
+
+Per [07-execution-plan.md](07-execution-plan.md), Phase 6 targets:
+
+### Deliverables
+
+| Package | File | Status |
+|---------|------|--------|
+| **TMCompatibility** | `EnvironmentBuilder.swift` — TM_* env var construction (25 variables, 4 context structs) | ✅ |
+| **TMCompatibility** | `CommandTypes.swift` — command pipeline types (8 enums + BundleCommand struct) | ✅ |
+| **TMCompatibility** | `CommandRunner.swift` — Foundation Process-based command execution with pipe I/O | ✅ |
+| **TMCompatibility** | `CommandOutputHandler.swift` — output routing for 8 modes + exit code overrides | ✅ |
+| **TMCompatibility** | `HTMLOutputView.swift` — WKWebView-based HTML output with TextMate JS bridge | ✅ |
+| **TMCompatibility** | `DialogShim.swift` — tm_dialog2 compatibility shim with command registry | ✅ |
+| **TMCompatibility** | `SettingsMigrator.swift` — legacy TM2 detection, .tm_properties parser, bundle discovery | ✅ |
+| **TMCompatibility** | `RMateServer.swift` — NWListener TCP server implementing rmate protocol | ✅ |
+
+### Tests (53 tests, 6 suites)
+
+| Suite | Tests | Status |
+|-------|-------|--------|
+| EnvironmentBuilder | 10 | ✅ |
+| CommandTypes | 8 | ✅ |
+| CommandOutputHandler | 12 | ✅ |
+| SettingsMigrator | 10 | ✅ |
+| RMateServer | 8 | ✅ |
+| BundleInfo | 5 | ✅ |
+
+---
+
+## Iteration 7: Bundle Execution System — ✅ COMPLETE
+
+Per [07-execution-plan.md](07-execution-plan.md), Phase 7 targets:
+
+### Deliverables
+
+| Package | File | Status |
+|---------|------|--------|
+| **TMBundleRuntime** | `SecurityPolicy.swift` — TrustLevel (5 levels), PermissionRequest/Response, SecurityPolicy class, LockedBox thread-safe container | ✅ |
+| **TMBundleRuntime** | `BundleIndex.swift` — BundleItemKind OptionSet (12 kinds), BundleMenuItem enum, BundleItem class, BundleDescriptor, BundleQuery, BundleIndex (thread-safe) | ✅ |
+| **TMBundleRuntime** | `BundleLoader.swift` — .tmbundle directory discovery, plist parsing, menu structure parsing | ✅ |
+| **TMBundleRuntime** | `BundleCommandParser.swift` — plist-to-BundleCommand parser with v1→v2 format conversion | ✅ |
+| **TMBundleRuntime** | `CommandDispatcher.swift` — full command execution pipeline (security → pre-exec → env → input → process → output routing), script caching | ✅ |
+| **TMBundleRuntime** | `AutoRefreshScheduler.swift` — document event triggers, debounced re-execution | ✅ |
+| **TMBundleRuntime** | `DragCommandHandler.swift` — drag-and-drop command matching, TM_DROPPED_FILE env vars | ✅ |
+| **TMBundleRuntime** | `BundleInstaller.swift` — remote catalog fetch, download/extract/install, dependency resolution, uninstall | ✅ |
+| **TMBundleUI** | `BundleMenuBuilder.swift` — NSMenuDelegate dynamic menu, key equivalent parsing (^~$@), disambiguation popup | ✅ |
+| **TMBundleUI** | `BundleManagerController.swift` — NSWindowController for install/update/uninstall UI | ✅ |
+| **TMBundleUI** | `BundleEditorController.swift` — sidebar tree + content editor + properties panel, change tracking, item CRUD | ✅ |
+| **TMBundleUI** | `PermissionDialogController.swift` — modal permission dialog + security preferences panel | ✅ |
+
+### Tests (97 tests, 17 suites)
+
+| Suite | Tests | Status |
+|-------|-------|--------|
+| SecurityPolicy | 10 | ✅ |
+| BundleIndex | 12 | ✅ |
+| BundleCommandParser | 14 | ✅ |
+| BundleCommand | 3 | ✅ |
+| BundleLoader | 5 | ✅ |
+| AutoRefreshScheduler | 4 | ✅ |
+| CommandDispatcher | 3 | ✅ |
+| DragCommandHandler | 3 | ✅ |
+| BundleItemKind | 2 | ✅ |
+| BundleDescriptor | 2 | ✅ |
+| CommandResult | 2 | ✅ |
+| BundleInstaller | 5 | ✅ |
+| BundleEditorEntry | 5 | ✅ |
+| BundleEditorTreeBuilder | 5 | ✅ |
+| BundleEditorChangeTracker | 6 | ✅ |
+| BundleItemProperties | 5 | ✅ |
+| KeyEquivalentParsing | 5 | ✅ |
+
+---
+
 ## Architecture Reminder
 
 All code follows the iteration strategy from
@@ -236,7 +311,9 @@ All code follows the iteration strategy from
 - **Iteration 3** — Core Editor Engine ✅
 - **Iteration 4** — Syntax & Language System ✅
 - **Iteration 5** — Custom Rendering Engine ✅
-- **Iteration 6** — Compatibility Layer (next)
+- **Iteration 6** — Compatibility Layer ✅
+- **Iteration 7** — Bundle Execution System ✅
+- **Iteration 8** — Document Management (next)
 
 ## Workflow Rules
 
