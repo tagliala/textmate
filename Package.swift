@@ -57,6 +57,10 @@ let package = Package(
 			name: "TMBundleUI",
 			targets: ["TMBundleUI"],
 		),
+		.library(
+			name: "TMDocumentManager",
+			targets: ["TMDocumentManager"],
+		),
 		.executable(
 			name: "TextMateApp",
 			targets: ["TMApp"],
@@ -165,6 +169,13 @@ let package = Package(
 			path: "Sources/TMBundleUI",
 		),
 
+		// MARK: - Document Management
+
+		.target(
+			name: "TMDocumentManager",
+			path: "Sources/TMDocumentManager",
+		),
+
 		// MARK: - Test Targets
 
 		.testTarget(
@@ -231,6 +242,12 @@ let package = Package(
 			name: "TMBundleUITests",
 			dependencies: ["TMBundleUI", "TMBundleRuntime"],
 			path: "Tests/TMBundleUITests",
+		),
+
+		.testTarget(
+			name: "TMDocumentManagerTests",
+			dependencies: ["TMDocumentManager"],
+			path: "Tests/TMDocumentManagerTests",
 		),
 	],
 )

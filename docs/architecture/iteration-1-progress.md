@@ -301,6 +301,64 @@ Per [07-execution-plan.md](07-execution-plan.md), Phase 7 targets:
 
 ---
 
+## Iteration 8: Document Management — ✅ COMPLETE
+
+Per [07-execution-plan.md](07-execution-plan.md), Phase 8 targets:
+
+### Deliverables
+
+| Package | File | Status |
+|---------|------|--------|
+| **TMDocumentManager** | `TMDocument.swift` — core document model: UUID identity, state machine (unloaded/loading/loaded/saving/error), ref-counted open/close, async load/save, BOM-aware encoding detection, line ending normalization, 3-way merge, xattr persistence, change observation | ✅ |
+| **TMDocumentManager** | `TMDocumentController.swift` — singleton registry: UUID + path indexes, path deduplication via canonicalization, LRU tracking, untitled document factory, document added/removed callbacks | ✅ |
+| **TMDocumentManager** | `FileWatcher.swift` — DispatchSource-based kqueue file monitoring: per-file watches with WatchToken, FileWatchEvent OptionSet, auto-rewatch on delete/rename, DirectoryWatcher companion | ✅ |
+| **TMDocumentManager** | `DocumentSession.swift` — session save/restore: SessionDocumentInfo, SessionWindowInfo, WindowFrame, DocumentSession (all Codable), SessionManager JSON persistence to ~/Library/Application Support/TextMate/ | ✅ |
+| **TMDocumentManager** | `MarkTracker.swift` — global bookmark system: MarkType enum (4 types), DocumentMark struct, path-keyed storage, toggle bookmark, line adjustment for edits, path rename transfer, export/import serialization | ✅ |
+| **TMDocumentManager** | `FileTypeDetector.swift` — file type detection: shebang parsing (with /usr/bin/env and flag skipping), first-line regex patterns, 40+ extension mappings, 15+ filename mappings, version-stripping for interpreters | ✅ |
+| **TMDocumentManager** | `RecentDocuments.swift` — LRU recent files: RecentDocumentEntry, UserDefaults persistence, max entries, prune stale entries, change callback | ✅ |
+| **TMDocumentManager** | `DocumentBackup.swift` — auto-save crash recovery: BackupRecord, BackupManifest (Codable), periodic timer-based backup, recovery and discard operations | ✅ |
+
+### Key Features Implemented
+
+- **Document model** — full equivalent of C++ `OakDocument` with UUID identity, state machine, revision-based modification tracking
+- **Encoding detection** — BOM-aware (UTF-8/16/32), IANA charset conversion, line ending detection via Unicode scalar iteration (handles CR+LF grapheme cluster correctly)
+- **3-way merge** — mine-wins strategy for external file changes during editing
+- **Extended attributes** — persists selection range, visible index, bookmarks, folded ranges via `setxattr`/`getxattr`
+- **File watching** — kqueue-based `DispatchSource.makeFileSystemObjectSource` with automatic rewatch after rename/delete
+- **Session persistence** — JSON-based window state serialization with ISO 8601 dates
+- **Mark system** — line-adjustment for insert/delete, path rename transfer, document load/save lifecycle
+- **File type detection** — priority chain: shebang > first-line patterns > filename > extension > fallback
+
+### Tests (194 tests, 23 suites)
+
+| Suite | Tests | Status |
+|-------|-------|--------|
+| TMDocument | 16 | ✅ |
+| LineEnding Detection | 5 | ✅ |
+| DocumentEncoding | 5 | ✅ |
+| DataDecoding | 7 | ✅ |
+| ThreeWayMerge | 6 | ✅ |
+| DocumentIOError | 3 | ✅ |
+| DocumentState | 5 | ✅ |
+| TMDocumentController | 16 | ✅ |
+| FileWatcher | 7 | ✅ |
+| DirectoryWatcher | 3 | ✅ |
+| FileWatchEvent | 2 | ✅ |
+| SessionDocumentInfo | 3 | ✅ |
+| SessionWindowInfo | 3 | ✅ |
+| DocumentSession | 2 | ✅ |
+| SessionManager | 3 | ✅ |
+| MarkTracker | 15 | ✅ |
+| DocumentMark | 3 | ✅ |
+| FileTypeDetector | 30 | ✅ |
+| RecentDocumentsManager | 10 | ✅ |
+| RecentDocumentEntry | 2 | ✅ |
+| DocumentBackupManager | 10 | ✅ |
+| BackupRecord | 7 | ✅ |
+| BackupManifest | 2 | ✅ |
+
+---
+
 ## Architecture Reminder
 
 All code follows the iteration strategy from
@@ -313,7 +371,8 @@ All code follows the iteration strategy from
 - **Iteration 5** — Custom Rendering Engine ✅
 - **Iteration 6** — Compatibility Layer ✅
 - **Iteration 7** — Bundle Execution System ✅
-- **Iteration 8** — Document Management (next)
+- **Iteration 8** — Document Management ✅
+- **Iteration 9** — Search & Replace (next)
 
 ## Workflow Rules
 
