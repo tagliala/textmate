@@ -1,6 +1,6 @@
 # TextMate Swift Rewrite — Session Progress
 
-> Last updated: 2025-07-27
+> Last updated: 2025-07-28
 
 ---
 
@@ -746,6 +746,62 @@ Depends on TMCompatibility, links WebKit.
 
 ---
 
+## Phase 16: Snippet & Format String Engine — ✅ COMPLETE
+
+### What Was Ported
+
+Ported the core regexp framework's format string, snippet, glob, indent, and dependency graph modules (~2,200 lines of C++20 → ~2,670 lines of Swift).
+
+| Legacy Framework | C++ Source Files | Ported To | Description |
+|------------------|-----------------|-----------|-------------|
+| regexp/src/format_string.h/.cc | ~600 | TMCore | Format string AST, parser, expander |
+| regexp/src/snippet.h/.cc | ~500 | TMCore | Snippet runtime (fields, mirrors, transforms, nesting) |
+| regexp/src/glob.h/.cc | ~400 | TMSettings | Glob pattern compilation, brace expansion, include/exclude lists |
+| regexp/src/indent.h/.cc | ~200 | TMEditor | Pattern-based auto-indentation FSM |
+| oak/dependency_graph.h | ~100 | TMCore | Generic DAG for mirror update ordering |
+
+### New Source Files (2,670 lines)
+
+| Package | File | Lines | Description |
+|---------|------|-------|-------------|
+| **TMCore** | `FormatStringNode.swift` | 107 | AST `indirect enum` with 11 cases: text, variable, variableTransform, variableFallback, variableCondition, variableChange, caseChange, placeholder, placeholderTransform, placeholderChoice, code |
+| **TMCore** | `FormatStringParser.swift` | 563 | Recursive descent parser for TM format strings and snippet bodies; handles `${var}`, `${var/regex/format/opts}`, `${var:?then:else}`, case changes (`\u\l\U\L\E`), control codes, escape sequences |
+| **TMCore** | `FormatStringExpander.swift` | 503 | AST evaluator with variable interpolation, regex transforms, case transforms (upper/lower/capitalize with stop words), named transforms (asciify, urlencode, shellEscape, number, duration), snippet field tracking |
+| **TMCore** | `DependencyGraph.swift` | 76 | Generic DAG with `addNode`, `addEdge`, `touch` (transitive dependents via BFS), `topologicalOrder` (Kahn's algorithm) |
+| **TMCore** | `SnippetEngine.swift` | 660 | Full snippet runtime: `SnippetField` (tab stop, mirror, transform, choice), `SnippetState` (parse → setup → navigate → update mirrors), `SnippetStack` (push/pop/next/previous, nested snippets, position adjustment) |
+| **TMSettings** | `GlobPattern.swift` | 546 | Glob-to-regex compiler with `GlobNode` AST, `BraceParser` (brace expansion), `GlobParser` (wildcards, character classes, path separators, exclude patterns), `GlobList` (semicolon-separated include/exclude matching) |
+| **TMEditor** | `IndentFSM.swift` | 215 | `PatternType` OptionSet (increase/decrease/incrementNext/ignore/zeroIndent), `IndentFSM` struct with `scanLine`, `isSeeded`/`isIgnored` queries, static `createIndent`/`leadingWhitespace` helpers |
+
+### Key Design Decisions
+
+- **C++ `boost::variant`** → Swift `indirect enum` for AST nodes (zero-cost abstraction)
+- **NSRegularExpression** used directly for regex transforms (no Onigmo dependency)
+- **Title-case capitalize** — expanded stop words set (23 words: a, an, the, and, as, at, but, by, for, if, in, nor, of, on, or, so, to, up, via, vs, with, yet) matching standard English title-case conventions
+- **BraceParser** — rewritten to properly propagate stop characters through nested `{a,b}` expansion
+- **GlobParser exclusion** — `~pattern` fully parsed into `exclude` node's left child for correct negation matching
+- **DependencyGraph.touch()** — returns empty set for non-existent nodes (guard clause)
+- **SnippetStack** — `currentField` exposed as public var for cross-snippet field access
+
+### Tests (1569/1569 pass — 197 suites, +144 tests in 6 new suites)
+
+| Suite | Tests | Status |
+|-------|-------|--------|
+| DependencyGraphTests | 8 | ✅ |
+| FormatStringParserTests | 30+ | ✅ |
+| FormatStringExpanderTests | 30+ | ✅ |
+| SnippetEngineTests | 15+ | ✅ |
+| GlobPatternTests | 20+ | ✅ |
+| IndentFSMTests | 15+ | ✅ |
+
+### Remaining Legacy Gaps (for future phases)
+
+| Framework | Lines (C++) | Notes |
+|-----------|-------------|-------|
+| plist | ~1,012 | delta, fs_cache, ASCII plist parser |
+| dialog/dialog-1.x | ~1,989 | Command handlers (low priority) |
+
+---
+
 ## Architecture Reminder
 
 All code follows the iteration strategy from
@@ -766,7 +822,8 @@ All code follows the iteration strategy from
 - **Iteration 13** — Application Infrastructure ✅
 - **Iteration 14** — File Browser Sidebar ✅
 - **Iteration 15** — HTML Output Chrome & System Services ✅
-- **Iteration 16** — (next)
+- **Iteration 16** — Snippet & Format String Engine ✅
+- **Iteration 17** — (next)
 
 ## Workflow Rules
 
