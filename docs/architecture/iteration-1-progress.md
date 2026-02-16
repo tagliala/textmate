@@ -703,4 +703,4 @@ All code follows the iteration strategy from
 - **Always run `swiftformat Sources/ Tests/`** before committing
 - **Always run `swift build && swift test`** before pushing
 - Target the `swift` branch, not `main`
-- Use `macos-latest` runner in CI, not hardcoded versions
+- Use `macos-26` runner in CI, not hardcoded versions
