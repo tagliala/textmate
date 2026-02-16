@@ -21,13 +21,13 @@ public protocol PreferencesPaneProtocol: AnyObject {
 open class PreferencesPane: NSViewController, PreferencesPaneProtocol {
 	/// Maps view model keys to UserDefaults keys.
 	/// Subclasses populate this in `init` or `loadView`.
-	nonisolated open var defaultsProperties: [String: String] {
+	open nonisolated var defaultsProperties: [String: String] {
 		[:]
 	}
 
 	/// Maps view model keys to settings keys.
 	/// Subclasses populate this in `init` or `loadView`.
-	nonisolated open var tmProperties: [String: String] {
+	open nonisolated var tmProperties: [String: String] {
 		[:]
 	}
 
