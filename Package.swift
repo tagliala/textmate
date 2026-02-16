@@ -81,6 +81,10 @@ let package = Package(
 			name: "TMServices",
 			targets: ["TMServices"],
 		),
+		.library(
+			name: "TMFileBrowser",
+			targets: ["TMFileBrowser"],
+		),
 		.executable(
 			name: "TextMateApp",
 			targets: ["TMApp"],
@@ -238,6 +242,16 @@ let package = Package(
 			],
 		),
 
+		// MARK: - File Browser Sidebar
+
+		.target(
+			name: "TMFileBrowser",
+			path: "Sources/TMFileBrowser",
+			linkerSettings: [
+				.linkedFramework("QuickLookUI"),
+			],
+		),
+
 		// MARK: - Test Targets
 
 		.testTarget(
@@ -340,6 +354,12 @@ let package = Package(
 			name: "TMServicesTests",
 			dependencies: ["TMServices"],
 			path: "Tests/TMServicesTests",
+		),
+
+		.testTarget(
+			name: "TMFileBrowserTests",
+			dependencies: ["TMFileBrowser"],
+			path: "Tests/TMFileBrowserTests",
 		),
 	],
 )

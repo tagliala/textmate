@@ -616,6 +616,67 @@ Per [07-execution-plan.md](07-execution-plan.md), Phase 8 targets:
 
 ---
 
+## Phase 14: File Browser Sidebar — ✅ COMPLETE
+
+### Deliverables
+
+| Package | File | Status |
+|---------|------|--------|
+| **TMFileBrowser** | `FileBrowserNotifications.swift` — `willDelete`/`didDuplicate` notification names, `pathKey`/`urlDictionaryKey` userInfo keys | ✅ |
+| **TMFileBrowser** | `FileItem.swift` — `@MainActor` model for files/directories: URL, file property flags, Finder tags, localized name, directory observer pattern, `QLPreviewItem` conformance, `FileBrowserLocation` enum, `FinderTag` struct | ✅ |
+| **TMFileBrowser** | `FileItemImage.swift` — Composite icon generation with SCM status badges: `iconImage(for:...)`, badge color/symbol rendering, dimmed modified icons | ✅ |
+| **TMFileBrowser** | `FileBrowserOutlineView.swift` — Custom `NSOutlineView` subclass: ⌘-Delete trash shortcut, right-click menu support, `FileBrowserOutlineViewDelegate` protocol | ✅ |
+| **TMFileBrowser** | `FileItemTableCellView.swift` — Table cell view with open/close buttons, icon, editable name field, `configure(with:icon:)` | ✅ |
+| **TMFileBrowser** | `FileBrowserHeaderView.swift` — `NSVisualEffectView` header with folder popup, back/forward navigation buttons | ✅ |
+| **TMFileBrowser** | `FileBrowserActionsView.swift` — `NSVisualEffectView` actions bar with create, reload, search, favorites, SCM buttons | ✅ |
+| **TMFileBrowser** | `FinderTagsChooser.swift` — Color swatch grid for Finder tag selection/removal | ✅ |
+| **TMFileBrowser** | `FileBrowserCompositeView.swift` — Composes header, scroll view with outline, and actions bar | ✅ |
+| **TMFileBrowser** | `DiskOperations.swift` — `DiskOperation` OptionSet, `DiskOperationHandler` with undo/redo, conflict resolution dialogs (Replace/Stop/Skip), unique name generation | ✅ |
+| **TMFileBrowser** | `FileBrowserViewController.swift` — Full file browser controller (~1750 lines): navigation history, file operations, cut/copy/paste, delete/duplicate/rename, favorites, session state persistence, context menu, QuickLook, drag & drop, Finder tag editing, item comparator/arrangement | ✅ |
+
+### Integration
+
+| Target | Change | Status |
+|--------|--------|--------|
+| **Package.swift** | Added TMFileBrowser library + TMFileBrowserTests target, QuickLookUI framework linker setting | ✅ |
+
+### Key Features
+
+- **FileItem** — `@MainActor` model with `@unchecked Sendable`; uppercase `URL` property (Obj-C convention) with lowercase `url` alias; `DirectoryObserver` pattern for FSEvent-backed directory watching; `QLPreviewItem` conformance via `nonisolated` + `MainActor.assumeIsolated`
+- **FileBrowserViewController** — Full port of 2300-line C++ `FileBrowserViewController.mm`; navigation stack with back/forward/parent/computer/home/desktop/favorites/SCM; session state serialization; `NSOutlineViewDataSource`/`NSOutlineViewDelegate`; LCS-based outline view animation for rearranges; disambiguation suffix calculation for duplicate names; drag-and-drop with link/copy/move detection
+- **DiskOperationHandler** — `UndoManager`-based undo/redo for all file operations; conflict resolution with Replace/Stop/Skip alerts; unique name generation via regex; sound effects for operations
+- **QuickLook** — `QLPreviewPanelDataSource`/`QLPreviewPanelDelegate` via nonisolated extension; `acceptsPreviewPanelControl`/`beginPreviewPanelControl`/`endPreviewPanelControl` overrides
+- **Concurrency** — `nonisolated(unsafe)` for directory observer tokens; `MainActor.assumeIsolated` in deinit for cleanup; `nonisolated` QL methods with `MainActor.assumeIsolated` bodies
+
+### Tests (27 tests, 20 suites)
+
+| Suite | Tests | Status |
+|-------|-------|--------|
+| FileBrowserNotifications | 5 | ✅ |
+| FileBrowserLocation | 7 | ✅ |
+| FileItem initialization | 10 | ✅ |
+| FileItem properties (real files) | 4 | ✅ |
+| FileItem DirectoryObserver | 4 | ✅ |
+| FinderTag | 4 | ✅ |
+| FileItemImage.SCMStatus | 2 | ✅ |
+| FileItemImage icon generation | 6 | ✅ |
+| DiskOperation OptionSet | 4 | ✅ |
+| DiskOperationHandler.incrementedName | 6 | ✅ |
+| DiskOperationHandler unique URLs | 1 + 1 skipped | ✅ |
+| FileBrowserViewController init | 4 | ✅ |
+| FileBrowserViewController navigation | 6 | ✅ |
+| FileBrowserViewController comparator | 2 | ✅ |
+| FileBrowserViewController session state | 4 | ✅ |
+| FileBrowserCompositeView | 1 | ✅ |
+| FileBrowserHeaderView | 1 | ✅ |
+| FileBrowserActionsView | 1 | ✅ |
+| FileBrowserOutlineView | 1 | ✅ |
+| FileItemTableCellView | 2 | ✅ |
+
+*Note: All AppKit-dependent code guarded with `#if canImport(AppKit)`. View controller tests exercise init, navigation, session state roundtrip, and item comparator without requiring a visible window.*
+
+---
+
 ## Architecture Reminder
 
 All code follows the iteration strategy from
@@ -634,7 +695,8 @@ All code follows the iteration strategy from
 - **Iteration 11** — Filter List / Navigation ✅
 - **Iteration 12** — Preferences & Auxiliary UI ✅
 - **Iteration 13** — Application Infrastructure ✅
-- **Iteration 14** — (next)
+- **Iteration 14** — File Browser Sidebar ✅
+- **Iteration 15** — (next)
 
 ## Workflow Rules
 
