@@ -1,6 +1,6 @@
 # TextMate Swift Rewrite — Session Progress
 
-> Last updated: 2026-02-15
+> Last updated: 2025-07-25
 
 ---
 
@@ -416,6 +416,52 @@ Per [07-execution-plan.md](07-execution-plan.md), Phase 8 targets:
 
 ---
 
+## Phase 10: SCM Integration — ✅ COMPLETE
+
+### Deliverables
+
+| Package | File | Status |
+|---------|------|--------|
+| **TMSCM** | `SCMStatus.swift` — `SCMStatus` enum (9 cases: unknown/none/unversioned/modified/added/deleted/conflicted/ignored/mixed), `SCMStatusMap` (path→status dictionary, directory status computation, merge), `SCMVariables` (VCS info, TM_SCM_* environment export) | ✅ |
+| **TMSCM** | `SCMDriver.swift` — `SCMDriver` protocol (detection marker, root walk, async status/variables), `SCMDriverRegistry` (ordered driver list, auto-detect), `runCommand` async Process helper, `findExecutable` PATH search | ✅ |
+| **TMSCM** | `GitDriver.swift` — Git driver: `git status --porcelain=v1 -uall --no-renames` parsing, index/worktree status mapping, branch via `--show-current`, HEAD commit via `rev-parse --short` | ✅ |
+| **TMSCM** | `HgDriver.swift` — Mercurial driver: `hg status --all -0` null-separated parsing, `mayTouchFilesystem = true` | ✅ |
+| **TMSCM** | `SvnDriver.swift` — Subversion driver: `svn status` 7-column format parsing, `tracksDirectories = true`, branch detection from URL (`/branches/`, `/trunk`) | ✅ |
+| **TMSCM** | `SCMRepository.swift` — `@MainActor` observable repository: async refresh, repository-level and file-level observer callbacks, `modifiedFiles`/`uncommittedFiles` computed properties, `SCMError` enum | ✅ |
+| **TMSCM** | `SCMManager.swift` — `@MainActor` singleton manager: repository caching by root path, auto-detect VCS, auto-refresh via `Task` with configurable interval, `refreshAll` via TaskGroup, convenience status/variables/branch APIs | ✅ |
+| **TMSCM** | `FileStatusBadge.swift` — Visual badge computation: colorName, symbolName (SF Symbols), text, AppKit NSColor, `FileStatusBadgeProvider` with `@MainActor` cache | ✅ |
+
+### Key Features
+
+- **SCMDriver protocol** — abstract interface for VCS drivers with root detection (walks parent directories for marker file/directory), async status and variables
+- **Git/Hg/Svn drivers** — full porcelain output parsing, branch/revision detection, proper status code mapping
+- **SCMStatusMap** — path→status dictionary with directory status aggregation (computes `mixed` when children have different statuses), merge operation for combining maps
+- **SCMVariables** — VCS-agnostic variable struct exposing `TM_SCM_NAME`, `TM_SCM_BRANCH` for bundle command environment
+- **SCMRepository** — observable repository model with async refresh, dual-level observer pattern (repository-wide and per-file callbacks), Identifiable
+- **SCMManager** — singleton manager with LRU-style repository cache, auto-detect VCS from file path, configurable auto-refresh interval (default 3s), TaskGroup-based parallel refresh
+- **FileStatusBadge** — visual status representation with SF Symbol names, semantic color names, AppKit NSColor mapping for file browser integration
+
+### Tests (68 tests, 14 suites)
+
+| Suite | Tests | Status |
+|-------|-------|--------|
+| SCMStatus | 5 | ✅ |
+| SCMStatusMap | 10 | ✅ |
+| SCMVariables | 5 | ✅ |
+| MockDriver | 4 | ✅ |
+| SCMDriverRegistry | 4 | ✅ |
+| GitDriver | 1 | ✅ |
+| HgDriver | 1 | ✅ |
+| SvnDriver | 1 | ✅ |
+| ShellHelpers | 3 | ✅ |
+| SCMRepository | 8 | ✅ |
+| SCMError | 1 | ✅ |
+| SCMManager | 9 | ✅ |
+| FileStatusBadge | 11 | ✅ |
+| FileStatusBadgeProvider | 3 | ✅ |
+
+---
+
 ## Architecture Reminder
 
 All code follows the iteration strategy from
@@ -430,7 +476,8 @@ All code follows the iteration strategy from
 - **Iteration 7** — Bundle Execution System ✅
 - **Iteration 8** — Document Management ✅
 - **Iteration 9** — Search & Replace ✅
-- **Iteration 10** — (next)
+- **Iteration 10** — SCM Integration ✅
+- **Iteration 11** — (next)
 
 ## Workflow Rules
 

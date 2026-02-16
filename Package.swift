@@ -65,6 +65,10 @@ let package = Package(
 			name: "TMSearchReplace",
 			targets: ["TMSearchReplace"],
 		),
+		.library(
+			name: "TMSCM",
+			targets: ["TMSCM"],
+		),
 		.executable(
 			name: "TextMateApp",
 			targets: ["TMApp"],
@@ -187,6 +191,13 @@ let package = Package(
 			path: "Sources/TMSearchReplace",
 		),
 
+		// MARK: - SCM Integration
+
+		.target(
+			name: "TMSCM",
+			path: "Sources/TMSCM",
+		),
+
 		// MARK: - Test Targets
 
 		.testTarget(
@@ -265,6 +276,12 @@ let package = Package(
 			name: "TMSearchReplaceTests",
 			dependencies: ["TMSearchReplace"],
 			path: "Tests/TMSearchReplaceTests",
+		),
+
+		.testTarget(
+			name: "TMSCMTests",
+			dependencies: ["TMSCM"],
+			path: "Tests/TMSCMTests",
 		),
 	],
 )
