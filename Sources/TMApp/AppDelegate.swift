@@ -158,7 +158,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 	}
 
 	@objc func showPreferences(_: Any?) {
-		PreferencesWindowController.shared.showPreferences()
+		AppPreferencesWindowController.shared.showPreferences()
 	}
 
 	// MARK: - Window State Restoration

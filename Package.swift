@@ -73,6 +73,10 @@ let package = Package(
 			name: "TMFilterList",
 			targets: ["TMFilterList"],
 		),
+		.library(
+			name: "TMPreferences",
+			targets: ["TMPreferences"],
+		),
 		.executable(
 			name: "TextMateApp",
 			targets: ["TMApp"],
@@ -150,6 +154,7 @@ let package = Package(
 				"TMTheme",
 				"TMAppKit",
 				"TMDocumentWindow",
+				"TMPreferences",
 			],
 			path: "Sources/TMApp",
 			exclude: ["Info.plist"],
@@ -207,6 +212,16 @@ let package = Package(
 		.target(
 			name: "TMFilterList",
 			path: "Sources/TMFilterList",
+		),
+
+		// MARK: - Preferences & Auxiliary UI
+
+		.target(
+			name: "TMPreferences",
+			path: "Sources/TMPreferences",
+			linkerSettings: [
+				.linkedFramework("WebKit"),
+			],
 		),
 
 		// MARK: - Test Targets
@@ -299,6 +314,12 @@ let package = Package(
 			name: "TMFilterListTests",
 			dependencies: ["TMFilterList"],
 			path: "Tests/TMFilterListTests",
+		),
+
+		.testTarget(
+			name: "TMPreferencesTests",
+			dependencies: ["TMPreferences"],
+			path: "Tests/TMPreferencesTests",
 		),
 	],
 )

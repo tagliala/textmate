@@ -1,6 +1,6 @@
 # TextMate Swift Rewrite — Session Progress
 
-> Last updated: 2025-07-26
+> Last updated: 2025-07-27
 
 ---
 
@@ -511,6 +511,61 @@ Per [07-execution-plan.md](07-execution-plan.md), Phase 8 targets:
 
 ---
 
+## Phase 12: Preferences & Auxiliary UI — ✅ COMPLETE
+
+### Deliverables
+
+| Package | File | Status |
+|---------|------|--------|
+| **TMPreferences** | `PreferencesKeys.swift` — 30+ static key constants organized by category, `RMateListenMode` enum, `UpdateChannel` enum, `defaultEnvironmentVariables` (9 entries) | ✅ |
+| **TMPreferences** | `PreferencesPane.swift` — `@MainActor PreferencesPaneProtocol`, `PreferencesPane` base class with KVC proxy via `value(forUndefinedKey:)`/`setValue(_:forUndefinedKey:)` routing to `defaultsProperties`/`tmProperties`, `PreferencesSettingsBridge` singleton | ✅ |
+| **TMPreferences** | `FilesPreferencesPane.swift` — session restore, encoding popup (12 encodings), line ending popup, file type checkboxes | ✅ |
+| **TMPreferences** | `ProjectsPreferencesPane.swift` — 11 defaults properties (foldersOnTop, showFileExtensions, fileBrowserPlacement, etc.), 3 tm properties (exclude/include/binary patterns) | ✅ |
+| **TMPreferences** | `BundlesPreferencesPane.swift` — standalone pane with `BundleInfo` struct, category extraction, search filtering, sorted display | ✅ |
+| **TMPreferences** | `VariablesPreferencesPane.swift` — standalone pane with `EnvironmentVariable` struct, NSTableView with add/remove, dictionary round-trip for UserDefaults | ✅ |
+| **TMPreferences** | `SoftwareUpdatePreferencesPane.swift` — update channel popup, "Check Now" button, `lastCheckDescription()` via RelativeDateTimeFormatter | ✅ |
+| **TMPreferences** | `TerminalPreferencesPane.swift` — mate CLI install path/status, rmate server config (listen mode, port) | ✅ |
+| **TMPreferences** | `PreferencesWindowController.swift` — `@MainActor` singleton, NSPanel with `NSWindowToolbarStylePreference`, 6 panes, selectNext/Previous with wrapping | ✅ |
+| **TMPreferences** | `CommitWindowController.swift` — `CommitItem` (auto-deselect ?/X), `CommitActionCommand` (parse factory), status colors (hardcoded RGB), previous messages (max 5, UserDefaults) | ✅ |
+| **TMPreferences** | `HTMLOutputWindowController.swift` — WKWebView wrapper, `isRunningCommand` → `isDocumentEdited`, frame autosave, `retainedSelf` lifecycle | ✅ |
+| **TMPreferences** | `FileReference.swift` — `FileReferenceSCMStatus` enum, identity-mapped cache via `NSMapTable.strongToWeakObjects()`, open/modified ref-counting, SCM badge overlay, symlink badge | ✅ |
+
+### Integration
+
+| Target | Change | Status |
+|--------|--------|--------|
+| **Package.swift** | Added TMPreferences library + TMPreferencesTests target, WebKit linker setting, TMApp dependency | ✅ |
+| **TMApp** | `PreferencesWindowController.swift` replaced with thin `AppPreferencesWindowController` wrapper importing TMPreferences | ✅ |
+| **TMApp** | `AppDelegate.swift` updated to use `AppPreferencesWindowController` | ✅ |
+
+### Key Features
+
+- **PreferencesPane base class** — KVC proxy pattern routing Cocoa bindings to UserDefaults (`defaultsProperties`) or `PreferencesSettingsBridge` (`tmProperties`)
+- **PreferencesSettingsBridge** — `@unchecked Sendable` singleton with `@Sendable` configure/get/set closures for thread-safe settings access
+- **CommitItem** — auto-deselects unversioned ("?") and conflicted ("X") items, `Comparable` by case-insensitive path
+- **CommitActionCommand** — parse factory for "M,A,D:Revert,/usr/bin/svn,revert" format strings
+- **FileReference** — identity-mapped via `NSMapTable.strongToWeakObjects()`, open/modified ref-counting with preconditions, SCM badge overlay image composition
+- **HTMLOutputWindowController** — WKWebView with `isRunningCommand` binding to `isDocumentEdited`, `cancelOperation` override for stop button
+
+### Tests (123 tests, 12 suites)
+
+| Suite | Tests | Status |
+|-------|-------|--------|
+| PreferencesKeys | 10 | ✅ |
+| PreferencesSettingsBridge | 5 | ✅ |
+| EnvironmentVariable | 14 | ✅ |
+| CommitItem | 11 | ✅ |
+| CommitActionCommand | 9 | ✅ |
+| CommitStatusColors | 9 | ✅ |
+| FileReference | 21 | ✅ |
+| BundlesPreferencesPane | 10 | ✅ |
+| PreferencesPaneProperty | 12 | ✅ |
+| HTMLOutputWindowController | 6 | ✅ |
+| PreferencesWindowController | 10 | ✅ |
+| PreferencesKeys (env vars) | 6 | ✅ |*
+
+---
+
 ## Architecture Reminder
 
 All code follows the iteration strategy from
@@ -527,7 +582,8 @@ All code follows the iteration strategy from
 - **Iteration 9** — Search & Replace ✅
 - **Iteration 10** — SCM Integration ✅
 - **Iteration 11** — Filter List / Navigation ✅
-- **Iteration 12** — (next)
+- **Iteration 12** — Preferences & Auxiliary UI ✅
+- **Iteration 13** — (next)
 
 ## Workflow Rules
 
