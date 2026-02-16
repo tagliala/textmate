@@ -77,6 +77,10 @@ let package = Package(
 			name: "TMPreferences",
 			targets: ["TMPreferences"],
 		),
+		.library(
+			name: "TMServices",
+			targets: ["TMServices"],
+		),
 		.executable(
 			name: "TextMateApp",
 			targets: ["TMApp"],
@@ -224,6 +228,16 @@ let package = Package(
 			],
 		),
 
+		// MARK: - Application Infrastructure
+
+		.target(
+			name: "TMServices",
+			path: "Sources/TMServices",
+			linkerSettings: [
+				.linkedFramework("Security"),
+			],
+		),
+
 		// MARK: - Test Targets
 
 		.testTarget(
@@ -320,6 +334,12 @@ let package = Package(
 			name: "TMPreferencesTests",
 			dependencies: ["TMPreferences"],
 			path: "Tests/TMPreferencesTests",
+		),
+
+		.testTarget(
+			name: "TMServicesTests",
+			dependencies: ["TMServices"],
+			path: "Tests/TMServicesTests",
 		),
 	],
 )

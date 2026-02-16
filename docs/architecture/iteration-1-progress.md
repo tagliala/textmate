@@ -566,6 +566,56 @@ Per [07-execution-plan.md](07-execution-plan.md), Phase 8 targets:
 
 ---
 
+## Phase 13: Application Infrastructure — ✅ COMPLETE
+
+### Deliverables
+
+| Package | File | Status |
+|---------|------|--------|
+| **TMServices** | `ExtendedAttributes.swift` — POSIX xattr wrappers: `read/readString/write/writeString/remove/list` by path, `read/write` by file descriptor | ✅ |
+| **TMServices** | `PathUtilities.swift` — 40+ path manipulation functions: `normalize/name/parent/extension/extensions/join/isAbsolute/isChild/withTilde/relativeTo/escape/unescape/displayName/disambiguate/unique/rank/exists/isDirectory/isReadable/home/temp/cwd/makeDir/content/setContent` | ✅ |
+| **TMServices** | `AtomicFileSave.swift` — volume-aware atomic file save with 3 strategies: `FileManagerStrategy` (NSFileManager `replaceItem`), `RenameStrategy` (temp+rename on same volume), `DirectStrategy` (overwrite in-place); `SaveError` enum | ✅ |
+| **TMServices** | `EventStringFormatter.swift` — event string parsing/formatting for `$^~@#` key representation: `parse/create/normalize/glyphsForFlags/glyphsForEventString/attributedString`; function key glyph table; modifier flag display order (⌃⌥⇧⌘) | ✅ |
+| **TMServices** | `VersionComparison.swift` — semantic version string comparison with prerelease (`-`) and build metadata (`+`) handling: `compare(_:_:) -> ComparisonResult`, `less(_:_:) -> Bool` | ✅ |
+| **TMServices** | `SignatureVerifier.swift` — DSA/RSA signature verification via Security.framework: `SecVerifyTransformCreate`, `SecItemImport` for PEM key import, `KeyChain` struct for identity→key mapping, base64 signature decoding | ✅ |
+| **TMServices** | `ArchiveExtractor.swift` — `.tbz` extraction via `/usr/bin/tar -jxmkC`: bulk `extract(data:)`, streaming `beginStreaming/write/finishStreaming`, async `extractAsync(data:)`, configurable `Options` (stripComponents, disableCopyfile, excludePatterns) | ✅ |
+| **TMServices** | `DownloadManager.swift` — URLSession-based download manager: `downloadFile` with ETag xattr caching + signature verification, `downloadArchive` with streaming extraction pipeline, user agent string with sysctl hardware info, internal `ArchiveDownloadTask` (`URLSessionDataDelegate`) | ✅ |
+| **TMServices** | `SoftwareUpdateEngine.swift` — `@MainActor` auto-update engine: `NSBackgroundActivityScheduler` (1-hour interval), channel management (release/beta/nightly), async `checkForUpdate`, `installAndRelaunch` with shell script, `suspendChecks`, read-only filesystem detection, `downloadUpdate` returning `(Progress, Task)` | ✅ |
+
+### Integration
+
+| Target | Change | Status |
+|--------|--------|--------|
+| **Package.swift** | Added TMServices library + TMServicesTests target, Security.framework linker setting | ✅ |
+
+### Key Features
+
+- **ExtendedAttributes** — Non-throwing API returning optionals/bools; supports both path-based and file-descriptor-based operations
+- **PathUtilities** — Comprehensive port of `Frameworks/io/src/path.h`; `disambiguate` returns minimum trailing component counts; `escape` uses shell quoting; `unescape` returns `[String]` to handle multiple paths
+- **AtomicFileSave** — Port of `intermediate_t`; volume-aware strategy selection ensures atomic writes even across volume boundaries
+- **EventStringFormatter** — Full port of `ns/event.h/.mm`; supports legacy TextMate 1 format; function key glyph table (F1–F35); auto-shift detection for shifted characters
+- **SignatureVerifier** — `KeyChain` struct maps signee identities to PEM public keys; `httpSigneeHeader`/`httpSignatureHeader` constants for download verification
+- **DownloadManager** — Singleton with `URLSessionDataDelegate`; captures signee/signature from HTTP response headers and redirect chains; ETag-based conditional requests via xattr cache
+- **SoftwareUpdateEngine** — Observable `@MainActor` class; `@preconcurrency import Foundation` + `nonisolated(unsafe)` for Sendable bridging; `MainActor.assumeIsolated` in deinit
+
+### Tests (105 tests, 9 suites)
+
+| Suite | Tests | Status |
+|-------|-------|--------|
+| ExtendedAttributes | 7 | ✅ |
+| PathUtilities | 22 | ✅ |
+| AtomicFileSave | 6 | ✅ |
+| EventStringFormatter | 11 | ✅ |
+| VersionComparison | 12 | ✅ |
+| SignatureVerifier | 7 | ✅ |
+| ArchiveExtractor | 6 | ✅ |
+| DownloadManager | 4 | ✅ |
+| SoftwareUpdateEngine | 8 | ✅ |
+
+*Note: Tests require macOS — guarded with `#if canImport(AppKit)` where needed. ArchiveExtractor real archive test uses `/usr/bin/tar` for creating test `.tbz` files.*
+
+---
+
 ## Architecture Reminder
 
 All code follows the iteration strategy from
@@ -583,7 +633,8 @@ All code follows the iteration strategy from
 - **Iteration 10** — SCM Integration ✅
 - **Iteration 11** — Filter List / Navigation ✅
 - **Iteration 12** — Preferences & Auxiliary UI ✅
-- **Iteration 13** — (next)
+- **Iteration 13** — Application Infrastructure ✅
+- **Iteration 14** — (next)
 
 ## Workflow Rules
 
