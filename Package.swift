@@ -61,6 +61,10 @@ let package = Package(
 			name: "TMDocumentManager",
 			targets: ["TMDocumentManager"],
 		),
+		.library(
+			name: "TMSearchReplace",
+			targets: ["TMSearchReplace"],
+		),
 		.executable(
 			name: "TextMateApp",
 			targets: ["TMApp"],
@@ -176,6 +180,13 @@ let package = Package(
 			path: "Sources/TMDocumentManager",
 		),
 
+		// MARK: - Search & Replace
+
+		.target(
+			name: "TMSearchReplace",
+			path: "Sources/TMSearchReplace",
+		),
+
 		// MARK: - Test Targets
 
 		.testTarget(
@@ -248,6 +259,12 @@ let package = Package(
 			name: "TMDocumentManagerTests",
 			dependencies: ["TMDocumentManager"],
 			path: "Tests/TMDocumentManagerTests",
+		),
+
+		.testTarget(
+			name: "TMSearchReplaceTests",
+			dependencies: ["TMSearchReplace"],
+			path: "Tests/TMSearchReplaceTests",
 		),
 	],
 )

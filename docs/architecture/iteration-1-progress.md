@@ -359,6 +359,63 @@ Per [07-execution-plan.md](07-execution-plan.md), Phase 8 targets:
 
 ---
 
+## Phase 9: Search & Replace — ✅ COMPLETE
+
+### Packages & Source Files
+
+| Package | File | Status |
+|---------|------|--------|
+| **TMSearchReplace** | `FindOptions.swift` — `FindOptions` OptionSet, `FindOperation`, `SearchScope`, `FindMatch`, `DocumentMatch`, `LineColumnRange` | ✅ |
+| **TMSearchReplace** | `TextFinder.swift` — `TextFinder` protocol, `PlainTextFinder` (case, words, backwards, whitespace), `RegexFinder` (NSRegularExpression, captures), factory | ✅ |
+| **TMSearchReplace** | `ReplacementTemplate.swift` — Format string expansion (`$N`, `${name}`, `${N:/transform}`, `(?N:then:else)`, escapes), `replaceAll` convenience | ✅ |
+| **TMSearchReplace** | `BufferSearcher.swift` — Buffer-level find ops (findNext with wrap, findAll, replaceAll with template expansion, countMatches) | ✅ |
+| **TMSearchReplace** | `ProjectSearchEngine.swift` — `SearchResultNode` tree, `ProjectSearchConfig`, `SearchProgress`, async `ProjectSearchEngine` with glob filtering | ✅ |
+| **TMSearchReplace** | `FindProtocol.swift` — `FindServer`/`FindClient` protocols, `FindNavigationDelegate`, `DocumentMatchReference`, `FindState` observable | ✅ |
+| **TMSearchReplace** | `IncrementalSearch.swift` — `IncrementalSearchState` live search bar (anchor, highlight all, findNext/Previous) | ✅ |
+| **TMSearchReplace** | `FindHistory.swift` — `FindPasteboard` singleton (system find pasteboard sync, history, UserDefaults persistence) | ✅ |
+
+### Key Features
+
+- **TextFinder protocol** — abstraction for plain text and regex engines, with factory dispatch
+- **PlainTextFinder** — String-based search with Unicode normalization, full word boundary detection, backwards search, whitespace-insensitive mode
+- **RegexFinder** — NSRegularExpression wrapper with numbered capture group extraction, anchorsMatchLines, case insensitive
+- **ReplacementTemplate** — Full format string expansion: `$0`–`$9`, `${name}`, `${N:/upcase|downcase|capitalize}`, `(?N:then:else)` conditionals, escape sequences; recursive expansion inside conditionals
+- **BufferSearcher** — String-level find with wrap-around, offset-based forward/backward, replaceAll with template expansion
+- **ProjectSearchEngine** — Async file system traversal with include/exclude glob filtering, per-file matching, excerpt building with context, cancel support, progress reporting
+- **SearchResultNode** — Tree model (root→file→match) with exclude/readonly propagation, match counting, deduplication
+- **FindState** — Observable shared state with find/replace history (max 30, dedup), options, search scope persistence
+- **FindPasteboard** — Singleton bridging system NSPasteboard.find, history management, UserDefaults save/restore
+- **IncrementalSearchState** — Live search bar with anchor position, automatic re-search on keystroke (didSet), highlight all matches, case toggle
+
+### Tests (140 tests, 22 suites)
+
+| Suite | Tests | Status |
+|-------|-------|--------|
+| FindOptions | 7 | ✅ |
+| FindOperation | 2 | ✅ |
+| SearchScope | 2 | ✅ |
+| FindMatch | 5 | ✅ |
+| DocumentMatch | 2 | ✅ |
+| LineColumnRange | 5 | ✅ |
+| PlainTextFinder | 12 | ✅ |
+| RegexFinder | 7 | ✅ |
+| TextFinder Factory | 3 | ✅ |
+| RegexValidation | 2 | ✅ |
+| ReplacementTemplate | 20 | ✅ |
+| BufferSearchResult | 2 | ✅ |
+| BufferSearcher | 15 | ✅ |
+| SearchResultNode | 9 | ✅ |
+| ProjectSearchConfig | 3 | ✅ |
+| SearchProgress | 2 | ✅ |
+| ProjectSearchEngine | 4 | ✅ |
+| FindState | 7 | ✅ |
+| DocumentMatchReference | 2 | ✅ |
+| FindPasteboard | 4 | ✅ |
+| FindHistory | 6 | ✅ |
+| IncrementalSearchState | 12 | ✅ |
+
+---
+
 ## Architecture Reminder
 
 All code follows the iteration strategy from
@@ -372,7 +429,8 @@ All code follows the iteration strategy from
 - **Iteration 6** — Compatibility Layer ✅
 - **Iteration 7** — Bundle Execution System ✅
 - **Iteration 8** — Document Management ✅
-- **Iteration 9** — Search & Replace (next)
+- **Iteration 9** — Search & Replace ✅
+- **Iteration 10** — (next)
 
 ## Workflow Rules
 
