@@ -295,13 +295,7 @@ struct FinderTagTests {
 	func equatable() {
 		let a = FinderTag(name: "Red", labelColor: .red)
 		let b = FinderTag(name: "Red", labelColor: .blue)
-		// FinderTag is Equatable — both have the same name but different colors
-		// Per the struct definition, both fields are compared
-		if a == b {
-			#expect(true, "Tags are equal")
-		} else {
-			#expect(true, "Tags differ by color as expected")
-		}
+		#expect(a != b, "Tags differ by color as expected")
 	}
 
 	@Test("hashable for use in sets")
@@ -343,7 +337,7 @@ struct SCMStatusTests {
 	func sendable() {
 		let status: FileItemImage.SCMStatus = .modified
 		let _: any Sendable = status
-		#expect(true)
+		#expect(status == .modified)
 	}
 }
 

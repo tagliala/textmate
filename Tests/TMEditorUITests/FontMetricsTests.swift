@@ -3,6 +3,7 @@ import Testing
 @testable import TMEditorUI
 
 @Suite("FontMetrics")
+@MainActor
 struct FontMetricsTests {
 	// MARK: - System Font
 
@@ -118,7 +119,7 @@ struct FontMetricsTests {
 	@Test("Unknown font name falls back to system font")
 	func unknownFontFallback() {
 		let metrics = FontMetrics(fontName: "NonexistentFont12345", fontSize: 12)
-		#expect(metrics.ascent > 0)
+		#expect(metrics.lineHeight() > 0)
 		#expect(metrics.columnWidth > 0)
 	}
 }

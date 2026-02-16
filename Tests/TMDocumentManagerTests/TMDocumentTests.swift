@@ -455,7 +455,7 @@ struct ThreeWayMergeTests {
 @Suite("DocumentIOError")
 struct DocumentIOErrorTests {
 	@Test("Error descriptions are meaningful")
-	func errorDescriptions() throws {
+	func errorDescriptions() {
 		#expect(DocumentIOError.noPath.errorDescription != nil)
 		#expect(DocumentIOError.noContent.errorDescription != nil)
 		#expect(DocumentIOError.encodingFailed("UTF-8").errorDescription?.contains("UTF-8") == true)
