@@ -677,6 +677,75 @@ Per [07-execution-plan.md](07-execution-plan.md), Phase 8 targets:
 
 ---
 
+## Iteration 15: HTML Output Chrome & System Services — ✅ COMPLETE
+
+### What Was Ported
+
+Ported remaining meaningful C++ code from legacy frameworks:
+
+| Legacy Framework | Lines (C++) | Ported To | Description |
+|------------------|-------------|-----------|-------------|
+| HTMLOutput/src/ (HOStatusBar, HOBrowserView, HOWebViewDelegateHelper, OakHTMLOutputView, HOJSBridge) | ~1,400 | TMHTMLOutput | Browser chrome, JS bridge, command lifecycle |
+| authorization/src/ | ~356 | TMServices | Privileged helper IPC, AuthorizationRef |
+| ns/src/spellcheck/ | ~102 | TMServices | NSSpellChecker wrapper with UTF-8 ranges |
+| encoding/src/ | ~258 | TMDocumentManager | Bayesian charset classifier |
+
+### New Package: TMHTMLOutput
+
+Depends on TMCompatibility, links WebKit.
+
+| File | Description |
+|------|-------------|
+| `HTMLOutputStatusBar.swift` | NSVisualEffectView status bar with back/forward buttons, status text, progress indicator (determinate + spinner) |
+| `HTMLOutputBrowserView.swift` | Composite WKWebView + StatusBar with KVO progress tracking, swipe navigation, hover link status, error pages, WKNavigationDelegate (txmt://, tm-file://), WKUIDelegate (JS alerts, new windows) |
+| `HTMLOutputCommandView.swift` | Full TextMate HTML output widget with JS bridge (TextMate.system/log/open), command lifecycle, auto-scroll, process management, printing |
+
+### Additions to Existing Packages
+
+| Package | File | Description |
+|---------|------|-------------|
+| TMServices | `AuthorizationService.swift` | NSXPCConnection-based privileged helper (replaces Unix socket IPC), AuthorizationRef wrapper, hex serialization |
+| TMServices | `SpellCheckService.swift` | NSSpellChecker wrapper with DocumentTag lifecycle, UTF-16→UTF-8 range conversion, suggestions |
+| TMDocumentManager | `EncodingDetector.swift` | Bayesian charset classifier with word/byte frequency analysis, Codable JSON persistence (replaces Cap'n Proto) |
+
+### Modernization Decisions
+
+- **WKWebView** replaces deprecated `WebView` throughout
+- **NSXPCConnection + SMAppService** replaces Unix socket IPC for privileged helper
+- **MainActor.assumeIsolated** used in WKScriptMessageHandler callbacks for strict concurrency
+- **Codable JSON** replaces Cap'n Proto for encoding frequency persistence
+- **String.Index(utf16Offset:)** used for NSSpellChecker range conversion to UTF-8
+
+### Frameworks Assessed as Not Needing Port
+
+| Framework | Reason |
+|-----------|--------|
+| HTMLOutputWindow | Functionality covered by TMPreferences.HTMLOutputWindowController |
+| OakDebug | Debug macros — not needed in Swift |
+| OakSystem | Trivial wrappers already covered by Foundation/AppKit |
+| cf | CoreFoundation wrappers — using native Swift equivalents |
+| MenuBuilder | Ported as TMApp.MainMenuBuilder |
+| license | Unnecessary — TextMate 2 is free/open-source |
+| crash/CrashReporter | Apple Crash Reporter + os.log replaces custom crash handling |
+
+### Tests (1425/1425 pass — 191 suites)
+
+| Suite | Tests | Status |
+|-------|-------|--------|
+| HTMLOutputStatusBar | 8 | ✅ |
+| HTMLOutputBrowserView | 5 | ✅ |
+| HTMLOutputBrowserView – Delegate | 1 | ✅ |
+| HTMLOutputCommandView | 6 | ✅ |
+| HTMLOutputCommandView – Printing | 1 | ✅ |
+| AuthorizationService – Constants | 2 | ✅ |
+| AuthorizationService – Serialization | 1 | ✅ |
+| AuthorizationService – Error Types | 2 | ✅ |
+| SpellCheckService | 7 | ✅ |
+| EncodingDetector | 7 | ✅ |
+| FrequencyRecord | 3 | ✅ |
+
+---
+
 ## Architecture Reminder
 
 All code follows the iteration strategy from
@@ -696,7 +765,8 @@ All code follows the iteration strategy from
 - **Iteration 12** — Preferences & Auxiliary UI ✅
 - **Iteration 13** — Application Infrastructure ✅
 - **Iteration 14** — File Browser Sidebar ✅
-- **Iteration 15** — (next)
+- **Iteration 15** — HTML Output Chrome & System Services ✅
+- **Iteration 16** — (next)
 
 ## Workflow Rules
 

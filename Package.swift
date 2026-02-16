@@ -85,6 +85,10 @@ let package = Package(
 			name: "TMFileBrowser",
 			targets: ["TMFileBrowser"],
 		),
+		.library(
+			name: "TMHTMLOutput",
+			targets: ["TMHTMLOutput"],
+		),
 		.executable(
 			name: "TextMateApp",
 			targets: ["TMApp"],
@@ -252,6 +256,19 @@ let package = Package(
 			],
 		),
 
+		// MARK: - HTML Output Browser
+
+		.target(
+			name: "TMHTMLOutput",
+			dependencies: [
+				"TMCompatibility",
+			],
+			path: "Sources/TMHTMLOutput",
+			linkerSettings: [
+				.linkedFramework("WebKit"),
+			],
+		),
+
 		// MARK: - Test Targets
 
 		.testTarget(
@@ -360,6 +377,12 @@ let package = Package(
 			name: "TMFileBrowserTests",
 			dependencies: ["TMFileBrowser"],
 			path: "Tests/TMFileBrowserTests",
+		),
+
+		.testTarget(
+			name: "TMHTMLOutputTests",
+			dependencies: ["TMHTMLOutput", "TMCompatibility"],
+			path: "Tests/TMHTMLOutputTests",
 		),
 	],
 )
