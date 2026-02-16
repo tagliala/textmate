@@ -1,3 +1,5 @@
+import Foundation
+
 // Swift-native regular expression engine for TextMate grammar parsing.
 //
 // Uses `NSRegularExpression` (ICU engine) instead of the vendored Onigmo C
@@ -7,8 +9,6 @@
 // Unicode properties — everything most grammars need.
 //
 // Architecture Decision: ADR-005 (see docs/architecture/)
-
-import Foundation
 
 // MARK: - OnigmoMatch
 
