@@ -114,7 +114,8 @@ public class FileBrowserViewController: NSViewController,
 
 	/// Currently selected items.
 	public var selectedItems: [FileItem] {
-		let outlineView = outlineView
+		guard let fileBrowserView else { return [] }
+		let outlineView = fileBrowserView.outlineView
 		let clickedRow = outlineView.clickedRow
 
 		let indexSet: IndexSet = if clickedRow >= 0, clickedRow < outlineView.numberOfRows,
@@ -211,7 +212,6 @@ public class FileBrowserViewController: NSViewController,
 		actions.scmButton.action = #selector(goToSCMDataSource(_:))
 
 		// Configure disk operations callbacks
-		diskOperations.window = view.window
 		diskOperations.onItemsInserted = { [weak self] urls in
 			self?.insertURLsInOutline(urls) ?? []
 		}
@@ -223,6 +223,7 @@ public class FileBrowserViewController: NSViewController,
 		}
 
 		view = fileBrowserView
+		diskOperations.window = view.window
 	}
 
 	// MARK: - Navigation
