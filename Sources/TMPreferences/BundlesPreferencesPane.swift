@@ -1,5 +1,6 @@
 #if canImport(AppKit)
 import AppKit
+import UniformTypeIdentifiers
 
 /// Bundles preferences pane — install/uninstall bundles, category filter, search.
 ///
@@ -8,7 +9,7 @@ import AppKit
 @MainActor
 public final class BundlesPreferencesPane: NSViewController, PreferencesPaneProtocol {
 	public var toolbarItemImage: NSImage? {
-		NSWorkspace.shared.icon(forFileType: "tmbundle")
+		UTType(filenameExtension: "tmbundle").flatMap { NSWorkspace.shared.icon(for: $0) }
 	}
 
 	public var toolbarItemLabel: String {

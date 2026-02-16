@@ -339,7 +339,8 @@ public enum PathUtilities {
 	public static func forFileDescriptor(_ fd: Int32) -> String? {
 		var buffer = [CChar](repeating: 0, count: Int(MAXPATHLEN))
 		guard fcntl(fd, F_GETPATH, &buffer) != -1 else { return nil }
-		return String(cString: buffer)
+		let nullIndex = buffer.firstIndex(of: 0) ?? buffer.count
+		return String(decoding: buffer.prefix(nullIndex).map { UInt8(bitPattern: $0) }, as: UTF8.self)
 	}
 
 	// MARK: - Actions
@@ -463,7 +464,8 @@ public enum PathUtilities {
 			let template = (dir as NSString).appendingPathComponent("tm_XXXXXXXX")
 			var buf = Array(template.utf8CString)
 			guard mkstemp(&buf) != -1 else { return "" }
-			path = String(cString: buf)
+			let nullIndex = buf.firstIndex(of: 0) ?? buf.count
+			path = String(decoding: buf.prefix(nullIndex).map { UInt8(bitPattern: $0) }, as: UTF8.self)
 		}
 		if let content {
 			try? content.write(toFile: path, atomically: true, encoding: .utf8)

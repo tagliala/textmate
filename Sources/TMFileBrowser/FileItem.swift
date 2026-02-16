@@ -247,9 +247,8 @@ public struct FinderTag: Sendable, Equatable, Hashable {
 	/// All favorite (system-defined) Finder tags.
 	public static var favoriteTags: [FinderTag] {
 		let workspace = NSWorkspace.shared
-		guard let tags = workspace.fileLabels as? [String],
-		      let colors = workspace.fileLabelColors as? [NSColor]
-		else { return [] }
+		let tags = workspace.fileLabels
+		let colors = workspace.fileLabelColors
 
 		return zip(tags, colors).compactMap { name, color in
 			name.isEmpty ? nil : FinderTag(name: name, labelColor: color)
@@ -264,10 +263,9 @@ public struct FinderTag: Sendable, Equatable, Hashable {
 		} else {
 			// Try to find this tag's color from system favorites
 			let workspace = NSWorkspace.shared
-			if let tags = workspace.fileLabels as? [String],
-			   let colors = workspace.fileLabelColors as? [NSColor],
-			   let index = tags.firstIndex(of: name)
-			{
+			let tags = workspace.fileLabels
+			let colors = workspace.fileLabelColors
+			if let index = tags.firstIndex(of: name) {
 				self.labelColor = colors[index]
 			} else {
 				self.labelColor = nil

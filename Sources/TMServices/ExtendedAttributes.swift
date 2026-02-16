@@ -76,7 +76,7 @@ public enum ExtendedAttributes {
 		var start = 0
 		for i in 0 ..< actual {
 			if buffer[i] == 0 {
-				let name = String(cString: Array(buffer[start ... i]))
+				let name = String(decoding: buffer[start ..< i].map { UInt8(bitPattern: $0) }, as: UTF8.self)
 				names.append(name)
 				start = i + 1
 			}

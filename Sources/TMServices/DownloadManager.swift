@@ -398,7 +398,7 @@ private final class ArchiveDownloadTask: NSObject, @unchecked Sendable, URLSessi
 
 		// Check for errors
 		if let error = extractorError ?? (extractorProcess != nil ? downloadError : nil) {
-			logger.error("Failed to download \(self.serverURL.absoluteString): \(error.localizedDescription)")
+			logger.error("Failed to download \(serverURL.absoluteString): \(error.localizedDescription)")
 			completion(nil, error)
 			return
 		}

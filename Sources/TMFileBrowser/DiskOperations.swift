@@ -93,7 +93,7 @@ public final class DiskOperationHandler {
 		unique makeUnique: Bool,
 		select selectDestinations: Bool,
 	) -> [URL]? {
-		var destURLs = makeUnique ? uniqueDestinationURLs(destinationURLs) : destinationURLs
+		let destURLs = makeUnique ? uniqueDestinationURLs(destinationURLs) : destinationURLs
 
 		let itemDescription: String
 		if sourceURLs.count == 1 {
@@ -242,7 +242,7 @@ public final class DiskOperationHandler {
 
 		do {
 			if operation.contains(.link) {
-				guard let srcURL = sourceURL, var destURL = destinationURL else { return false }
+				guard let srcURL = sourceURL, let destURL = destinationURL else { return false }
 				// Create symbolic link — use relative path if on same device
 				try fm.createSymbolicLink(at: destURL, withDestinationURL: srcURL)
 				destinationURL = destURL
@@ -361,7 +361,7 @@ public final class DiskOperationHandler {
 		selectDestinations: Bool,
 		itemDescription: String,
 	) {
-		undoManager.registerUndo(withTarget: self) { [weak self] target in
+		undoManager.registerUndo(withTarget: self) { target in
 			target.undoOperation(
 				operation,
 				sourceURLs: sourceURLs,
@@ -427,7 +427,7 @@ public final class DiskOperationHandler {
 		}
 
 		// Register redo
-		undoManager.registerUndo(withTarget: self) { [weak self] target in
+		undoManager.registerUndo(withTarget: self) { target in
 			target.performOperation(
 				operation,
 				sourceURLs: sourceURLs ?? [],

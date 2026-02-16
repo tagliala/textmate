@@ -111,7 +111,7 @@ public final class AtomicFileSave: @unchecked Sendable {
 				}
 			}
 
-			try FileManager.default.replaceItemAt(destURL, withItemAt: tempURL)
+			_ = try FileManager.default.replaceItemAt(destURL, withItemAt: tempURL)
 			tempDirectoryURL = nil // Prevent cleanup from removing
 		}
 
