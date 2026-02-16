@@ -144,7 +144,7 @@ public enum SignatureVerifier {
 		return try verify(data: data, signature: signatureData, publicKey: publicKey)
 	}
 
-	/// Low-level verification using `SecVerifyTransformCreate`.
+	/// Low-level verification using `SecKeyVerifySignature`.
 	///
 	/// - Parameters:
 	///   - data: The data that was signed.
@@ -156,25 +156,34 @@ public enum SignatureVerifier {
 		signature: Data,
 		publicKey: SecKey,
 	) throws -> Bool {
-		var error: Unmanaged<CFError>?
+		let algorithms: [SecKeyAlgorithm] = [
+			.rsaSignatureMessagePKCS1v15SHA256,
+			.rsaSignatureMessagePKCS1v15SHA1,
+			.rsaSignatureMessagePKCS1v15SHA384,
+			.rsaSignatureMessagePKCS1v15SHA512,
+			.rsaSignatureMessagePSSSHA256,
+			.rsaSignatureMessagePSSSHA384,
+			.rsaSignatureMessagePSSSHA512,
+			.ecdsaSignatureMessageX962SHA256,
+			.ecdsaSignatureMessageX962SHA384,
+			.ecdsaSignatureMessageX962SHA512,
+		]
 
-		guard let verifier = SecVerifyTransformCreate(publicKey, signature as CFData, &error) else {
-			let errMsg = error.map { String(describing: $0.takeRetainedValue()) } ?? "Unknown error"
-			throw VerificationError.verifyTransformCreateFailed(errMsg)
+		var attempted = false
+
+		for algorithm in algorithms where SecKeyIsAlgorithmSupported(publicKey, .verify, algorithm) {
+			attempted = true
+			var error: Unmanaged<CFError>?
+			if SecKeyVerifySignature(publicKey, algorithm, data as CFData, signature as CFData, &error) {
+				return true
+			}
 		}
 
-		guard SecTransformSetAttribute(
-			verifier,
-			kSecTransformInputAttributeName,
-			data as CFData,
-			&error,
-		) else {
-			let errMsg = error.map { String(describing: $0.takeRetainedValue()) } ?? "Unknown error"
-			throw VerificationError.verifyFailed(errMsg)
+		if !attempted {
+			throw VerificationError.verifyFailed("No supported signature verification algorithm")
 		}
 
-		let result = SecTransformExecute(verifier, &error)
-		return (result as? Bool) == true
+		return false
 	}
 
 	// MARK: - HTTP Header Constants

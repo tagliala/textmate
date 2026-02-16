@@ -37,7 +37,7 @@ public struct FontMetrics: Sendable {
 		let zeroChar: UniChar = 0x0030 // '0'
 		var glyph: CGGlyph = 0
 		var advance = CGSize.zero
-		withUnsafePointer(to: zeroChar) { charPtr in
+		_ = withUnsafePointer(to: zeroChar) { charPtr in
 			CTFontGetGlyphsForCharacters(ctFont, charPtr, &glyph, 1)
 		}
 		CTFontGetAdvancesForGlyphs(ctFont, .horizontal, &glyph, &advance, 1)

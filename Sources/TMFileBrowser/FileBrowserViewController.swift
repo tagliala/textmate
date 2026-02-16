@@ -1619,13 +1619,17 @@ public class FileBrowserViewController: NSViewController,
 	}
 
 	override public func beginPreviewPanelControl(_ panel: QLPreviewPanel!) {
-		previewItems = previewableItems
-		panel.delegate = self
-		panel.dataSource = self
+		MainActor.assumeIsolated {
+			previewItems = previewableItems
+			panel.delegate = self
+			panel.dataSource = self
+		}
 	}
 
 	override public func endPreviewPanelControl(_: QLPreviewPanel!) {
-		previewItems = []
+		MainActor.assumeIsolated {
+			previewItems = []
+		}
 	}
 
 	private func imageRect(of item: FileItem?) -> NSRect {
