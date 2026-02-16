@@ -69,6 +69,10 @@ let package = Package(
 			name: "TMSCM",
 			targets: ["TMSCM"],
 		),
+		.library(
+			name: "TMFilterList",
+			targets: ["TMFilterList"],
+		),
 		.executable(
 			name: "TextMateApp",
 			targets: ["TMApp"],
@@ -198,6 +202,13 @@ let package = Package(
 			path: "Sources/TMSCM",
 		),
 
+		// MARK: - Filter List / Navigation
+
+		.target(
+			name: "TMFilterList",
+			path: "Sources/TMFilterList",
+		),
+
 		// MARK: - Test Targets
 
 		.testTarget(
@@ -282,6 +293,12 @@ let package = Package(
 			name: "TMSCMTests",
 			dependencies: ["TMSCM"],
 			path: "Tests/TMSCMTests",
+		),
+
+		.testTarget(
+			name: "TMFilterListTests",
+			dependencies: ["TMFilterList"],
+			path: "Tests/TMFilterListTests",
 		),
 	],
 )

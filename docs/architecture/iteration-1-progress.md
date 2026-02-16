@@ -1,6 +1,6 @@
 # TextMate Swift Rewrite — Session Progress
 
-> Last updated: 2025-07-25
+> Last updated: 2025-07-26
 
 ---
 
@@ -462,6 +462,55 @@ Per [07-execution-plan.md](07-execution-plan.md), Phase 8 targets:
 
 ---
 
+## Phase 11: Filter List / Navigation — ✅ COMPLETE
+
+### Deliverables
+
+| Package | File | Status |
+|---------|------|--------|
+| **TMFilterList** | `FuzzyRanker.swift` — `CoverRange` struct, `RankResult` struct, `FuzzyRanker` enum with `normalizeFilter`, `rank(filter:candidate:)`, 4-phase matrix algorithm (match matrix → backward bound → run propagation → greedy walk), CamelCase bonus, contiguous run preference, inline ASCII helpers | ✅ |
+| **TMFilterList** | `AbbreviationStore.swift` — Named singletons (NSLock-protected), MRU learn/retrieve, exact+prefix lookup, max 50 entries, UserDefaults persistence, `rankBoost()`, `LockedValue<T>` thread-safe wrapper | ✅ |
+| **TMFilterList** | `MatchHighlighter.swift` — `Style` struct, `attributedString(for:coverRanges:)` with background color + underline, `splitCoverRanges(_:at:)` for path/name boundary splitting (`#if canImport(AppKit)`) | ✅ |
+| **TMFilterList** | `ChooserItem.swift` — `ChooserItem` protocol, `FileChooserItem` (filename-first then full-path fallback, abbreviation boost, glob matching), `BundleChooserItem` (5 search fields, eclipsed support), `SymbolChooserItem` (section grouping, offset-based order), sorting extensions | ✅ |
+| **TMFilterList** | `ChooserPanelController.swift` — `@MainActor` NSPanel (utility, floating), NSSearchField + NSTableView + NSVisualEffectView footer, `showWindow(relativeTo:)`, subclass override points (`#if canImport(AppKit)`) | ✅ |
+| **TMFilterList** | `FileChooser.swift` — `FileChooserSource` enum (all/open/uncommitted), `ParsedFilter` struct (regex: filter/glob/selection/symbol), `FileChooserState` with async `enumerateFiles`, abbreviation learning | ✅ |
+| **TMFilterList** | `BundleItemChooser.swift` — `BundleSearchSource` OptionSet (7 flags + 3 composites), `BundleItemChooserState` with source/field filtering, `BundleItemDescriptor` population DTO | ✅ |
+| **TMFilterList** | `SymbolChooser.swift` — `SymbolChooserState` with section detection (em-space prefix `\u{2003}`), separator exclusion, fuzzy filtering, `SymbolDescriptor` | ✅ |
+| **TMFilterList** | `ChooserTableCellView.swift` — `FileChooserCellView` (icon + 2-line name/path, close button), `BundleItemCellView` (name + key equivalent/tab trigger, strikethrough for eclipsed) (`#if canImport(AppKit)`) | ✅ |
+
+### Key Features
+
+- **Fuzzy ranking** — port of C++ `oak::rank()`: 4-phase dynamic programming on match matrix, CamelCase/word-boundary awareness, contiguous run preference, prefix bonus, length ratio bonus
+- **Abbreviation learning** — MRU-ordered learned bindings with max 50 entries, exact+prefix lookup, rank boost formula `2.0 + index/count`, UserDefaults persistence
+- **File chooser** — 3 sources (all files, open documents, uncommitted), filter parsing regex (glob/selection/symbol notation), filename-first then full-path fallback ranking, async file enumeration with glob exclude
+- **Bundle item chooser** — 7 search source flags with 3 tab composites (actions/settings/other), 5 search fields (title/keyEquivalent/tabTrigger/semanticClass/scopeSelector), preserve-order mode for settings
+- **Symbol chooser** — section grouping via em-space prefix, separator exclusion, document-order default
+- **Match highlighting** — NSAttributedString with background color and underline on matched ranges, cover range splitting at path/name boundary
+- **NSPanel UI** — floating utility panel with search field, table view, status footer, `showWindow(relativeTo:)` positioning
+
+### Tests (106 tests, 16 suites)
+
+| Suite | Tests | Status |
+|-------|-------|--------|
+| FuzzyRanker | 23 | ✅ |
+| AbbreviationStore | 12 | ✅ |
+| FileChooserSource | 2 | ✅ |
+| ParsedFilter | 7 | ✅ |
+| FileChooserState | 8 | ✅ |
+| FileChooserItem | 5 | ✅ |
+| BundleSearchSource | 3 | ✅ |
+| BundleChooserItem | 8 | ✅ |
+| BundleItemChooserState | 7 | ✅ |
+| BundleItemDescriptor | 1 | ✅ |
+| SymbolDescriptor | 2 | ✅ |
+| SymbolChooserItem | 4 | ✅ |
+| SymbolChooserState | 7 | ✅ |
+| MatchHighlighter.splitCoverRanges | 7 | ✅ |
+| MatchHighlighter.Style | 2 | ✅ |
+| MatchHighlighter.attributedString | 3 | ✅ |
+
+---
+
 ## Architecture Reminder
 
 All code follows the iteration strategy from
@@ -477,7 +526,8 @@ All code follows the iteration strategy from
 - **Iteration 8** — Document Management ✅
 - **Iteration 9** — Search & Replace ✅
 - **Iteration 10** — SCM Integration ✅
-- **Iteration 11** — (next)
+- **Iteration 11** — Filter List / Navigation ✅
+- **Iteration 12** — (next)
 
 ## Workflow Rules
 
