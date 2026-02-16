@@ -8,7 +8,7 @@ struct HTMLOutputWindowControllerTests {
 	@MainActor func initialization() {
 		let controller = HTMLOutputWindowController()
 		#expect(controller.window != nil)
-		#expect(controller.webView != nil)
+		#expect(controller.webView.superview != nil)
 	}
 
 	@Test("isRunningCommand defaults to false")

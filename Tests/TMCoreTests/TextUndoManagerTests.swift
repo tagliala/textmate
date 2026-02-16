@@ -170,7 +170,7 @@ struct TextUndoManagerTests {
 	// MARK: - Edge Cases
 
 	@Test func undoEmptyGroupIsNoop() {
-		let (buf, undo) = makeBufferAndUndo("abc")
+		let (_, undo) = makeBufferAndUndo("abc")
 		let sel = SelectionState(caret: TextPosition.zero)
 		undo.beginUndoGroup(selections: sel)
 		// No edits within group.

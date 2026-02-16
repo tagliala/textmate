@@ -140,7 +140,7 @@ struct TMDocumentControllerTests {
 	func lruOrder() {
 		let controller = freshController()
 		let doc1 = controller.documentForPath("/tmp/lru_1.txt")
-		let doc2 = controller.documentForPath("/tmp/lru_2.txt")
+		_ = controller.documentForPath("/tmp/lru_2.txt")
 		let doc3 = controller.documentForPath("/tmp/lru_3.txt")
 
 		let recent = controller.recentlyUsed

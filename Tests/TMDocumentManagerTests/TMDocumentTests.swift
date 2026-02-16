@@ -458,11 +458,11 @@ struct DocumentIOErrorTests {
 	func errorDescriptions() throws {
 		#expect(DocumentIOError.noPath.errorDescription != nil)
 		#expect(DocumentIOError.noContent.errorDescription != nil)
-		#expect(try #require(DocumentIOError.encodingFailed("UTF-8").errorDescription?.contains("UTF-8")))
-		#expect(try #require(DocumentIOError.fileNotFound("/tmp/x").errorDescription?.contains("/tmp/x")))
-		#expect(try #require(DocumentIOError.permissionDenied("/tmp/x").errorDescription?.contains("Permission")))
-		#expect(try #require(DocumentIOError.externallyModified("/tmp/x").errorDescription?.contains("externally")))
-		#expect(try #require(DocumentIOError.mergeFailed.errorDescription?.contains("merge")))
+		#expect(DocumentIOError.encodingFailed("UTF-8").errorDescription?.contains("UTF-8") == true)
+		#expect(DocumentIOError.fileNotFound("/tmp/x").errorDescription?.contains("/tmp/x") == true)
+		#expect(DocumentIOError.permissionDenied("/tmp/x").errorDescription?.contains("Permission") == true)
+		#expect(DocumentIOError.externallyModified("/tmp/x").errorDescription?.contains("externally") == true)
+		#expect(DocumentIOError.mergeFailed.errorDescription?.contains("merge") == true)
 	}
 }
 

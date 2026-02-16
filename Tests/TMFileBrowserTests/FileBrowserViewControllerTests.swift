@@ -18,7 +18,7 @@ struct FileBrowserViewControllerInitTests {
 	@MainActor func loadViewCreatesComposite() {
 		let vc = FileBrowserViewController()
 		vc.loadView()
-		#expect(vc.view is FileBrowserCompositeView)
+		#expect(vc.view as? FileBrowserCompositeView != nil)
 	}
 
 	@Test("default navigation state")
@@ -209,7 +209,8 @@ struct FileBrowserViewControllerSessionTests {
 	@MainActor func variablesReturns() {
 		let vc = FileBrowserViewController()
 		let env = vc.variables
-		#expect(env is [String: String])
+		let typedEnv: [String: String] = env
+		#expect(type(of: typedEnv) == [String: String].self)
 	}
 }
 
@@ -218,9 +219,9 @@ struct FileBrowserCompositeViewTests {
 	@Test("composite view initializes subviews")
 	@MainActor func initializes() {
 		let view = FileBrowserCompositeView()
-		#expect(view.headerView is FileBrowserHeaderView)
-		#expect(view.outlineView is FileBrowserOutlineView)
-		#expect(view.actionsView is FileBrowserActionsView)
+		#expect(view.headerView.superview == view)
+		#expect(view.outlineView.superview != nil)
+		#expect(view.actionsView.superview == view)
 	}
 }
 
@@ -229,9 +230,9 @@ struct FileBrowserHeaderViewTests {
 	@Test("header view creates navigation buttons")
 	@MainActor func navigationButtons() {
 		let header = FileBrowserHeaderView()
-		#expect(header.goBackButton is NSButton)
-		#expect(header.goForwardButton is NSButton)
-		#expect(header.folderPopUpButton is NSPopUpButton)
+		#expect(header.goBackButton.superview == header)
+		#expect(header.goForwardButton.superview == header)
+		#expect(header.folderPopUpButton.superview == header)
 	}
 }
 
@@ -240,10 +241,10 @@ struct FileBrowserActionsViewTests {
 	@Test("actions view creates action buttons")
 	@MainActor func actionButtons() {
 		let actions = FileBrowserActionsView()
-		#expect(actions.createButton is NSButton)
-		#expect(actions.reloadButton is NSButton)
-		#expect(actions.favoritesButton is NSButton)
-		#expect(actions.scmButton is NSButton)
+		#expect(actions.createButton.superview == actions)
+		#expect(actions.reloadButton.superview == actions)
+		#expect(actions.favoritesButton.superview == actions)
+		#expect(actions.scmButton.superview == actions)
 	}
 }
 
@@ -252,7 +253,7 @@ struct FileBrowserOutlineViewTests {
 	@Test("outline view initializes")
 	@MainActor func initializes() {
 		let ov = FileBrowserOutlineView()
-		#expect(ov is NSOutlineView)
+		#expect(type(of: ov) == FileBrowserOutlineView.self)
 	}
 }
 
@@ -261,10 +262,10 @@ struct FileItemTableCellViewTests {
 	@Test("cell view initializes with subviews")
 	@MainActor func initializes() {
 		let cell = FileItemTableCellView()
-		#expect(cell.openButton is NSButton)
-		#expect(cell.closeButton is NSButton)
-		#expect(cell.iconView is NSImageView)
-		#expect(cell.nameField is NSTextField)
+		#expect(cell.openButton.superview == cell)
+		#expect(cell.closeButton.superview == cell)
+		#expect(cell.iconView.superview == cell)
+		#expect(cell.nameField.superview == cell)
 	}
 
 	@Test("configure sets name and icon")
