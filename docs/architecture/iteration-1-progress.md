@@ -1,6 +1,6 @@
 # TextMate Swift Rewrite — Session Progress
 
-> Last updated: 2025-07-28
+> Last updated: 2025-07-29
 
 ---
 
@@ -797,8 +797,64 @@ Ported the core regexp framework's format string, snippet, glob, indent, and dep
 
 | Framework | Lines (C++) | Notes |
 |-----------|-------------|-------|
-| plist | ~1,012 | delta, fs_cache, ASCII plist parser |
-| dialog/dialog-1.x | ~1,989 | Command handlers (low priority) |
+| DocumentWindow | ~3,573 | Main document window management |
+| buffer | ~1,178 | Core text buffer |
+| file | ~1,547 | File open/save coordination |
+| io | ~1,938 | File I/O engine |
+| dialog/dialog-1.x | ~3,953 | Command UI handlers |
+| theme | ~956 | Theme completion |
+| ns | ~606 | Miscellaneous NS utilities |
+| CLI Applications | ~5,454 | mate, tm_query, etc. |
+
+---
+
+## Phase 17 — Plist Engine & Text Utilities
+
+Ported the C++ `plist` framework (~1,482 lines) and `text` utility
+framework (~897 lines) — foundational infrastructure used pervasively
+throughout the codebase.
+
+### Source Files
+
+| Package | File | Description |
+|---------|------|-------------|
+| **TMCore** | `PlistValue.swift` | Typed plist value enum (`indirect enum PlistValue`), Foundation bridge, key-path extraction, IO (load/save/parse) |
+| **TMCore** | `PlistSerializer.swift` | ASCII (OpenStep) plist format serializer with key ordering, escaping, indentation |
+| **TMCore** | `PlistDelta.swift` | Plist diff/merge: `createDelta(old:new:)`, `mergeDelta(plists:)` with dot-separated key paths |
+| **TMCore** | `PlistCache.swift` | Filesystem plist cache with entry tracking, modification detection, Codable JSON persistence |
+| **TMCore** | `TextUtilities.swift` | HTML entity decoding (253 entities), Base32/64, ROT13, URL encode/decode, format size, east-asian width, soft breaks, opposite case, indent style |
+
+### C++ → Swift Mapping
+
+| C++ | Swift |
+|-----|-------|
+| `plist::any_t` (boost::recursive_variant) | `PlistValue` (indirect enum, 7 cases) |
+| `plist::dictionary_t` | `PlistDictionary` ([String: PlistValue]) |
+| `plist::load()` / `plist::save()` | `PlistIO.load(contentsOfFile:)` / `PlistIO.save(_:toFile:)` |
+| `boost::to_s(plist)` | `PlistSerializer.serialize(_:options:keySortOrder:)` |
+| `plist::create_delta()` / `plist::merge_delta()` | `PlistDelta.createDelta(old:new:)` / `PlistDelta.mergeDelta(plists:)` |
+| `plist::cache_t` (Cap'n Proto) | `PlistCache` (Codable JSON) |
+| `decode::entities()` | `TextDecode.htmlEntities(_:)` |
+| `decode::base32()` / `decode::base64()` | `TextDecode.base32(_:)` / `TextDecode.base64(_:)` |
+| `decode::rot13()` | `TextDecode.rot13(_:)` |
+| `encode::url_part()` | `TextEncode.urlPart(_:excluding:)` |
+| `text::format_size()` | `TextUtilities.formatSize(_:)` |
+| `text::is_east_asian_width()` | `TextUtilities.isEastAsianWidth(_:)` |
+| `text::soft_breaks()` | `TextUtilities.softBreaks(in:width:tabSize:prefixSize:)` |
+| `text::opposite_case()` | `TextUtilities.oppositeCase(_:)` |
+| `text::indent_t::create()` | `IndentStyle.create(atColumn:units:)` |
+
+### Test Coverage
+
+| Test Suite | Tests | Status |
+|-----------|-------|--------|
+| PlistValueTests | 16 | ✅ |
+| PlistSerializerTests | 12 | ✅ |
+| PlistDeltaTests | 9 | ✅ |
+| TextUtilitiesTests | 25+ | ✅ |
+| IndentStyleTests | 5 | ✅ |
+
+### Cumulative Total: 1644 tests in 202 suites
 
 ---
 
@@ -823,7 +879,8 @@ All code follows the iteration strategy from
 - **Iteration 14** — File Browser Sidebar ✅
 - **Iteration 15** — HTML Output Chrome & System Services ✅
 - **Iteration 16** — Snippet & Format String Engine ✅
-- **Iteration 17** — (next)
+- **Iteration 17** — Plist Engine & Text Utilities ✅
+- **Iteration 18** — (next)
 
 ## Workflow Rules
 
