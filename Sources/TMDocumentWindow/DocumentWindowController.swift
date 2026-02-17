@@ -228,6 +228,56 @@ public class DocumentWindowController: NSWindowController {
 		}
 	}
 
+	// MARK: - Printing
+
+	/// Handles File → Print by creating a ``PrintableDocumentView`` with
+	/// the current document content and a ``PrintOptionsViewController``
+	/// accessory panel.
+	@IBAction public func printDocument(_: Any?) {
+		let text = documentEditor?.editor.text ?? textDocument.content ?? ""
+		let title = textDocument.displayName
+
+		// Determine the font name from the editor view's layout manager.
+		let fontName = editorView.layoutManager.font.fontName
+
+		let printView = PrintableDocumentView(
+			text: text,
+			title: title,
+			fontName: fontName,
+			styleProvider: editorView.layoutManager.styleProvider,
+		)
+
+		// Configure the print options accessory.
+		let accessory = PrintOptionsViewController()
+		// Theme list can be populated if a registry is available.
+		// For now, use the current theme if set.
+		if let theme = currentTheme {
+			accessory.availableThemes = [
+				PrintOptionsViewController.ThemeEntry(name: theme.name, uuid: theme.uuid),
+			]
+		}
+
+		let printInfo = NSPrintInfo.shared.copy() as! NSPrintInfo
+		printInfo.dictionary()[PrintSettingKey.fontSize] = NSNumber(
+			value: UserDefaults.standard.integer(forKey: PrintSettingKey.fontSize),
+		)
+		if let uuid = UserDefaults.standard.string(forKey: PrintSettingKey.themeUUID) {
+			printInfo.dictionary()[PrintSettingKey.themeUUID] = uuid
+		}
+
+		let operation = NSPrintOperation(view: printView, printInfo: printInfo)
+		let panel = operation.printPanel
+		panel.options.insert(.showsPreview)
+		panel.addAccessoryController(accessory)
+
+		operation.runModal(
+			for: window!,
+			delegate: nil,
+			didRun: nil,
+			contextInfo: nil,
+		)
+	}
+
 	// MARK: - Private Setup
 
 	private func setupLayout() {
