@@ -309,6 +309,267 @@ struct ScopeSelectorTests {
 	}
 }
 
+// MARK: - Scope Utility Tests (ported from C++ t_utility.cc)
+
+@Suite("ScopeUtilities")
+struct ScopeUtilityTests {
+	@Test("sharedPrefix")
+	func testSharedPrefix() {
+		#expect(sharedPrefix(Scope("foo"), Scope("bar")).toString() == "")
+		#expect(sharedPrefix(Scope("foo bar"), Scope("foo")).toString() == "foo")
+		#expect(sharedPrefix(Scope("foo"), Scope("foo bar")).toString() == "foo")
+		#expect(
+			sharedPrefix(Scope("foo bar quux"), Scope("foo bar baz qux")).toString()
+				== "foo bar",
+		)
+	}
+
+	@Test("sharedPrefix with empty scopes")
+	func sharedPrefixEmpty() {
+		#expect(sharedPrefix(Scope(), Scope()).toString() == "")
+		#expect(sharedPrefix(Scope("foo"), Scope()).toString() == "")
+		#expect(sharedPrefix(Scope(), Scope("foo")).toString() == "")
+	}
+
+	@Test("sharedPrefix with identical scopes")
+	func sharedPrefixIdentical() {
+		let scope: Scope = "source.swift meta.function"
+		#expect(sharedPrefix(scope, scope) == scope)
+	}
+
+	@Test("xmlDifference")
+	func testXmlDifference() {
+		let empty = Scope()
+		let first = Scope("foo bar")
+		let second = Scope("foo")
+		let third = Scope("baz qux")
+
+		#expect(xmlDifference(from: empty, to: first) == "<foo><bar>")
+		#expect(xmlDifference(from: first, to: second) == "</bar>")
+		#expect(xmlDifference(from: second, to: third) == "</foo><baz><qux>")
+		#expect(xmlDifference(from: third, to: empty) == "</qux></baz>")
+	}
+
+	@Test("xmlDifference with identical scopes")
+	func xmlDifferenceIdentical() {
+		let scope = Scope("foo bar")
+		#expect(xmlDifference(from: scope, to: scope) == "")
+	}
+
+	@Test("xmlDifference empty to empty")
+	func xmlDifferenceEmpty() {
+		#expect(xmlDifference(from: Scope(), to: Scope()) == "")
+	}
+}
+
+// MARK: - Scope Comparable Tests
+
+@Suite("ScopeComparable")
+struct ScopeComparableTests {
+	@Test("Less than: different atoms")
+	func lessThanDifferentAtoms() {
+		let a = Scope("aaa")
+		let b = Scope("bbb")
+		#expect(a < b)
+		#expect(!(b < a))
+	}
+
+	@Test("Less than: comparison is top-of-stack first")
+	func lessThanTopOfStack() {
+		// C++ compares from top-of-stack: "foo bar" top is "bar", "foo" top is "foo"
+		// "bar" < "foo" so "foo bar" < "foo"
+		let a = Scope("foo")
+		let b = Scope("foo bar")
+		#expect(b < a)
+		#expect(!(a < b))
+	}
+
+	@Test("Not less than: equal scopes")
+	func notLessThanEqual() {
+		let a = Scope("foo bar")
+		let b = Scope("foo bar")
+		#expect(!(a < b))
+		#expect(!(b < a))
+	}
+
+	@Test("Sorting works")
+	func sorting() {
+		let scopes: [Scope] = [
+			"source.python",
+			"source.c",
+			"source.swift",
+			"source.objc",
+		]
+		let sorted = scopes.sorted()
+		#expect(sorted[0].toString() == "source.c")
+		#expect(sorted[1].toString() == "source.objc")
+		#expect(sorted[2].toString() == "source.python")
+		#expect(sorted[3].toString() == "source.swift")
+	}
+
+	@Test("Wildcard constant")
+	func wildcardConstant() {
+		#expect(Scope.wildcard == Scope("x-any"))
+		#expect(Scope.wildcard.toString() == "x-any")
+	}
+}
+
+// MARK: - Comprehensive Scope Selector Match Tests (ported from C++ t_scope_selector.cc)
+
+@Suite("ScopeSelectorComprehensive")
+struct ScopeSelectorComprehensiveTests {
+	/// Helper: test if selector matches scope.
+	private func match(_ selector: String, _ scope: String) -> Bool {
+		ScopeSelector(selector).doesMatch(Scope(scope)) != nil
+	}
+
+	@Test("Child selector >")
+	func childSelector() {
+		#expect(match("foo fud", "foo bar fud") == true)
+		#expect(match("foo > fud", "foo bar fud") == false)
+		#expect(match("foo > foo > fud", "foo foo fud") == true)
+		#expect(match("foo > foo > fud", "foo foo fud fud") == true)
+		#expect(match("foo > foo > fud", "foo foo fud baz") == true)
+		#expect(match("foo > foo fud > fud", "foo foo bar fud fud") == true)
+	}
+
+	@Test("Mixed anchors and child selectors")
+	func mixed() {
+		#expect(match("^ foo > bar", "foo bar foo") == true)
+		#expect(match("foo > bar $", "foo bar foo") == false)
+		#expect(match("bar > foo $", "foo bar foo") == true)
+		#expect(match("foo > bar > foo $", "foo bar foo") == true)
+		#expect(match("^ foo > bar > foo $", "foo bar foo") == true)
+		#expect(match("bar > foo $", "foo bar foo") == true)
+		#expect(match("^ foo > bar > baz", "foo bar baz foo bar baz") == true)
+		#expect(match("^ foo > bar > baz", "foo foo bar baz foo bar baz") == false)
+	}
+
+	@Test("Dollar anchor with auxiliary scopes")
+	func dollarAnchor() {
+		var dyn = Scope("foo bar")
+		dyn.pushScope("dyn.selection")
+		#expect(ScopeSelector("foo bar$").doesMatch(dyn) != nil)
+		#expect(ScopeSelector("foo bar dyn$").doesMatch(dyn) == nil)
+		#expect(ScopeSelector("foo bar dyn").doesMatch(dyn) != nil)
+	}
+
+	@Test("Anchor tests (^ and $)")
+	func anchors() {
+		#expect(match("^ foo", "foo bar") == true)
+		#expect(match("^ bar", "foo bar") == false)
+		#expect(match("^ foo", "foo bar foo") == true)
+		#expect(match("foo $", "foo bar") == false)
+		#expect(match("bar $", "foo bar") == true)
+	}
+
+	@Test("Rank ordering with complex scopes")
+	func rankOrderingComplex() throws {
+		let textScope: Scope = "text.html.markdown meta.paragraph.markdown markup.bold.markdown"
+		let selectors: [ScopeSelector] = [
+			"text.* markup.bold",
+			"text markup.bold",
+			"markup.bold",
+			"text.html meta.*.markdown markup",
+			"text.html meta.* markup",
+			"text.html * markup",
+			"text.html markup",
+			"text markup",
+			"markup",
+			"text.html",
+			"text",
+		]
+
+		var lastRank: Double = 1
+		for selector in selectors {
+			let rank = try #require(selector.doesMatch(textScope))
+			#expect(rank < lastRank)
+			lastRank = rank
+		}
+	}
+
+	@Test("Rank with L/R context")
+	func rankWithContext() throws {
+		let leftScope: Scope = "text.html.php meta.embedded.block.php source.php comment.block.php"
+		let rightScope: Scope = "text.html.php meta.embedded.block.php source.php"
+		let context = ScopeContext(left: leftScope, right: rightScope)
+
+		let globalSelector = ScopeSelector("comment.block | L:comment.block")
+		let phpSelector = ScopeSelector("L:source.php - string")
+
+		let globalRank = try #require(globalSelector.doesMatch(context))
+		let phpRank = try #require(phpSelector.doesMatch(context))
+		#expect(phpRank < globalRank)
+	}
+
+	@Test("Comprehensive match matrix: descendant, wildcard, prefix")
+	func matchMatrix() {
+		// Positive matches
+		#expect(match("foo", "foo.qux bar.quux.grault baz.corge.garply"))
+		#expect(match("foo bar", "foo.qux bar.quux.grault baz.corge.garply"))
+		#expect(match("foo bar baz", "foo.qux bar.quux.grault baz.corge.garply"))
+		#expect(match("foo baz", "foo.qux bar.quux.grault baz.corge.garply"))
+		#expect(match("foo.*", "foo.qux bar.quux.grault baz.corge.garply"))
+		#expect(match("foo.qux", "foo.qux bar.quux.grault baz.corge.garply"))
+		#expect(match("foo.qux baz.*.garply", "foo.qux bar.quux.grault baz.corge.garply"))
+		#expect(match("bar", "foo.qux bar.quux.grault baz.corge.garply"))
+
+		// Negative matches
+		#expect(!match("foo qux", "foo.qux bar.quux.grault baz.corge.garply"))
+		#expect(!match("foo.bar", "foo.qux bar.quux.grault baz.corge.garply"))
+		#expect(!match("foo.qux baz.garply", "foo.qux bar.quux.grault baz.corge.garply"))
+		#expect(!match("bar.*.baz", "foo.qux bar.quux.grault baz.corge.garply"))
+	}
+
+	@Test("Comprehensive match matrix: child operator >")
+	func matchMatrixChild() {
+		#expect(match("foo > bar", "foo bar baz bar baz"))
+		#expect(match("bar > baz", "foo bar baz bar baz"))
+		#expect(match("foo > bar baz", "foo bar baz bar baz"))
+		#expect(match("foo bar > baz", "foo bar baz bar baz"))
+		#expect(match("foo > bar > baz", "foo bar baz bar baz"))
+		#expect(match("foo > bar bar > baz", "foo bar baz bar baz"))
+		#expect(!match("foo > bar > bar > baz", "foo bar baz bar baz"))
+	}
+
+	@Test("Comprehensive match matrix: $ anchor")
+	func matchMatrixDollar() {
+		#expect(match("baz $", "foo bar baz bar baz"))
+		#expect(match("bar > baz $", "foo bar baz bar baz"))
+		#expect(match("foo bar > baz $", "foo bar baz bar baz"))
+		#expect(match("foo > bar > baz", "foo bar baz bar baz"))
+		#expect(!match("foo > bar > baz $", "foo bar baz bar baz"))
+		#expect(!match("bar $", "foo bar baz bar baz"))
+	}
+
+	@Test("Comprehensive match matrix: $ anchor with dyn scopes")
+	func matchMatrixDollarDyn() {
+		#expect(match("baz $", "foo bar baz bar baz dyn.qux"))
+		#expect(match("bar > baz $", "foo bar baz bar baz dyn.qux"))
+		#expect(match("foo bar > baz $", "foo bar baz bar baz dyn.qux"))
+		#expect(!match("foo > bar > baz $", "foo bar baz bar baz dyn.qux"))
+		#expect(!match("bar $", "foo bar baz bar baz dyn.qux"))
+	}
+
+	@Test("Comprehensive match matrix: ^ anchor")
+	func matchMatrixCaret() {
+		#expect(match("^ foo", "foo bar foo bar baz"))
+		#expect(match("^ foo > bar", "foo bar foo bar baz"))
+		#expect(match("^ foo bar > baz", "foo bar foo bar baz"))
+		#expect(match("^ foo > bar baz", "foo bar foo bar baz"))
+		#expect(!match("^ foo > bar > baz", "foo bar foo bar baz"))
+		#expect(!match("^ bar", "foo bar foo bar baz"))
+	}
+
+	@Test("Comprehensive match matrix: ^ and $ combined with >")
+	func matchMatrixCaretDollar() {
+		#expect(match("foo > bar > baz", "foo bar baz foo bar baz"))
+		#expect(match("^ foo > bar > baz", "foo bar baz foo bar baz"))
+		#expect(match("foo > bar > baz $", "foo bar baz foo bar baz"))
+		#expect(!match("^ foo > bar > baz $", "foo bar baz foo bar baz"))
+	}
+}
+
 // MARK: - OnigmoPattern Tests (NSRegularExpression backend)
 
 @Suite("OnigmoPattern")

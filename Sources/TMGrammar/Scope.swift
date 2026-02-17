@@ -131,6 +131,23 @@ public struct Scope: Sendable, Hashable {
 	}
 }
 
+// MARK: - Comparable
+
+extension Scope: Comparable {
+	public static func < (lhs: Scope, rhs: Scope) -> Bool {
+		var n1 = lhs.node
+		var n2 = rhs.node
+		while n1 !== n2, let a = n1, let b = n2, a.atoms == b.atoms {
+			n1 = a.parent
+			n2 = b.parent
+		}
+		if let a = n1, let b = n2 {
+			return a.atoms < b.atoms
+		}
+		return n1 == nil && n2 != nil
+	}
+}
+
 // MARK: - CustomStringConvertible
 
 extension Scope: CustomStringConvertible {
@@ -145,6 +162,118 @@ extension Scope: ExpressibleByStringLiteral {
 	public init(stringLiteral value: String) {
 		self.init(value)
 	}
+}
+
+// MARK: - Wildcard
+
+public extension Scope {
+	/// The special wildcard scope `"x-any"` that matches everything.
+	static let wildcard = Scope("x-any")
+}
+
+// MARK: - Scope Utilities
+
+/// Returns the longest common prefix of two scopes.
+///
+/// Equalizes the depths by walking up the deeper scope, then walks
+/// both scopes up together until their atoms match.
+///
+/// Example:
+/// ```
+/// sharedPrefix("foo bar quux", "foo bar baz qux")  // → "foo bar"
+/// ```
+public func sharedPrefix(_ lhs: Scope, _ rhs: Scope) -> Scope {
+	let lhsSize = lhs.size
+	let rhsSize = rhs.size
+	var n1 = lhs.currentNode
+	var n2 = rhs.currentNode
+
+	// Equalize depths
+	if lhsSize > rhsSize {
+		for _ in 0 ..< (lhsSize - rhsSize) {
+			n1 = n1?.parent
+		}
+	} else if rhsSize > lhsSize {
+		for _ in 0 ..< (rhsSize - lhsSize) {
+			n2 = n2?.parent
+		}
+	}
+
+	// Walk up until atoms match
+	while let a = n1, let b = n2, a.atoms != b.atoms {
+		n1 = a.parent
+		n2 = b.parent
+	}
+
+	// Reconstruct the shared prefix scope from the matched node
+	guard n1 != nil else { return Scope() }
+	var parts: [String] = []
+	var n = n1
+	while let current = n {
+		parts.append(current.atoms)
+		n = current.parent
+	}
+	var result = Scope()
+	for atom in parts.reversed() {
+		result.pushScope(atom)
+	}
+	return result
+}
+
+/// Computes the XML-style difference between two scopes.
+///
+/// Returns a string of closing tags for scopes being left and opening tags
+/// for scopes being entered, skipping the common prefix.
+///
+/// Example:
+/// ```
+/// xmlDifference(from: Scope("foo bar"), to: Scope("foo"))
+/// // → "</bar>"
+/// ```
+public func xmlDifference(
+	from: Scope,
+	to: Scope,
+	open: String = "<",
+	close: String = ">",
+) -> String {
+	// Collect scopes into arrays (bottom-to-top order)
+	var fromScopes: [String] = []
+	var toScopes: [String] = []
+	var tmp = from
+	while !tmp.isEmpty {
+		if let back = tmp.back { fromScopes.append(back) }
+		tmp.popScope()
+	}
+	tmp = to
+	while !tmp.isEmpty {
+		if let back = tmp.back { toScopes.append(back) }
+		tmp.popScope()
+	}
+
+	// fromScopes/toScopes are in top-to-bottom order; reverse to bottom-to-top
+	fromScopes.reverse()
+	toScopes.reverse()
+
+	// Skip common prefix
+	var commonLen = 0
+	while commonLen < fromScopes.count, commonLen < toScopes.count,
+	      fromScopes[commonLen] == toScopes[commonLen]
+	{
+		commonLen += 1
+	}
+
+	// Close scopes being left (in top-to-bottom order)
+	var result = ""
+	for i in stride(from: fromScopes.count - 1, through: commonLen, by: -1) {
+		result += "\(open)/\(fromScopes[i])\(close)"
+	}
+
+	// Open scopes being entered (in bottom-to-top order)
+	for i in commonLen ..< toScopes.count {
+		result += "\(open)\(toScopes[i])\(close)"
+	}
+
+	return result
 }
 
 // MARK: - ScopeContext

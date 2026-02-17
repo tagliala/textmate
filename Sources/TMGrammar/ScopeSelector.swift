@@ -259,7 +259,7 @@ private func pathDoesMatch(_ path: SelectorPath, scope: Scope, rank: inout Doubl
 			btSelIdx = -1
 		}
 
-		node = n.parent
+		node = node?.parent
 	}
 
 	rank = selIdx < 0 ? score : 0
@@ -494,8 +494,7 @@ public struct ScopeSelector: Sendable {
 		guard let data else { return 0 }
 
 		// Wildcard: "x-any" on either side always matches
-		let wildcard = Scope("x-any")
-		if context.left == wildcard || context.right == wildcard {
+		if context.left == .wildcard || context.right == .wildcard {
 			var rank: Double = 1
 			_ = data.doesMatch(left: context.left, right: context.right, rank: &rank)
 			return rank
