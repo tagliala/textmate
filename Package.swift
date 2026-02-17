@@ -132,6 +132,9 @@ let package = Package(
 
 		.target(
 			name: "TMTheme",
+			dependencies: [
+				"TMGrammar",
+			],
 			path: "Sources/TMTheme",
 		),
 
@@ -279,7 +282,7 @@ let package = Package(
 
 		.testTarget(
 			name: "TMThemeTests",
-			dependencies: ["TMTheme"],
+			dependencies: ["TMTheme", "TMGrammar"],
 			path: "Tests/TMThemeTests",
 		),
 

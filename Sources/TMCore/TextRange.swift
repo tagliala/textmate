@@ -3,6 +3,12 @@
 /// The anchor is the position where the selection started, and the head is
 /// where the caret currently sits. When `anchor == head`, the range represents
 /// a caret (zero-width selection).
+///
+/// Additional flags mirror `ng::range_t` from the C++ editor:
+/// - `isColumnar`: Rectangular (column) selection mode.
+/// - `isFreehanded`: Cursor may sit past the end of a line.
+/// - `isUnanchored`: Selection anchor floats during extend operations.
+/// - `color`: Optional accent color tag for bracketed paste or diagnostics.
 public struct TextRange: Sendable, Hashable {
 	/// The position where the selection was initiated.
 	public var anchor: TextPosition
@@ -13,10 +19,38 @@ public struct TextRange: Sendable, Hashable {
 	/// Whether this range represents a columnar (rectangular) selection.
 	public var isColumnar: Bool
 
-	public init(anchor: TextPosition, head: TextPosition, isColumnar: Bool = false) {
+	/// Whether the cursor is allowed past the end of a line ("freehanded" mode).
+	///
+	/// When true, the editor allows placing the caret beyond the last
+	/// character on a line, similar to block-cursor behavior in some editors.
+	public var isFreehanded: Bool
+
+	/// Whether the selection anchor is unfixed.
+	///
+	/// An unanchored range floats its anchor during extend operations,
+	/// allowing selection growth from either end.
+	public var isUnanchored: Bool
+
+	/// Optional accent color tag for this range.
+	///
+	/// Used to visually distinguish ranges (e.g. bracketed paste, snippets,
+	/// or diagnostic overlays).  Zero means no special color.
+	public var color: UInt32
+
+	public init(
+		anchor: TextPosition,
+		head: TextPosition,
+		isColumnar: Bool = false,
+		isFreehanded: Bool = false,
+		isUnanchored: Bool = false,
+		color: UInt32 = 0,
+	) {
 		self.anchor = anchor
 		self.head = head
 		self.isColumnar = isColumnar
+		self.isFreehanded = isFreehanded
+		self.isUnanchored = isUnanchored
+		self.color = color
 	}
 
 	/// Creates a caret (zero-width selection) at the given position.
@@ -24,6 +58,9 @@ public struct TextRange: Sendable, Hashable {
 		anchor = position
 		head = position
 		isColumnar = false
+		isFreehanded = false
+		isUnanchored = false
+		color = 0
 	}
 
 	/// The earlier of anchor and head.

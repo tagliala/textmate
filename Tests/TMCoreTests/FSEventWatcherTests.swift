@@ -6,7 +6,7 @@ import Testing
 struct FSEventWatcherTests {
 	@Test("shared instance is available")
 	func sharedInstance() {
-		let watcher: FSEventWatcher = FSEventWatcher.shared
+		let watcher = FSEventWatcher.shared
 		// Just verify it's a valid instance by checking its type
 		#expect(type(of: watcher) == FSEventWatcher.self)
 	}
