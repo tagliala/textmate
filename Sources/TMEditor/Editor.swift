@@ -313,10 +313,21 @@ extension Editor {
 			return positionAtSubWordBoundary(after: offset)
 
 		case .beginOfSoftLine:
-			// Without layout, soft line == hard line
+			// Use layout delegate for visual soft-line start when available.
+			if let delegate = layoutDelegate,
+			   let softPos = delegate.beginOfSoftLine(from: pos)
+			{
+				return softPos
+			}
+			// Fallback: soft line == hard line
 			return buffer.convert(offset: buffer.lineStart(pos.line))
 
 		case .endOfSoftLine:
+			if let delegate = layoutDelegate,
+			   let softPos = delegate.endOfSoftLine(from: pos)
+			{
+				return softPos
+			}
 			return buffer.convert(offset: buffer.lineEnd(pos.line))
 
 		case .beginOfLine:
@@ -1730,6 +1741,16 @@ public protocol EditorLayoutDelegate: AnyObject, Sendable {
 
 	/// Returns the position one page down from the given position.
 	func pageDown(from position: TextPosition) -> TextPosition
+
+	/// Returns the position at the beginning of the visual (soft) line
+	/// containing `position`. Returns `nil` if no soft-wrap information
+	/// is available, in which case the editor falls back to hard-line BOL.
+	func beginOfSoftLine(from position: TextPosition) -> TextPosition?
+
+	/// Returns the position at the end of the visual (soft) line
+	/// containing `position`. Returns `nil` if no soft-wrap information
+	/// is available, in which case the editor falls back to hard-line EOL.
+	func endOfSoftLine(from position: TextPosition) -> TextPosition?
 }
 
 // MARK: - MovementUnit Classification

@@ -403,3 +403,228 @@ struct EditorLayoutManagerTests {
 		#expect(y >= 20) // At least the top margin
 	}
 }
+
+// MARK: - Soft Wrapping
+
+@Suite("EditorLayoutManager — Soft Wrapping")
+struct EditorLayoutManagerSoftWrapTests {
+	/// Helper: configures a layout manager with soft-wrap enabled at the
+	/// given column width, using a monospaced font.
+	@MainActor
+	private func makeManager(
+		text: String,
+		wrapColumn: Int = 20,
+		tabSize: Int = 4,
+	) -> EditorLayoutManager {
+		let manager = EditorLayoutManager()
+		manager.softWrap = true
+		manager.wrapColumn = wrapColumn
+		manager.tabSize = tabSize
+		manager.viewportSize = NSSize(width: 1000, height: 5000)
+		manager.setText(text)
+		return manager
+	}
+
+	@Test("short line produces one visual line when soft-wrap is on")
+	@MainActor
+	func shortLineOneVisual() {
+		let manager = makeManager(text: "Hello World", wrapColumn: 20)
+		let lines = manager.layoutLines(in: CGRect(x: 0, y: 0, width: 1000, height: 5000))
+		#expect(lines.count == 1)
+		#expect(lines[0].lineIndex == 0)
+		#expect(lines[0].softWrapOffset == 0)
+	}
+
+	@Test("long line produces multiple visual lines")
+	@MainActor
+	func longLineMultipleVisuals() {
+		// "abcdefghij klmnopqrst uvwxyz" — 28 chars, wrap at 20
+		let manager = makeManager(text: "abcdefghij klmnopqrst uvwxyz", wrapColumn: 20)
+		let lines = manager.layoutLines(in: CGRect(x: 0, y: 0, width: 1000, height: 5000))
+		#expect(lines.count >= 2) // Should wrap at least once
+		// All visual lines belong to hard line 0
+		for line in lines {
+			#expect(line.lineIndex == 0)
+		}
+		// First visual line starts at offset 0
+		#expect(lines[0].softWrapOffset == 0)
+		// Subsequent visual line starts at a positive offset
+		if lines.count >= 2 {
+			#expect(lines[1].softWrapOffset > 0)
+		}
+	}
+
+	@Test("multiple hard lines with wrapping")
+	@MainActor
+	func multipleHardLinesWrapped() {
+		let text = "short\nabcdefghij klmnopqrst uvwxyz\nend"
+		let manager = makeManager(text: text, wrapColumn: 20)
+		let lines = manager.layoutLines(in: CGRect(x: 0, y: 0, width: 1000, height: 5000))
+
+		// Line 0 is short — 1 visual line
+		let line0visuals = lines.filter { $0.lineIndex == 0 }
+		#expect(line0visuals.count == 1)
+
+		// Line 1 is long — multiple visual lines
+		let line1visuals = lines.filter { $0.lineIndex == 1 }
+		#expect(line1visuals.count >= 2)
+
+		// Line 2 is short — 1 visual line
+		let line2visuals = lines.filter { $0.lineIndex == 2 }
+		#expect(line2visuals.count == 1)
+	}
+
+	@Test("y positions are monotonically increasing across visual lines")
+	@MainActor
+	func yPositionsMonotonic() {
+		let text = "abcdefghij klmnopqrst uvwxyz abcdef"
+		let manager = makeManager(text: text, wrapColumn: 20)
+		let lines = manager.layoutLines(in: CGRect(x: 0, y: 0, width: 1000, height: 5000))
+
+		for i in 1 ..< lines.count {
+			#expect(
+				lines[i].origin.y > lines[i - 1].origin.y,
+				"Visual line \(i) should be below visual line \(i - 1)",
+			)
+		}
+	}
+
+	@Test("total height accounts for wrapped lines")
+	@MainActor
+	func totalHeightIncludesWraps() {
+		let longText = "abcdefghij klmnopqrst uvwxyz"
+		let shortText = "short"
+
+		let longManager = makeManager(text: longText, wrapColumn: 20)
+		let shortManager = makeManager(text: shortText, wrapColumn: 20)
+
+		// The long line should produce a taller total height
+		#expect(longManager.totalHeight > shortManager.totalHeight)
+	}
+
+	@Test("softLineCount returns correct count")
+	@MainActor
+	func softLineCountQuery() {
+		let manager = makeManager(text: "abcdefghij klmnopqrst uvwxyz", wrapColumn: 20)
+		// Force layout
+		_ = manager.layoutLines(in: CGRect(x: 0, y: 0, width: 1000, height: 5000))
+		let count = manager.softLineCount(forLine: 0)
+		#expect(count >= 2)
+	}
+
+	@Test("softLineCount is 1 when wrap is disabled")
+	@MainActor
+	func softLineCountNoWrap() {
+		let manager = EditorLayoutManager()
+		manager.softWrap = false
+		manager.setText("abcdefghij klmnopqrst uvwxyz")
+		#expect(manager.softLineCount(forLine: 0) == 1)
+	}
+
+	@Test("beginOfSoftLine returns segment start offset")
+	@MainActor
+	func beginOfSoftLineOffset() {
+		let manager = makeManager(text: "abcdefghij klmnopqrst uvwxyz", wrapColumn: 20)
+		_ = manager.layoutLines(in: CGRect(x: 0, y: 0, width: 1000, height: 5000))
+
+		// At the start of the line
+		let bol0 = manager.beginOfSoftLine(forLine: 0, characterIndex: 0)
+		#expect(bol0 == 0)
+
+		// At a character beyond the first wrap — should return the wrap offset
+		let lines = manager.layoutLines(in: CGRect(x: 0, y: 0, width: 1000, height: 5000))
+		if lines.count >= 2 {
+			let wrapOffset = lines[1].softWrapOffset
+			let bol1 = manager.beginOfSoftLine(forLine: 0, characterIndex: wrapOffset + 1)
+			#expect(bol1 == wrapOffset)
+		}
+	}
+
+	@Test("endOfSoftLine returns segment end offset")
+	@MainActor
+	func endOfSoftLineOffset() {
+		let manager = makeManager(text: "abcdefghij klmnopqrst uvwxyz", wrapColumn: 20)
+		_ = manager.layoutLines(in: CGRect(x: 0, y: 0, width: 1000, height: 5000))
+
+		let lines = manager.layoutLines(in: CGRect(x: 0, y: 0, width: 1000, height: 5000))
+		if lines.count >= 2 {
+			// End of first visual line should be the start of 2nd
+			let eol0 = manager.endOfSoftLine(forLine: 0, characterIndex: 0)
+			#expect(eol0 == lines[1].softWrapOffset)
+		}
+	}
+
+	@Test("character index hit-test finds correct segment")
+	@MainActor
+	func hitTestInWrappedLine() {
+		let manager = makeManager(text: "abcdefghij klmnopqrst uvwxyz", wrapColumn: 20)
+		let laid = manager.layoutLines(in: CGRect(x: 0, y: 0, width: 1000, height: 5000))
+
+		guard laid.count >= 2 else { return }
+
+		// Hit test in the first visual line
+		let (line0, _) = manager.characterIndex(at: CGPoint(
+			x: manager.margin.left + 5,
+			y: laid[0].origin.y + 1,
+		))
+		#expect(line0 == 0)
+
+		// Hit test in the second visual line (wrapped segment)
+		let (line1, idx1) = manager.characterIndex(at: CGPoint(
+			x: manager.margin.left + 5,
+			y: laid[1].origin.y + 1,
+		))
+		#expect(line1 == 0) // Same hard line
+		#expect(idx1 >= laid[1].softWrapOffset) // In the second segment
+	}
+
+	@Test("toggling softWrap invalidates and re-lays out")
+	@MainActor
+	func toggleSoftWrap() {
+		let manager = EditorLayoutManager()
+		manager.setText("abcdefghij klmnopqrst uvwxyz")
+		manager.wrapColumn = 20
+		manager.viewportSize = NSSize(width: 1000, height: 5000)
+
+		// Without wrap
+		manager.softWrap = false
+		let noWrap = manager.layoutLines(in: CGRect(x: 0, y: 0, width: 1000, height: 5000))
+		#expect(noWrap.count == 1)
+
+		// Enable wrap
+		manager.softWrap = true
+		let wrapped = manager.layoutLines(in: CGRect(x: 0, y: 0, width: 1000, height: 5000))
+		#expect(wrapped.count >= 2)
+	}
+
+	@Test("point for character in second visual line has larger y")
+	@MainActor
+	func pointInSecondVisualLine() {
+		let manager = makeManager(text: "abcdefghij klmnopqrst uvwxyz", wrapColumn: 20)
+		let laid = manager.layoutLines(in: CGRect(x: 0, y: 0, width: 1000, height: 5000))
+
+		guard laid.count >= 2 else { return }
+
+		let pt0 = manager.point(forLine: 0, characterIndex: 0)
+		let pt1 = manager.point(forLine: 0, characterIndex: laid[1].softWrapOffset)
+
+		#expect(pt1.y > pt0.y, "Second visual line should have larger y")
+	}
+
+	@Test("lineIndex atY returns correct hard line in wrapped mode")
+	@MainActor
+	func lineIndexAtYWrapped() {
+		let text = "short\nabcdefghij klmnopqrst uvwxyz\nend"
+		let manager = makeManager(text: text, wrapColumn: 20)
+		_ = manager.layoutLines(in: CGRect(x: 0, y: 0, width: 1000, height: 5000))
+
+		// Y at the very top is line 0
+		let idx0 = manager.lineIndex(atY: manager.margin.top + 1)
+		#expect(idx0 == 0)
+
+		// Find the y of the last hard line
+		let yLine2 = manager.yPosition(forLine: 2)
+		let idx2 = manager.lineIndex(atY: yLine2 + 1)
+		#expect(idx2 == 2)
+	}
+}

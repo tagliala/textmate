@@ -354,8 +354,8 @@ public final class LayoutParagraph: @unchecked Sendable {
 	/// - Returns: `true` if the layout actually changed (was dirty).
 	@discardableResult
 	public func layout(
-		softWrap _: Bool,
-		wrapColumn _: Int,
+		softWrap: Bool,
+		wrapColumn: Int,
 		metrics: FontMetrics,
 		layoutProvider: ParagraphLayoutProvider,
 	) -> Bool {
@@ -364,8 +364,36 @@ public final class LayoutParagraph: @unchecked Sendable {
 		// Remove existing soft-breaks
 		nodes.removeAll { $0.type == .softBreak }
 
-		// TODO: Insert soft-break nodes for word wrapping when softWrap=true
-		// This would require text::soft_breaks() equivalent
+		// Insert soft-break nodes for word wrapping when softWrap is enabled.
+		if softWrap, wrapColumn > 0 {
+			// Build the paragraph text from all node lengths.
+			let totalLen = nodes.reduce(0) { $0 + $1.length }
+			let hasFoldings = nodes.contains { $0.type == .folding }
+
+			// Only wrap if there are no folded regions (matches C++ behavior).
+			if !hasFoldings, totalLen > 0 {
+				// We need the raw text to compute soft breaks. The layout
+				// provider will supply the text when laying out each node,
+				// but for break calculation we use the byte lengths.
+				// Since we don't have the raw buffer text here, we approximate
+				// with node lengths. The EditorLayoutManager handles the actual
+				// CTTypesetter-based wrapping; this path is for the lower-level
+				// paragraph system used by the gutter/hit-test code.
+				// For now, insert a soft-break node at the wrap column boundary
+				// using a simplified character-counting approach.
+				var col = 0
+				var offset = 0
+				for node in Array(nodes) {
+					col += node.length
+					offset += node.length
+					if col >= wrapColumn, node.type == .text, col > 0 {
+						let insertIdx = iteratorAt(offset)
+						nodes.insert(ParagraphNode(type: .softBreak, length: 0), at: insertIdx)
+						col = 0
+					}
+				}
+			}
+		}
 
 		// Layout each node
 		var x: CGFloat = 0

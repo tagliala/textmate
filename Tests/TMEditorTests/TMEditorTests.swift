@@ -917,3 +917,110 @@ struct EditorMultiCursorTests {
 		#expect(editor.text == "Xaa Xbb")
 	}
 }
+
+// MARK: - Editor Soft-Line Movement Tests
+
+/// A mock layout delegate that provides fixed soft-line boundaries
+/// to test the editor's beginOfSoftLine / endOfSoftLine handling.
+final class MockLayoutDelegate: EditorLayoutDelegate, @unchecked Sendable {
+	/// Fixed soft-line begin/end offsets per hard line.
+	/// Each entry: (lineStartOffset, softLineRanges as [(beginOffset, endOffset)]).
+	var softLineMap: [Int: [(begin: Int, end: Int)]] = [:]
+
+	func pageUp(from position: TMCore.TextPosition) -> TMCore.TextPosition {
+		position
+	}
+
+	func pageDown(from position: TMCore.TextPosition) -> TMCore.TextPosition {
+		position
+	}
+
+	func beginOfSoftLine(from position: TMCore.TextPosition) -> TMCore.TextPosition? {
+		guard let ranges = softLineMap[position.line] else { return nil }
+		for range in ranges.reversed() {
+			if position.offset >= range.begin, position.offset <= range.end {
+				return TMCore.TextPosition(line: position.line, column: range.begin, offset: range.begin)
+			}
+		}
+		return nil
+	}
+
+	func endOfSoftLine(from position: TMCore.TextPosition) -> TMCore.TextPosition? {
+		guard let ranges = softLineMap[position.line] else { return nil }
+		for range in ranges {
+			if position.offset >= range.begin, position.offset <= range.end {
+				return TMCore.TextPosition(line: position.line, column: range.end, offset: range.end)
+			}
+		}
+		return nil
+	}
+}
+
+@Suite("Editor Soft-Line Movement")
+struct EditorSoftLineMovementTests {
+	@Test("beginOfSoftLine uses layout delegate when available")
+	func beginOfSoftLineUsesDelegate() throws {
+		let editor = Editor(text: "abcdefghij klmnopqrst uvwxyz")
+		let delegate = MockLayoutDelegate()
+		// Simulate two soft lines: [0..10), [11..28)
+		delegate.softLineMap = [0: [(begin: 0, end: 10), (begin: 11, end: 28)]]
+		editor.layoutDelegate = delegate
+
+		// Place caret at offset 15 (in second soft line)
+		editor.selections = SelectionState([
+			TMCore.TextRange(caret: TMCore.TextPosition(line: 0, column: 15, offset: 15)),
+		])
+		editor.perform(.moveToBeginOfSoftLine)
+
+		// Should move to offset 11 (begin of soft line), not offset 0
+		let head = try #require(editor.selections.primary?.head)
+		#expect(head.offset == 11)
+	}
+
+	@Test("endOfSoftLine uses layout delegate when available")
+	func endOfSoftLineUsesDelegate() throws {
+		let editor = Editor(text: "abcdefghij klmnopqrst uvwxyz")
+		let delegate = MockLayoutDelegate()
+		delegate.softLineMap = [0: [(begin: 0, end: 10), (begin: 11, end: 28)]]
+		editor.layoutDelegate = delegate
+
+		// Place caret at offset 5 (in first soft line)
+		editor.selections = SelectionState([
+			TMCore.TextRange(caret: TMCore.TextPosition(line: 0, column: 5, offset: 5)),
+		])
+		editor.perform(.moveToEndOfSoftLine)
+
+		// Should move to offset 10, not end of hard line (28)
+		let head = try #require(editor.selections.primary?.head)
+		#expect(head.offset == 10)
+	}
+
+	@Test("beginOfSoftLine falls back to BOL without delegate")
+	func beginOfSoftLineFallback() throws {
+		let editor = Editor(text: "Hello World")
+		// No layout delegate set
+
+		editor.selections = SelectionState([
+			TMCore.TextRange(caret: TMCore.TextPosition(line: 0, column: 5, offset: 5)),
+		])
+		editor.perform(.moveToBeginOfSoftLine)
+
+		// Falls back to beginning of hard line
+		let head = try #require(editor.selections.primary?.head)
+		#expect(head.offset == 0)
+	}
+
+	@Test("endOfSoftLine falls back to EOL without delegate")
+	func endOfSoftLineFallback() throws {
+		let editor = Editor(text: "Hello World")
+
+		editor.selections = SelectionState([
+			TMCore.TextRange(caret: TMCore.TextPosition(line: 0, column: 5, offset: 5)),
+		])
+		editor.perform(.moveToEndOfSoftLine)
+
+		// Falls back to end of hard line
+		let head = try #require(editor.selections.primary?.head)
+		#expect(head.offset == 11)
+	}
+}
