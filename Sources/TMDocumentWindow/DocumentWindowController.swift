@@ -4,6 +4,7 @@ import TMCore
 import TMDocumentManager
 import TMEditor
 import TMEditorUI
+import TMGrammar
 import TMTheme
 
 /// The main document window controller, managing the layout that matches
@@ -37,6 +38,12 @@ public class DocumentWindowController: NSWindowController {
 
 	/// Shared clipboards for copy/paste/find/replace across editors.
 	public let clipboards = ClipboardSet()
+
+	/// Grammar registry for syntax highlighting (optional).
+	public var grammarRegistry: GrammarRegistry?
+
+	/// Theme engine for scope-based styling (optional).
+	public var themeEngine: ThemeEngine?
 
 	private let splitView = NSSplitView()
 	private let editorContainer = NSView()
@@ -282,5 +289,13 @@ public class DocumentWindowController: NSWindowController {
 			editorView: editorView,
 			clipboards: clipboards,
 		)
+
+		// Configure syntax highlighting if a grammar registry is available.
+		if let registry = grammarRegistry, let engine = themeEngine {
+			documentEditor?.configureGrammar(
+				registry: registry,
+				themeEngine: engine,
+			)
+		}
 	}
 }

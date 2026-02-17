@@ -3,6 +3,8 @@ import TMCore
 import TMDocumentManager
 import TMEditor
 import TMEditorUI
+import TMGrammar
+import TMTheme
 
 /// Bridges a `TMDocument` to an `Editor` and an `EditorView`.
 ///
@@ -24,6 +26,10 @@ public final class TMDocumentEditor {
 
 	/// The view displaying this editor (weak to avoid retain cycle).
 	public private(set) weak var editorView: EditorView?
+
+	/// Syntax highlighter that bridges grammar parser + theme engine
+	/// to produce style runs for the layout manager.
+	public let syntaxHighlighter = SyntaxHighlighter()
 
 	/// Nesting level for undo change groups.
 	private var changeGroupLevel: Int = 0
@@ -65,6 +71,9 @@ public final class TMDocumentEditor {
 
 		// Push initial content to the view.
 		editorView.setText(text)
+
+		// Wire syntax highlighting into the layout manager.
+		setupSyntaxHighlighting(editorView: editorView)
 
 		// Restore selection from document metadata if available.
 		if let selectionString = document.selection {
@@ -180,6 +189,13 @@ public final class TMDocumentEditor {
 		let text = editor.text
 		document.setContent(text)
 		editorView?.setText(text)
+
+		// Re-sync the parser with the full text.
+		// In a future phase, this can be optimized to only replace
+		// the changed lines using IncrementalParser.replaceLines.
+		syntaxHighlighter.setText(text)
+		syntaxHighlighter.parseSync()
+
 		syncSelectionToView()
 	}
 
@@ -218,8 +234,64 @@ public final class TMDocumentEditor {
 			// In a future phase this could do a proper delta/merge.
 			editor.buffer.replace(from: 0, to: editor.buffer.size, with: docContent)
 			editorView?.setText(docContent)
+
+			// Re-parse the new content.
+			syntaxHighlighter.setText(docContent)
+			syntaxHighlighter.parseSync()
+
 			syncSelectionToView()
 		}
+	}
+
+	// MARK: - Syntax Highlighting Setup
+
+	/// Configures the syntax highlighting pipeline for an editor view.
+	private func setupSyntaxHighlighting(editorView: EditorView) {
+		// Wire the style provider: the layout manager will call back
+		// into the syntax highlighter when it needs style runs for a line.
+		editorView.layoutManager.styleProvider = syntaxHighlighter.makeStyleProvider()
+
+		// When the parser reports changed lines, invalidate the layout.
+		syntaxHighlighter.onStylesChanged = { [weak editorView] range in
+			editorView?.layoutManager.invalidateStyles(from: range.lowerBound, to: range.upperBound)
+			editorView?.needsDisplay = true
+		}
+	}
+
+	/// Configures the grammar and theme for syntax highlighting.
+	///
+	/// Call this after loading a document to enable scope-based coloring.
+	///
+	/// - Parameters:
+	///   - grammarRegistry: The registry of available grammars.
+	///   - themeEngine: The theme engine for scope → style resolution.
+	///   - scope: The grammar scope (e.g. "source.swift"), or `nil`
+	///     to auto-detect from the document's file extension.
+	public func configureGrammar(
+		registry: GrammarRegistry,
+		themeEngine: ThemeEngine,
+		scope: String? = nil,
+	) {
+		syntaxHighlighter.setGrammarRegistry(registry)
+		syntaxHighlighter.setThemeEngine(themeEngine)
+
+		let resolvedScope = scope ?? detectScope()
+		syntaxHighlighter.setGrammar(scope: resolvedScope)
+
+		// Parse the current content.
+		if let text = document.content {
+			syntaxHighlighter.setText(text)
+			syntaxHighlighter.parseSync()
+			editorView?.needsDisplay = true
+		}
+	}
+
+	/// Auto-detects the grammar scope from the document's file path.
+	private func detectScope() -> String? {
+		guard let path = document.path else { return nil }
+		let detector = FileTypeDetector()
+		let result = detector.detect(path: path, content: document.content)
+		return result.scope
 	}
 
 	// MARK: - Undo / Redo

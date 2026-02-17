@@ -33,6 +33,28 @@ public struct GrammarDefinition: Sendable {
 	/// The fold end marker regular expression.
 	public let foldingStopMarker: String?
 
+	public init(
+		scopeName: String,
+		name: String,
+		fileTypes: [String] = [],
+		uuid: String? = nil,
+		firstLineMatch: String? = nil,
+		patterns: [Pattern] = [],
+		repository: [String: PatternGroup] = [:],
+		foldingStartMarker: String? = nil,
+		foldingStopMarker: String? = nil,
+	) {
+		self.scopeName = scopeName
+		self.name = name
+		self.fileTypes = fileTypes
+		self.uuid = uuid
+		self.firstLineMatch = firstLineMatch
+		self.patterns = patterns
+		self.repository = repository
+		self.foldingStartMarker = foldingStartMarker
+		self.foldingStopMarker = foldingStopMarker
+	}
+
 	// MARK: - Pattern Types
 
 	/// A single grammar pattern.

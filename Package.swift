@@ -162,6 +162,7 @@ let package = Package(
 				"TMAppKit",
 				"TMEditor",
 				"TMEditorUI",
+				"TMGrammar",
 				"TMDocumentManager",
 			],
 			path: "Sources/TMDocumentWindow",
@@ -292,7 +293,7 @@ let package = Package(
 
 		.testTarget(
 			name: "TMDocumentWindowTests",
-			dependencies: ["TMDocumentWindow"],
+			dependencies: ["TMDocumentWindow", "TMBundle", "TMGrammar", "TMTheme"],
 			path: "Tests/TMDocumentWindowTests",
 		),
 

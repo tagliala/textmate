@@ -22,6 +22,22 @@ public struct Theme: Sendable {
 
 	/// Ordered list of scope-specific style rules.
 	public let rules: [ThemeStyleRule]
+
+	public init(
+		name: String,
+		semanticClass: String,
+		uuid: String,
+		globalSettings: ThemeGlobalSettings,
+		gutterSettings: ThemeGutterSettings = ThemeGutterSettings(),
+		rules: [ThemeStyleRule] = [],
+	) {
+		self.name = name
+		self.semanticClass = semanticClass
+		self.uuid = uuid
+		self.globalSettings = globalSettings
+		self.gutterSettings = gutterSettings
+		self.rules = rules
+	}
 }
 
 /// Global (unscoped) settings from a `.tmTheme` file.
