@@ -2003,3 +2003,113 @@ extension SelectionExtensionUnit {
 		}
 	}
 }
+
+// MARK: - Visual Metrics
+
+public extension Editor {
+	/// Computes the visual column distance between two offsets on the same line,
+	/// accounting for tab stops and East Asian full-width characters.
+	///
+	/// This is the Swift counterpart of `ng::editor_t::visual_distance()` from
+	/// `Frameworks/editor/src/metrics.cc`.
+	///
+	/// - Parameters:
+	///   - first: The starting byte offset.
+	///   - last: The ending byte offset (must be on the same line).
+	///   - eastAsianWidth: Whether to count East Asian wide characters as 2 columns.
+	/// - Returns: The visual column width between the two offsets.
+	func visualDistance(from first: Int, to last: Int, eastAsianWidth: Bool = false) -> Int {
+		precondition(first <= last)
+		let text = buffer.substring(from: first, to: last)
+		var len = 0
+		for scalar in text.unicodeScalars {
+			if scalar == "\t" {
+				len += tabSize - (len % tabSize)
+			} else if eastAsianWidth, scalar.isEastAsianWide {
+				len += 2
+			} else {
+				len += 1
+			}
+		}
+		return len
+	}
+
+	/// Advances from a byte offset to a target visual column, accounting for
+	/// tab stops and East Asian full-width characters.
+	///
+	/// This is the Swift counterpart of `ng::editor_t::visual_advance()` from
+	/// `Frameworks/editor/src/metrics.cc`.
+	///
+	/// - Parameters:
+	///   - offset: The starting byte offset.
+	///   - distance: The target visual column distance to advance.
+	///   - eastAsianWidth: Whether to count East Asian wide characters as 2 columns.
+	/// - Returns: The byte offset after advancing `distance` visual columns,
+	///   and the carry (extra columns past the last character).
+	func visualAdvance(from offset: Int, distance: Int, eastAsianWidth: Bool = false) -> (offset: Int, carry: Int) {
+		let lineEnd = buffer.lineEnd(buffer.convert(offset: offset).line)
+		let text = buffer.substring(from: offset, to: lineEnd)
+		var len = 0
+		var bytePos = 0
+		for scalar in text.unicodeScalars {
+			if len == distance {
+				return (offset + bytePos, 0)
+			}
+			if scalar == "\n" {
+				return (offset + bytePos, distance - len)
+			}
+			let charWidth: Int = if scalar == "\t" {
+				tabSize - (len % tabSize)
+			} else if eastAsianWidth, scalar.isEastAsianWide {
+				2
+			} else {
+				1
+			}
+			if len + charWidth > distance {
+				return (offset + bytePos, distance - len)
+			}
+			len += charWidth
+			bytePos += Int(scalar.utf8.count)
+		}
+		return (offset + bytePos, distance - len)
+	}
+
+	/// Returns the visual column of the primary caret, accounting for tabs.
+	var visualColumn: Int {
+		guard let primary = selections.primary else { return 0 }
+		let pos = buffer.convert(offset: primary.head.offset)
+		let lineStart = buffer.lineStart(pos.line)
+		return visualDistance(from: lineStart, to: primary.head.offset)
+	}
+}
+
+// MARK: - East Asian Width Helper
+
+public extension Unicode.Scalar {
+	/// Whether this scalar is classified as East Asian wide (W) or fullwidth (F).
+	///
+	/// This is a simplified check covering the most common ranges.
+	var isEastAsianWide: Bool {
+		let v = value
+		// CJK Unified Ideographs
+		if v >= 0x4E00, v <= 0x9FFF { return true }
+		// CJK Unified Ideographs Extension A
+		if v >= 0x3400, v <= 0x4DBF { return true }
+		// CJK Compatibility Ideographs
+		if v >= 0xF900, v <= 0xFAFF { return true }
+		// Fullwidth Forms
+		if v >= 0xFF01, v <= 0xFF60 { return true }
+		if v >= 0xFFE0, v <= 0xFFE6 { return true }
+		// CJK Unified Ideographs Extension B+
+		if v >= 0x20000, v <= 0x2FA1F { return true }
+		// Hangul Syllables
+		if v >= 0xAC00, v <= 0xD7AF { return true }
+		// CJK Radicals, Kangxi Radicals, Ideographic Description, CJK Symbols
+		if v >= 0x2E80, v <= 0x303E { return true }
+		// Hiragana, Katakana, Bopomofo
+		if v >= 0x3040, v <= 0x312F { return true }
+		// Katakana Phonetic Extensions, Enclosed CJK Letters
+		if v >= 0x31F0, v <= 0x33FF { return true }
+		return false
+	}
+}

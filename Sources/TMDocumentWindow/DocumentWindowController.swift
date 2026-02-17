@@ -5,6 +5,7 @@ import TMDocumentManager
 import TMEditor
 import TMEditorUI
 import TMGrammar
+import TMSearchReplace
 import TMTheme
 
 /// The main document window controller, managing the layout that matches
@@ -19,6 +20,8 @@ import TMTheme
 /// │ (sidebar)  │        │                   │
 /// │            │        │                   │
 /// ├────────────┴────────┴───────────────────┤
+/// │ Live Search Bar (optional)              │
+/// ├─────────────────────────────────────────┤
 /// │ Status Bar                              │
 /// └─────────────────────────────────────────┘
 /// ```
@@ -29,6 +32,7 @@ public class DocumentWindowController: NSWindowController {
 	public let gutterView = GutterView()
 	public let statusBarView = StatusBarView()
 	public let editorView = EditorView()
+	public let liveSearchBar = LiveSearchBarView()
 
 	/// The document model for the currently displayed file.
 	public private(set) var textDocument: TMDocument
@@ -51,6 +55,15 @@ public class DocumentWindowController: NSWindowController {
 
 	private var fileBrowserWidth: CGFloat = 200
 	private var isFileBrowserVisible = true
+
+	/// Incremental search state backing the live search bar.
+	public let incrementalSearch = IncrementalSearchState()
+
+	/// Constraint anchoring the split view bottom to the live search bar.
+	private var splitViewBottomConstraint: NSLayoutConstraint?
+
+	/// Height constraint for the live search bar (0 when hidden).
+	private var searchBarHeightConstraint: NSLayoutConstraint?
 
 	private var currentTheme: Theme?
 
@@ -170,6 +183,40 @@ public class DocumentWindowController: NSWindowController {
 		return true
 	}
 
+	/// Show or activate the incremental (live) search bar.
+	public func showLiveSearch() {
+		searchBarHeightConstraint?.constant = LiveSearchBarView.barHeight
+		window?.contentView?.layoutSubtreeIfNeeded()
+
+		// Snapshot current buffer text and anchor at the caret.
+		if let editor = documentEditor?.editor {
+			let text = editor.text
+			let anchor = editor.selections.primary?.head.offset ?? 0
+			incrementalSearch.activate(anchorOffset: anchor, bufferText: text)
+		}
+
+		liveSearchBar.activate()
+	}
+
+	/// Hide the live search bar.
+	public func hideLiveSearch() {
+		incrementalSearch.deactivate()
+		liveSearchBar.deactivate()
+		searchBarHeightConstraint?.constant = 0
+		window?.contentView?.layoutSubtreeIfNeeded()
+		window?.makeFirstResponder(editorView)
+	}
+
+	/// Whether the live search bar is currently visible.
+	public var isLiveSearchVisible: Bool {
+		(searchBarHeightConstraint?.constant ?? 0) > 0
+	}
+
+	/// Show a transient HUD overlay in the editor view.
+	public func showHUD(text: String) {
+		EditorHUD.show(in: editorView, text: text)
+	}
+
 	/// Toggle file browser visibility.
 	public func toggleFileBrowser() {
 		isFileBrowserVisible.toggle()
@@ -210,9 +257,17 @@ public class DocumentWindowController: NSWindowController {
 		splitView.addArrangedSubview(editorContainer)
 		contentView.addSubview(splitView)
 
+		// Live search bar (initially hidden)
+		liveSearchBar.translatesAutoresizingMaskIntoConstraints = false
+		liveSearchBar.delegate = self
+		contentView.addSubview(liveSearchBar)
+
 		// Status bar at the bottom
 		statusBarView.translatesAutoresizingMaskIntoConstraints = false
 		contentView.addSubview(statusBarView)
+
+		let searchBarHeight = liveSearchBar.heightAnchor.constraint(equalToConstant: 0)
+		searchBarHeightConstraint = searchBarHeight
 
 		NSLayoutConstraint.activate([
 			// Tab bar
@@ -225,7 +280,13 @@ public class DocumentWindowController: NSWindowController {
 			splitView.topAnchor.constraint(equalTo: tabBarView.bottomAnchor),
 			splitView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
 			splitView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-			splitView.bottomAnchor.constraint(equalTo: statusBarView.topAnchor),
+			splitView.bottomAnchor.constraint(equalTo: liveSearchBar.topAnchor),
+
+			// Live search bar
+			liveSearchBar.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+			liveSearchBar.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+			liveSearchBar.bottomAnchor.constraint(equalTo: statusBarView.topAnchor),
+			searchBarHeight,
 
 			// File browser min width
 			fileBrowserView.widthAnchor.constraint(greaterThanOrEqualToConstant: 100),
@@ -297,5 +358,67 @@ public class DocumentWindowController: NSWindowController {
 				themeEngine: engine,
 			)
 		}
+	}
+}
+
+// MARK: - LiveSearchBarViewDelegate
+
+extension DocumentWindowController: LiveSearchBarViewDelegate {
+	public func liveSearchBar(_: LiveSearchBarView, searchStringDidChange text: String) {
+		incrementalSearch.searchString = text
+		incrementalSearch.ignoreCase = liveSearchBar.ignoreCase
+		incrementalSearch.wrapAround = liveSearchBar.wrapAround
+		liveSearchBar.hasNoResults = incrementalSearch.hasNoResults
+
+		// Move selection to the current match.
+		if let match = incrementalSearch.currentMatch {
+			applySearchMatch(match)
+		}
+	}
+
+	public func liveSearchBarDidAccept(_: LiveSearchBarView) {
+		// Accept the current match position and dismiss.
+		hideLiveSearch()
+	}
+
+	public func liveSearchBarDidCancel(_: LiveSearchBarView) {
+		// Restore original position (anchor) and dismiss.
+		if let editor = documentEditor?.editor {
+			let anchor = incrementalSearch.anchorOffset
+			let pos = editor.buffer.convert(offset: min(anchor, editor.buffer.size))
+			editor.selections = SelectionState(caret: pos)
+		}
+		hideLiveSearch()
+	}
+
+	public func liveSearchBarDidRequestNext(_: LiveSearchBarView) {
+		incrementalSearch.findNext()
+		if let match = incrementalSearch.currentMatch {
+			applySearchMatch(match)
+		}
+	}
+
+	public func liveSearchBarDidRequestPrevious(_: LiveSearchBarView) {
+		incrementalSearch.findPrevious()
+		if let match = incrementalSearch.currentMatch {
+			applySearchMatch(match)
+		}
+	}
+
+	/// Moves the editor selection to encompass a search match.
+	private func applySearchMatch(_ match: FindMatch) {
+		guard let editor = documentEditor?.editor else { return }
+		let start = editor.buffer.convert(offset: min(match.range.lowerBound, editor.buffer.size))
+		let end = editor.buffer.convert(offset: min(match.range.upperBound, editor.buffer.size))
+		let range = TMCore.TextRange(anchor: start, head: end)
+		editor.selections = SelectionState([range])
+
+		// Sync the view.
+		let pos = editor.buffer.convert(offset: end.offset)
+		editorView.carets = [(pos.line, pos.column)]
+		editorView.selectionRanges = [
+			(start: (start.line, start.column), end: (end.line, end.column)),
+		]
+		editorView.scrollToCaret()
 	}
 }

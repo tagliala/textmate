@@ -164,6 +164,7 @@ let package = Package(
 				"TMEditorUI",
 				"TMGrammar",
 				"TMDocumentManager",
+				"TMSearchReplace",
 			],
 			path: "Sources/TMDocumentWindow",
 		),
