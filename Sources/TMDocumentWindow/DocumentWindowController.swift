@@ -1,5 +1,8 @@
 import AppKit
 import TMAppKit
+import TMCore
+import TMDocumentManager
+import TMEditor
 import TMEditorUI
 import TMTheme
 
@@ -27,7 +30,13 @@ public class DocumentWindowController: NSWindowController {
 	public let editorView = EditorView()
 
 	/// The document model for the currently displayed file.
-	public let documentModel = DocumentModel()
+	public private(set) var textDocument: TMDocument
+
+	/// The bridge connecting the document, editor engine, and editor view.
+	public private(set) var documentEditor: TMDocumentEditor?
+
+	/// Shared clipboards for copy/paste/find/replace across editors.
+	public let clipboards = ClipboardSet()
 
 	private let splitView = NSSplitView()
 	private let editorContainer = NSView()
@@ -39,7 +48,9 @@ public class DocumentWindowController: NSWindowController {
 	private var currentTheme: Theme?
 
 	/// Creates a new document window with the standard TextMate layout.
-	public init() {
+	public init(document: TMDocument? = nil) {
+		textDocument = document ?? TMDocument()
+
 		let window = NSWindow(
 			contentRect: NSRect(x: 0, y: 0, width: 900, height: 600),
 			styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
@@ -54,6 +65,7 @@ public class DocumentWindowController: NSWindowController {
 
 		super.init(window: window)
 		setupLayout()
+		wireDocumentEditor()
 	}
 
 	@available(*, unavailable)
@@ -88,34 +100,40 @@ public class DocumentWindowController: NSWindowController {
 
 	/// Open a file, detecting its encoding automatically.
 	public func openFile(at url: URL) {
-		do {
-			let text = try documentModel.readFile(at: url)
-			editorView.setText(text)
-			window?.title = documentModel.displayTitle
-			statusBarView.setEncoding(documentModel.encodingDisplayName)
-			documentModel.isModified = false
-			updateWindowTitle()
-		} catch {
-			let alert = NSAlert(error: error)
-			alert.runModal()
+		let doc = TMDocument(path: url.path)
+		Task { @MainActor in
+			do {
+				try await doc.load()
+				self.textDocument = doc
+				self.wireDocumentEditor()
+				window?.title = doc.displayName
+				statusBarView.setEncoding(doc.encoding.charset)
+				updateWindowTitle()
+			} catch {
+				let alert = NSAlert(error: error)
+				alert.runModal()
+			}
 		}
 	}
 
 	/// Save the current document. Returns `true` if the save succeeded.
 	@discardableResult
 	public func saveDocument() -> Bool {
-		guard documentModel.fileURL != nil else {
+		guard textDocument.path != nil else {
 			return saveDocumentAs()
 		}
-		do {
-			try documentModel.writeFile(text: editorView.text)
-			updateWindowTitle()
-			return true
-		} catch {
-			let alert = NSAlert(error: error)
-			alert.runModal()
-			return false
+		documentEditor?.documentWillSave()
+		textDocument.setContent(documentEditor?.editor.text ?? "")
+		Task { @MainActor in
+			do {
+				try await textDocument.save()
+				updateWindowTitle()
+			} catch {
+				let alert = NSAlert(error: error)
+				alert.runModal()
+			}
 		}
+		return true
 	}
 
 	/// Present a Save panel and save the document. Returns `true` on success.
@@ -123,23 +141,26 @@ public class DocumentWindowController: NSWindowController {
 	public func saveDocumentAs() -> Bool {
 		let panel = NSSavePanel()
 		panel.canCreateDirectories = true
-		panel.nameFieldStringValue = documentModel.displayTitle
+		panel.nameFieldStringValue = textDocument.displayName
 
 		guard panel.runModal() == .OK, let url = panel.url else {
 			return false
 		}
 
-		documentModel.fileURL = url
-		do {
-			try documentModel.writeFile(text: editorView.text)
-			window?.title = documentModel.displayTitle
-			updateWindowTitle()
-			return true
-		} catch {
-			let alert = NSAlert(error: error)
-			alert.runModal()
-			return false
+		documentEditor?.documentWillSave()
+		textDocument.setContent(documentEditor?.editor.text ?? "")
+		textDocument.setPath(url.path)
+		Task { @MainActor in
+			do {
+				try await textDocument.save()
+				window?.title = textDocument.displayName
+				updateWindowTitle()
+			} catch {
+				let alert = NSAlert(error: error)
+				alert.runModal()
+			}
 		}
+		return true
 	}
 
 	/// Toggle file browser visibility.
@@ -245,7 +266,21 @@ public class DocumentWindowController: NSWindowController {
 	}
 
 	private func updateWindowTitle() {
-		let title = documentModel.displayTitle
-		window?.title = documentModel.isModified ? "● \(title)" : title
+		let title = textDocument.displayName
+		window?.title = textDocument.isModified ? "● \(title)" : title
+	}
+
+	/// Wires or re-wires the document editor for the current document.
+	private func wireDocumentEditor() {
+		// Ensure the document has content (treat nil as empty for untitled).
+		if textDocument.content == nil {
+			textDocument.setContent("", preserveRevision: true)
+		}
+
+		documentEditor = TMDocumentEditor(
+			document: textDocument,
+			editorView: editorView,
+			clipboards: clipboards,
+		)
 	}
 }

@@ -141,7 +141,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
 	@objc func saveAllDocuments(_: Any?) {
 		for controller in windowControllers {
-			if controller.documentModel.fileURL != nil {
+			if controller.textDocument.path != nil {
 				controller.saveDocument()
 			}
 		}
@@ -166,7 +166,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 	private static let restorationKey = "TMOpenDocumentURLs"
 
 	private func saveWindowState() {
-		let urls = windowControllers.compactMap(\.documentModel.fileURL?.absoluteString)
+		let urls = windowControllers.compactMap { ctrl -> String? in
+			guard let path = ctrl.textDocument.path else { return nil }
+			return URL(fileURLWithPath: path).absoluteString
+		}
 		UserDefaults.standard.set(urls, forKey: Self.restorationKey)
 	}
 

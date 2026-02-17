@@ -157,9 +157,12 @@ let package = Package(
 		.target(
 			name: "TMDocumentWindow",
 			dependencies: [
+				"TMCore",
 				"TMTheme",
 				"TMAppKit",
+				"TMEditor",
 				"TMEditorUI",
+				"TMDocumentManager",
 			],
 			path: "Sources/TMDocumentWindow",
 		),
