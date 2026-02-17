@@ -353,7 +353,7 @@ public struct FormatStringParser: Sendable {
 		case "x":
 			// \x{HHHH} or \xHH
 			if parseChar("{") {
-				if var hexStr = parseUntil("}") {
+				if let hexStr = parseUntil("}") {
 					if hexStr.count <= 8, hexStr.allSatisfy(\.isHexDigit),
 					   let codepoint = UInt32(hexStr, radix: 16),
 					   let scalar = Unicode.Scalar(codepoint)

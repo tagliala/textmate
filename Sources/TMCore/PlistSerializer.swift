@@ -267,7 +267,6 @@ private func formatArray(_ arr: [PlistValue], context ctx: Context) -> String {
 	}
 
 	if singleLine || fitsSingleLine(.array(arr)) {
-		var parts = [String]()
 		var line = ""
 		var wrap = 0
 
@@ -291,7 +290,6 @@ private func formatArray(_ arr: [PlistValue], context ctx: Context) -> String {
 			if body.hasSuffix(" ") { body.removeLast() }
 			body += "\n" + ctx.indentString
 		}
-		_ = parts // suppress warning
 		return "(" + body + ")"
 	} else {
 		var lines = [String]()
@@ -316,7 +314,7 @@ private func formatDictionary(
 	}
 
 	if singleLine || fitsSingleLine(.dictionary(dict)) {
-		var prefix = if singleLine || ctx.indent == 0 || ctx.isKey {
+		let prefix = if singleLine || ctx.indent == 0 || ctx.isKey {
 			" "
 		} else {
 			"\t"

@@ -92,21 +92,24 @@ public final class AuthorizationService: Sendable {
 		guard status == errAuthorizationSuccess, let authRef else { return false }
 		defer { AuthorizationFree(authRef, []) }
 
-		var item = AuthorizationItem(
-			name: right,
-			valueLength: 0,
-			value: nil,
-			flags: 0,
-		)
-		var rights = AuthorizationRights(count: 1, items: &item)
-
-		let copyStatus = AuthorizationCopyRights(
-			authRef,
-			&rights,
-			nil,
-			[],
-			nil,
-		)
+		let copyStatus: OSStatus = right.withCString { rightCString in
+			var item = AuthorizationItem(
+				name: rightCString,
+				valueLength: 0,
+				value: nil,
+				flags: 0,
+			)
+			return withUnsafeMutablePointer(to: &item) { itemPointer in
+				var rights = AuthorizationRights(count: 1, items: itemPointer)
+				return AuthorizationCopyRights(
+					authRef,
+					&rights,
+					nil,
+					[],
+					nil,
+				)
+			}
+		}
 		return copyStatus == errAuthorizationSuccess
 	}
 
@@ -120,21 +123,24 @@ public final class AuthorizationService: Sendable {
 		guard status == errAuthorizationSuccess, let authRef else { return false }
 		defer { AuthorizationFree(authRef, []) }
 
-		var item = AuthorizationItem(
-			name: right,
-			valueLength: 0,
-			value: nil,
-			flags: 0,
-		)
-		var rights = AuthorizationRights(count: 1, items: &item)
-
-		let copyStatus = AuthorizationCopyRights(
-			authRef,
-			&rights,
-			nil,
-			[.interactionAllowed, .extendRights],
-			nil,
-		)
+		let copyStatus: OSStatus = right.withCString { rightCString in
+			var item = AuthorizationItem(
+				name: rightCString,
+				valueLength: 0,
+				value: nil,
+				flags: 0,
+			)
+			return withUnsafeMutablePointer(to: &item) { itemPointer in
+				var rights = AuthorizationRights(count: 1, items: itemPointer)
+				return AuthorizationCopyRights(
+					authRef,
+					&rights,
+					nil,
+					[.interactionAllowed, .extendRights],
+					nil,
+				)
+			}
+		}
 
 		switch copyStatus {
 		case errAuthorizationSuccess:
