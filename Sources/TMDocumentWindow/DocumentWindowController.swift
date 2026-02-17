@@ -345,7 +345,6 @@ public class DocumentWindowController: NSWindowController {
 			statusBarView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
 			statusBarView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
 			statusBarView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
-			statusBarView.heightAnchor.constraint(equalToConstant: statusBarView.statusBarHeight),
 		])
 
 		// Set initial sidebar width

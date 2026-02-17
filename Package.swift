@@ -393,5 +393,11 @@ let package = Package(
 			dependencies: ["TMHTMLOutput", "TMCompatibility"],
 			path: "Tests/TMHTMLOutputTests",
 		),
+
+		.testTarget(
+			name: "TMAppKitTests",
+			dependencies: ["TMAppKit"],
+			path: "Tests/TMAppKitTests",
+		),
 	],
 )
