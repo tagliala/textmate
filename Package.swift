@@ -126,6 +126,7 @@ let package = Package(
 			name: "TMEditor",
 			dependencies: [
 				"TMCore",
+				"TMSearchReplace",
 			],
 			path: "Sources/TMEditor",
 		),

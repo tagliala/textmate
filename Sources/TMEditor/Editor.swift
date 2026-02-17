@@ -1,5 +1,6 @@
 import Foundation
 import TMCore
+import TMSearchReplace
 
 public typealias TextRange = TMCore.TextRange
 
@@ -47,6 +48,19 @@ public final class Editor: @unchecked Sendable {
 
 	/// Column at which to wrap text (for reformat operations).
 	public var wrapColumn: Int = 80
+
+	/// Options for find operations (regex, case-insensitive, etc.).
+	///
+	/// These options are applied when dispatching find/replace actions.
+	/// The find clipboard entry provides the search string; these options
+	/// control matching behavior.
+	public var findOptions: FindOptions = [.wrapAround]
+
+	/// Capture groups from the most recent single-match find operation.
+	///
+	/// Used by `replace` to expand capture references (e.g. `$1`) in
+	/// the replacement template.
+	public private(set) var matchCaptures: [String: String] = [:]
 
 	/// Delegate for layout-dependent operations.
 	public weak var layoutDelegate: EditorLayoutDelegate?
@@ -919,21 +933,207 @@ extension Editor {
 
 extension Editor {
 	private func performFindReplace(_ action: EditorAction) {
-		// Find/replace requires integration with the find clipboard and a find engine.
-		// For now, these are stubs — the full implementation will integrate with
-		// TMBundle's regex/find system in a later phase.
 		switch action {
-		case .findNext, .findPrevious:
-			break // Requires find engine integration
-		case .findNextAndModifySelection, .findPreviousAndModifySelection:
-			break
-		case .findAll, .findAllInSelection:
-			break
-		case .replace, .replaceAll, .replaceAllInSelection, .replaceAndFind:
-			break
+		case .findNext:
+			findUsingClipboard(backwards: false, extendSelection: false)
+		case .findPrevious:
+			findUsingClipboard(backwards: true, extendSelection: false)
+		case .findNextAndModifySelection:
+			findUsingClipboard(backwards: false, extendSelection: true)
+		case .findPreviousAndModifySelection:
+			findUsingClipboard(backwards: true, extendSelection: true)
+		case .findAll:
+			findAllUsingClipboard(inSelection: false)
+		case .findAllInSelection:
+			findAllUsingClipboard(inSelection: hasSelection)
+		case .replace:
+			replaceUsingClipboard()
+		case .replaceAndFind:
+			replaceUsingClipboard()
+			findUsingClipboard(backwards: false, extendSelection: false)
+		case .replaceAll:
+			replaceAllUsingClipboard(inSelection: false)
+		case .replaceAllInSelection:
+			replaceAllUsingClipboard(inSelection: hasSelection)
 		default:
 			break
 		}
+	}
+
+	/// Finds the next or previous match using the find clipboard string.
+	///
+	/// - Parameters:
+	///   - backwards: Search backwards from the current position.
+	///   - extendSelection: Add the match to existing selections instead of replacing them.
+	private func findUsingClipboard(backwards: Bool, extendSelection: Bool) {
+		guard let findEntry = clipboards.find.current() else { return }
+		let pattern = findEntry.text
+		guard !pattern.isEmpty else { return }
+
+		var options = findOptions
+		if backwards {
+			options.insert(.backwards)
+		} else {
+			options.remove(.backwards)
+		}
+
+		matchCaptures = [:]
+
+		let searcher = BufferSearcher(text: buffer.string)
+		let fromOffset = backwards
+			? selections.first?.start.offset ?? 0
+			: selections.last?.end.offset ?? 0
+
+		guard let result = try? searcher.findNext(
+			pattern: pattern,
+			options: options,
+			fromOffset: fromOffset,
+		) else { return }
+
+		guard let match = result.matches.first else { return }
+
+		matchCaptures = match.captures
+
+		let matchRange = TextRange(
+			anchor: buffer.convert(offset: match.range.lowerBound),
+			head: buffer.convert(offset: match.range.upperBound),
+		)
+
+		if extendSelection {
+			var sels = selections.selections
+			sels.append(matchRange)
+			selections = SelectionState(sels)
+		} else {
+			selections = SelectionState([matchRange])
+		}
+	}
+
+	/// Finds all matches and selects them.
+	///
+	/// - Parameter inSelection: If `true`, searches only within the current selections.
+	private func findAllUsingClipboard(inSelection: Bool) {
+		guard let findEntry = clipboards.find.current() else { return }
+		let pattern = findEntry.text
+		guard !pattern.isEmpty else { return }
+
+		matchCaptures = [:]
+
+		let searcher = BufferSearcher(text: buffer.string)
+
+		if inSelection {
+			// Search within each selection range
+			var allMatches: [TextRange] = []
+			for sel in selections.selections {
+				let searchRange = sel.start.offset ..< sel.end.offset
+				guard let result = try? searcher.findAll(
+					pattern: pattern,
+					options: findOptions,
+					searchRange: searchRange,
+				) else { continue }
+
+				for match in result.matches {
+					allMatches.append(TextRange(
+						anchor: buffer.convert(offset: match.range.lowerBound),
+						head: buffer.convert(offset: match.range.upperBound),
+					))
+				}
+			}
+
+			// If in-selection result equals the current selections, retry without selection constraint
+			// (mirrors C++ behavior: "foo bar" selected and Find All selects the same text → expand to all)
+			let matchSorted = allMatches.sorted { $0.start.offset < $1.start.offset }
+			let selSorted = selections.selections.sorted { $0.start.offset < $1.start.offset }
+			if matchSorted == selSorted {
+				findAllUsingClipboard(inSelection: false)
+				return
+			}
+
+			if !allMatches.isEmpty {
+				selections = SelectionState(allMatches)
+			}
+		} else {
+			guard let result = try? searcher.findAll(
+				pattern: pattern,
+				options: findOptions,
+			) else { return }
+
+			let ranges = result.matches.map { match in
+				TextRange(
+					anchor: buffer.convert(offset: match.range.lowerBound),
+					head: buffer.convert(offset: match.range.upperBound),
+				)
+			}
+
+			if !ranges.isEmpty {
+				selections = SelectionState(ranges)
+			}
+		}
+	}
+
+	/// Replaces the current selection using the replace clipboard.
+	///
+	/// If the most recent find captured groups, the replacement template
+	/// is expanded with those captures (e.g. `$1`, `${name}`).
+	private func replaceUsingClipboard() {
+		guard let replaceEntry = clipboards.replace.current() else { return }
+		guard hasSelection else { return }
+
+		var replacement = replaceEntry.text
+		if !matchCaptures.isEmpty {
+			let template = ReplacementTemplate(replacement)
+			replacement = template.expand(with: matchCaptures)
+		}
+
+		insertText(replacement)
+	}
+
+	/// Replaces all matches of the find clipboard pattern with the replace clipboard text.
+	///
+	/// - Parameter inSelection: If `true`, replaces only within the current selections.
+	private func replaceAllUsingClipboard(inSelection: Bool) {
+		guard let findEntry = clipboards.find.current() else { return }
+		guard let replaceEntry = clipboards.replace.current() else { return }
+		let pattern = findEntry.text
+		let replacement = replaceEntry.text
+		guard !pattern.isEmpty else { return }
+
+		let searcher = BufferSearcher(text: buffer.string)
+
+		undoManager.beginUndoGroup(selections: selections)
+
+		if inSelection {
+			// Replace within each selection, processing from back to front
+			let sortedSels = selections.selections.sorted { $0.start.offset > $1.start.offset }
+			for sel in sortedSels {
+				let searchRange = sel.start.offset ..< sel.end.offset
+				let selText = buffer.substring(from: sel.start.offset, to: sel.end.offset)
+				let selSearcher = BufferSearcher(text: selText)
+
+				guard let result = try? selSearcher.replaceAll(
+					pattern: pattern,
+					replacement: replacement,
+					options: findOptions,
+				), result.count > 0 else { continue }
+
+				buffer.replace(from: searchRange.lowerBound, to: searchRange.upperBound, with: result.text)
+			}
+		} else {
+			guard let result = try? searcher.replaceAll(
+				pattern: pattern,
+				replacement: replacement,
+				options: findOptions,
+			), result.count > 0 else {
+				undoManager.endUndoGroup(selections: selections)
+				return
+			}
+
+			// Replace entire buffer content
+			buffer.replace(from: 0, to: buffer.size, with: result.text)
+		}
+
+		// Place caret at buffer start after replace-all
+		selections = SelectionState(caret: TextPosition.zero)
+		undoManager.endUndoGroup(selections: selections)
 	}
 }
 
