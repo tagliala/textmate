@@ -106,7 +106,8 @@ struct EncodingDetectorTests {
 		let tmpURL = URL(fileURLWithPath: NSTemporaryDirectory())
 			.appendingPathComponent("invalid_encoding_\(UUID().uuidString).json")
 		defer { try? FileManager.default.removeItem(at: tmpURL) }
-		try "not json".data(using: .utf8)!.write(to: tmpURL)
+		let invalidJSONData = try #require("not json".data(using: .utf8))
+		try invalidJSONData.write(to: tmpURL)
 
 		let detector = EncodingDetector()
 		#expect(throws: (any Error).self) {

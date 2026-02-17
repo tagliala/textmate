@@ -35,7 +35,7 @@ struct AuthorizationSerializationTests {
 @Suite("AuthorizationService - Error Types")
 struct AuthorizationErrorTests {
 	@Test("Error descriptions are non-empty")
-	func errorDescriptions() throws {
+	func errorDescriptions() {
 		let errors: [AuthorizationError] = [
 			.helperNotAvailable,
 			.authorizationDenied,
