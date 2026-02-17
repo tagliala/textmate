@@ -31,6 +31,9 @@ public final class TMDocumentEditor {
 	/// to produce style runs for the layout manager.
 	public let syntaxHighlighter = SyntaxHighlighter()
 
+	/// The completion choice menu (floating panel).
+	private var choiceMenu: ChoiceMenuPanel?
+
 	/// Nesting level for undo change groups.
 	private var changeGroupLevel: Int = 0
 
@@ -360,6 +363,7 @@ extension TMDocumentEditor {
 
 extension TMDocumentEditor: EditorViewDelegate {
 	public func editorView(_: EditorView, insertText text: String, replacementRange _: NSRange) {
+		dismissChoiceMenu()
 		beginChangeGrouping()
 		editor.insertText(text)
 		endChangeGrouping()
@@ -382,6 +386,7 @@ extension TMDocumentEditor: EditorViewDelegate {
 	}
 
 	public func editorView(_: EditorView, didClickAtLine line: Int, index: Int, event: NSEvent) {
+		dismissChoiceMenu()
 		let offset = editor.buffer.lineStart(line) + index
 		let position = editor.buffer.convert(offset: min(offset, editor.buffer.size))
 
@@ -417,16 +422,95 @@ extension TMDocumentEditor: EditorViewDelegate {
 	public func editorView(_: EditorView, doCommandBySelector selector: Selector) {
 		let selectorName = NSStringFromSelector(selector)
 		if let action = EditorAction(selector: selectorName) {
-			let needsGroup = action.isDeletion || action.isClipboard || action.isTextTransform
+			let isCompletion = action == .complete || action == .nextCompletion || action == .previousCompletion
+			let needsGroup = action.isDeletion || action.isClipboard || action.isTextTransform || isCompletion
 			if needsGroup { beginChangeGrouping() }
 			editor.perform(action)
 			if needsGroup { endChangeGrouping() }
 
-			if action.isDeletion || action.isClipboard || action.isTextTransform || action.isFindReplace {
+			if isCompletion {
 				syncAfterEdit()
+				updateChoiceMenu()
+			} else if action.isDeletion || action.isClipboard || action.isTextTransform || action.isFindReplace {
+				syncAfterEdit()
+				dismissChoiceMenu()
 			} else {
 				syncSelectionToView()
+				dismissChoiceMenu()
 			}
 		}
+	}
+}
+
+// MARK: - Completion UI
+
+extension TMDocumentEditor {
+	/// Shows or updates the choice menu with current completion suggestions.
+	private func updateChoiceMenu() {
+		guard editor.isCompletionActive else {
+			dismissChoiceMenu()
+			return
+		}
+
+		let suggestions = editor.completionSuggestions
+		guard !suggestions.isEmpty else {
+			dismissChoiceMenu()
+			return
+		}
+
+		// If there's exactly one suggestion and it was just inserted, dismiss.
+		if suggestions.count == 1, editor.completionIndex == 0 {
+			// Single completion: already applied, just dismiss.
+			dismissChoiceMenu()
+			return
+		}
+
+		let menu = choiceMenu ?? createChoiceMenu()
+		menu.choices = suggestions
+		menu.choiceIndex = editor.completionIndex
+
+		if !menu.isMenuVisible, let view = editorView {
+			let screenPoint = caretScreenPoint(in: view)
+			menu.show(at: screenPoint, in: view)
+		}
+	}
+
+	/// Dismisses the choice menu and cancels the completion session.
+	private func dismissChoiceMenu() {
+		if editor.isCompletionActive {
+			editor.cancelCompletion()
+		}
+		choiceMenu?.dismiss()
+	}
+
+	/// Creates and configures the choice menu panel.
+	private func createChoiceMenu() -> ChoiceMenuPanel {
+		let menu = ChoiceMenuPanel(
+			font: editorView?.layoutManager.font ?? .monospacedSystemFont(
+				ofSize: NSFont.systemFontSize,
+				weight: .regular,
+			),
+		)
+		choiceMenu = menu
+		return menu
+	}
+
+	/// Computes the screen point at the primary caret position.
+	private func caretScreenPoint(in view: EditorView) -> NSPoint {
+		guard let primary = editor.selections.primary else {
+			return view.frame.origin
+		}
+		let pos = editor.buffer.convert(offset: primary.head.offset)
+		let localPoint = view.layoutManager.point(
+			forLine: pos.line,
+			characterIndex: pos.column,
+		)
+		// Place the menu below the caret line.
+		let belowCaret = NSPoint(
+			x: localPoint.x,
+			y: localPoint.y + view.layoutManager.defaultLineHeight,
+		)
+		guard let window = view.window else { return belowCaret }
+		return window.convertPoint(toScreen: view.convert(belowCaret, to: nil))
 	}
 }

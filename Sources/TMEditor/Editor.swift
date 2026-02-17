@@ -65,6 +65,9 @@ public final class Editor: @unchecked Sendable {
 	/// Delegate for layout-dependent operations.
 	public weak var layoutDelegate: EditorLayoutDelegate?
 
+	/// Tracks the current completion session state.
+	public var completionInfo = CompletionInfo()
+
 	// MARK: - Init
 
 	/// Creates an editor with the given initial text.
@@ -1182,11 +1185,143 @@ extension Editor {
 
 // MARK: - Completion
 
-extension Editor {
-	private func performCompletion(_: EditorAction) {
-		// Completion requires integration with the bundle system and UI.
-		// This is a stub for Phase 3 — full completion will be implemented
-		// when the completion UI is built.
+public extension Editor {
+	/// Performs a completion action: initial trigger, next, or previous.
+	private func performCompletion(_ action: EditorAction) {
+		switch action {
+		case .complete:
+			if setupCompletion() {
+				completionInfo.advance()
+				applyCurrentCompletion()
+			}
+		case .nextCompletion:
+			nextCompletion()
+		case .previousCompletion:
+			previousCompletion()
+		default:
+			break
+		}
+	}
+
+	/// Set up the completion session if not already valid for the current
+	/// buffer revision and selection.
+	///
+	/// Port of `editor_t::setup_completion` from completion.cc.
+	@discardableResult
+	func setupCompletion() -> Bool {
+		if completionInfo.revision != buffer.revision
+			|| completionInfo.ranges != selections.selections
+		{
+			completionInfo.revision = buffer.revision
+			completionInfo.ranges = selections.selections
+
+			// Use the primary selection's head as the cursor position.
+			guard let primary = selections.primary else { return false }
+			let cursorOffset = primary.head.offset
+
+			// Find word boundaries around cursor.
+			let bow = wordBoundaryLeft(from: cursorOffset)
+			let eow = wordBoundaryRight(from: cursorOffset)
+
+			let prefix = buffer.substring(from: bow, to: cursorOffset)
+			let suffix = buffer.substring(from: cursorOffset, to: eow)
+
+			// Compute the prefix range: (cursorOffset ..< cursorOffset) initially
+			// (a zero-width range at the cursor).
+			completionInfo.prefixRanges = [TextRange(caret: primary.head)]
+
+			let engine = CompletionEngine()
+			let suggestions = engine.completions(
+				buffer: buffer,
+				bow: bow,
+				eow: eow,
+				prefix: prefix,
+				suffix: suffix,
+			)
+			completionInfo.setSuggestions(suggestions)
+		}
+		return !completionInfo.isEmpty
+	}
+
+	/// Cycle to the next completion and insert it.
+	///
+	/// Port of `editor_t::next_completion` from completion.cc.
+	func nextCompletion() {
+		guard setupCompletion() else { return }
+		completionInfo.advance()
+		applyCurrentCompletion()
+	}
+
+	/// Cycle to the previous completion and insert it.
+	///
+	/// Port of `editor_t::previous_completion` from completion.cc.
+	func previousCompletion() {
+		guard setupCompletion() else { return }
+		completionInfo.recede()
+		applyCurrentCompletion()
+	}
+
+	/// Insert the current completion suggestion, replacing the prefix ranges.
+	private func applyCurrentCompletion() {
+		let text = completionInfo.current
+		guard !completionInfo.prefixRanges.isEmpty else { return }
+
+		// Replace each prefix range with the current suggestion.
+		// Process in reverse order to preserve earlier offsets.
+		let sortedRanges = completionInfo.prefixRanges.sorted {
+			$0.start.offset > $1.start.offset
+		}
+
+		var newPrefixRanges: [TextRange] = []
+		for range in sortedRanges {
+			let from = range.start.offset
+			let to = range.end.offset
+			let end = buffer.replace(from: from, to: to, with: text)
+			let endPos = buffer.convert(offset: end)
+			let startPos = buffer.convert(offset: from)
+			newPrefixRanges.append(TextRange(anchor: startPos, head: endPos))
+
+			// Update snippet controller.
+			snippetController.adjustForEdit(
+				at: from,
+				oldLength: to - from,
+				newLength: text.utf8.count,
+			)
+		}
+
+		completionInfo.prefixRanges = newPrefixRanges.reversed()
+		completionInfo.revision = buffer.revision
+
+		// Move selections to end of inserted text.
+		let newSelections = completionInfo.prefixRanges.map { range in
+			TextRange(caret: range.end)
+		}
+		completionInfo.ranges = newSelections
+		selections = SelectionState(newSelections)
+	}
+
+	/// The currently active completion suggestions (for UI display).
+	var completionSuggestions: [String] {
+		completionInfo.suggestions
+	}
+
+	/// The index of the currently active suggestion.
+	var completionIndex: Int? {
+		guard !completionInfo.isEmpty else { return nil }
+		// CompletionInfo uses advance/recede but we can derive index
+		// by checking which suggestion matches current.
+		let current = completionInfo.current
+		return completionInfo.suggestions.firstIndex(of: current)
+	}
+
+	/// Cancel the active completion session.
+	func cancelCompletion() {
+		completionInfo = CompletionInfo()
+	}
+
+	/// Whether a completion session is active.
+	var isCompletionActive: Bool {
+		!completionInfo.isEmpty
 	}
 }
 

@@ -311,7 +311,7 @@ let package = Package(
 
 		.testTarget(
 			name: "TMEditorTests",
-			dependencies: ["TMEditor"],
+			dependencies: ["TMEditor", "TMEditorUI"],
 			path: "Tests/TMEditorTests",
 		),
 
