@@ -33,6 +33,20 @@ public struct SelectionState: Sendable, Hashable {
 		selections.first
 	}
 
+	/// The first selection (alias for `primary`).
+	///
+	/// Mirrors the C++ `ranges_t::first()` accessor.
+	public var first: TextRange? {
+		selections.first
+	}
+
+	/// The last selection.
+	///
+	/// Mirrors the C++ `ranges_t::last()` accessor.
+	public var last: TextRange? {
+		selections.last
+	}
+
 	/// Sorts and merges overlapping selections.
 	private static func normalized(_ ranges: [TextRange]) -> [TextRange] {
 		guard ranges.count > 1 else { return ranges }

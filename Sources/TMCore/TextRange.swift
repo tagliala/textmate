@@ -82,4 +82,40 @@ public struct TextRange: Sendable, Hashable {
 	public var length: Int {
 		end.offset - start.offset
 	}
+
+	/// Returns a range with `anchor = start` and `head = end`, preserving flags.
+	///
+	/// This is the Swift port of C++ `range_t::sorted()`.
+	public func sorted() -> TextRange {
+		TextRange(
+			anchor: start,
+			head: end,
+			isColumnar: isColumnar,
+			isFreehanded: isFreehanded,
+			isUnanchored: isUnanchored,
+			color: color,
+		)
+	}
+
+	/// Returns a sorted range with carry stripped unless columnar or freehanded.
+	///
+	/// This is the Swift port of C++ `range_t::normalized()`.
+	public func normalized() -> TextRange {
+		var result = sorted()
+		if !isColumnar, !isFreehanded {
+			result.anchor = TextPosition(
+				line: result.anchor.line,
+				column: result.anchor.column,
+				offset: result.anchor.offset,
+				carry: 0,
+			)
+			result.head = TextPosition(
+				line: result.head.line,
+				column: result.head.column,
+				offset: result.head.offset,
+				carry: 0,
+			)
+		}
+		return result
+	}
 }
