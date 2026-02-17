@@ -858,6 +858,89 @@ throughout the codebase.
 
 ---
 
+## Phase 18 — IO Framework & File Status
+
+Ported the C++ `io` framework (~1,301 lines) and simpler parts of the
+`file` framework (~400 lines) — low-level file system primitives used
+throughout the codebase for path manipulation, process spawning, file
+watching, atomic saves, and file status queries.
+
+### Source Files
+
+| Package | File | Description |
+|---------|------|-------------|
+| **TMCore** | `PathUtilities.swift` | ~40 path manipulation & FS operations: normalize, name, parent, extension, extensions, join, isAbsolute, isChild, withTilde, relativeTo, escape, unescape, displayName, disambiguate, unique, rank, resolve (symlinks + macOS aliases), exists, isReadable, isWritable, isDirectory, isExecutable, isLocal, device, content, setContent, getAttr, setAttr, attributes, setAttributes, link, makeDir, moveToTrash, renameOrCopy, duplicate, copy, move, remove, entries, home, cwd, temp, cache, desktop, volumes |
+| **TMCore** | `ProcessExecution.swift` | Process spawning (posix_spawn with pipe I/O), synchronous exec with parallel stdout/stderr reading, environment variable whitelisting with glob patterns |
+| **TMCore** | `FSEventWatcher.swift` | FSEventStream wrapper: EventHandler protocol, WatchedStream (wraps FSEventStreamRef, stat-based change detection, watches nearest existing parent), FSEventWatcher singleton with watch/unwatch |
+| **TMCore** | `AtomicFileWriter.swift` | 3 atomic save strategies: FileManager (NSFileManager replaceItemAt), atomic (exchangedata/rename), direct; volume-aware strategy selection |
+| **TMCore** | `FileStatus.swift` | File writability testing (7 status cases), path→scope attribute generation, BOM detection (UTF-8/16/32 BE/LE), charset→String.Encoding mapping |
+
+### C++ → Swift Mapping
+
+| C++ | Swift |
+|-----|-------|
+| `path::normalize()` | `PathUtilities.normalize(_:)` |
+| `path::name()` / `parent()` / `extension()` / `extensions()` | `PathUtilities.name/parent/extension/extensions` |
+| `path::join()` / `is_absolute()` / `is_child()` | `PathUtilities.join/isAbsolute/isChild` |
+| `path::with_tilde()` / `relative_to()` | `PathUtilities.withTilde/relativeTo` |
+| `path::escape()` / `unescape()` | `PathUtilities.escape/unescape` |
+| `path::display_name()` / `disambiguate()` / `unique()` | `PathUtilities.displayName/disambiguate/unique` |
+| `path::rank()` | `PathUtilities.rank(_:extension:)` |
+| `path::resolve()` / `resolve_head()` | `PathUtilities.resolve/resolveHead` (+ macOS alias via URL.resolvingAliasFileAt) |
+| `path::exists()` / `is_directory()` / `is_readable()` / etc. | `PathUtilities.exists/isDirectory/isReadable/...` |
+| `path::content()` / `set_content()` | `PathUtilities.content/setContent` |
+| `path::get_attr()` / `set_attr()` | `PathUtilities.getAttr/setAttr` (raw xattr API) |
+| `path::copy()` / `move()` / `remove()` | `PathUtilities.copy/move/remove` (recursive via copyfile) |
+| `path::entries()` | `PathUtilities.entries` (DirectoryEntry struct) |
+| `path::home()` / `temp()` / `volumes()` | `PathUtilities.home/temp/cache/desktop/volumes` |
+| `io::spawn()` / `io::exec()` | `ProcessExecution.spawn/exec` (posix_spawn + DispatchGroup) |
+| `io::create_pipe()` | `ProcessExecution.createPipe` (pipe + FD_CLOEXEC) |
+| `oak::basic_environment()` | `ProcessExecution.basicEnvironment` (whitelist-filtered + standard vars) |
+| `fs::watch()` / `fs::unwatch()` | `FSEventWatcher.shared.watch/unwatch` |
+| `path::intermediate_t` | `AtomicFileWriter` (3 strategies: fileManager, atomic, direct) |
+| `file::status()` | `FileStatus.status(_:)` (WritabilityStatus enum) |
+| `file::path_attributes()` | `FileStatus.pathAttributes(_:)` (reversed dotted scope string) |
+| `encoding::charset_from_bom()` | `FileStatus.charsetFromBOM(_:)` (BOMResult struct) |
+
+### Key Design Decisions
+
+- **`Optional<String>`** instead of C++ `NULL_STR` sentinel values
+- **`URL.resolvingAliasFileAt`** for macOS alias resolution (cleaner than raw CF API)
+- **`FileManager.contentsOfDirectory`** for directory scanning instead of POSIX `scandir`
+- **`posix_spawn` directly** (not Foundation `Process` class) to match C++ semantics
+- **`nonisolated(unsafe)`** for dispatch group parallel variable mutation
+- **`@unchecked Sendable`** for FSEventWatcher with NSLock thread safety
+- **`FSEventStreamSetDispatchQueue`** instead of deprecated `FSEventStreamScheduleWithRunLoop`
+- **`dev_t` return**: `~0` instead of `dev_t(bitPattern: -1)` (avoids unsigned overflow)
+
+### Items Deferred to Future Phases
+
+| C++ Source | Reason |
+|-----------|--------|
+| `file/reader.cc` | Streaming charset-detecting file reader (depends on encoding detection, settings) |
+| `file/type.cc` | File type detection (depends on bundles, settings, regexp) |
+| `file/open.cc`, `file/save.cc` | Complex state machines (depend on authorization, command, settings) |
+| `file/filter.cc` | Bundle import/export filters (depends on command runner) |
+| `io/resource.cc` | Legacy Carbon resource fork API (deprecated, skip) |
+
+### Test Coverage
+
+| Test Suite | Tests | Status |
+|-----------|-------|--------|
+| PathUtilities — String Manipulation | 14 | ✅ |
+| PathUtilities — File System Operations | 12 | ✅ |
+| PathUtilities — Display & Disambiguation | 2 | ✅ |
+| ProcessExecution — Pipe & Spawn | 8 | ✅ |
+| FileStatus — Writability | 4 | ✅ |
+| FileStatus — Path Attributes | 3 | ✅ |
+| FileStatus — BOM Detection | 8 | ✅ |
+| AtomicFileWriter | 7 | ✅ |
+| FSEventWatcher — Basic | 3 | ✅ |
+
+### Cumulative Total: 1712 tests in 211 suites
+
+---
+
 ## Architecture Reminder
 
 All code follows the iteration strategy from
@@ -880,7 +963,8 @@ All code follows the iteration strategy from
 - **Iteration 15** — HTML Output Chrome & System Services ✅
 - **Iteration 16** — Snippet & Format String Engine ✅
 - **Iteration 17** — Plist Engine & Text Utilities ✅
-- **Iteration 18** — (next)
+- **Iteration 18** — IO Framework & File Status ✅
+- **Iteration 19** — (next)
 
 ## Workflow Rules
 
