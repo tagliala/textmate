@@ -28,7 +28,7 @@ struct AuthorizationSerializationTests {
 		// but we can ensure the hex encoding/decoding functions are consistent.
 		let service = AuthorizationService.shared
 		// Verify the shared instance exists
-		#expect(service != nil)
+		#expect(type(of: service) == AuthorizationService.self)
 	}
 }
 
@@ -44,7 +44,7 @@ struct AuthorizationErrorTests {
 		]
 		for error in errors {
 			#expect(error.errorDescription != nil)
-			#expect(try !(#require(error.errorDescription?.isEmpty)))
+			#expect(error.errorDescription?.isEmpty == false)
 		}
 	}
 

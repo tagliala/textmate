@@ -11,7 +11,7 @@ struct HTMLOutputCommandViewTests {
 	@Test("Creates with browser view embedded")
 	func initCreatesBrowserView() {
 		let view = HTMLOutputCommandView()
-		#expect(view.browserView != nil)
+		#expect(view.browserView.superview === view)
 	}
 
 	@Test("Default state is idle")

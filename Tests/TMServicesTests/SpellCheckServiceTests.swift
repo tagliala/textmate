@@ -10,7 +10,7 @@ struct SpellCheckServiceTests {
 	@Test("Shared instance is available")
 	func sharedInstance() {
 		let service = SpellCheckService.shared
-		#expect(service != nil)
+		#expect(type(of: service) == SpellCheckService.self)
 	}
 
 	// MARK: - Document Tags

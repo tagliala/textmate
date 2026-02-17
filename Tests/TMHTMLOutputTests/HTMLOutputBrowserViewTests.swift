@@ -11,8 +11,8 @@ struct HTMLOutputBrowserViewTests {
 	@Test("Creates with embedded web view and status bar")
 	func initCreatesSubviews() {
 		let browser = HTMLOutputBrowserView()
-		#expect(browser.webView is WKWebView)
-		#expect(browser.statusBar is HTMLOutputStatusBar)
+		#expect(browser.webView.superview === browser)
+		#expect(browser.statusBar.superview === browser)
 	}
 
 	@Test("Web view fills browser view")
