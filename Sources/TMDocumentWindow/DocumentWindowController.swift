@@ -8,6 +8,7 @@ import TMFileBrowser
 import TMGrammar
 import TMSCM
 import TMSearchReplace
+import TMSettings
 import TMTheme
 
 /// The main document window controller, managing the layout that matches
@@ -175,6 +176,7 @@ public class DocumentWindowController: NSWindowController {
 		Task { @MainActor in
 			do {
 				try await doc.load()
+				self.applySettings(to: doc)
 				self.textDocument = doc
 				// Replace disposable document, or append as new tab.
 				if let disposable = self.disposableDocumentIndex {
@@ -330,6 +332,22 @@ public class DocumentWindowController: NSWindowController {
 			didRun: nil,
 			contextInfo: nil,
 		)
+	}
+
+	// MARK: - TMSettings Integration
+
+	/// Apply `.tm_properties` settings to a document after loading.
+	private func applySettings(to doc: TMDocument) {
+		guard let filePath = doc.path else { return }
+		let scope = documentEditor?.syntaxHighlighter.activeScope
+		let settings = SettingsResolver.settingsForPath(filePath, scope: scope)
+
+		if let tabSizeStr = settings["tabSize"], let tabSize = Int(tabSizeStr), tabSize > 0 {
+			doc.tabSize = tabSize
+		}
+		if let softTabsStr = settings["softTabs"] {
+			doc.softTabs = softTabsStr == "true" || softTabsStr == "1"
+		}
 	}
 
 	// MARK: - Private Setup

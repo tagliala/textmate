@@ -2,6 +2,7 @@ import AppKit
 import TMBundleRuntime
 import TMBundleUI
 import TMDocumentWindow
+import TMFilterList
 import TMTheme
 
 /// The main application delegate. Sets up the menu bar, loads the default
@@ -161,7 +162,90 @@ class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency BundleMenuAc
 	}
 
 	@objc func goToFile(_: Any?) {
-		// Placeholder — Open Quickly panel (Iteration 3).
+		guard let controller = currentWindowController(),
+		      let frame = controller.window?.frame
+		else {
+			return
+		}
+
+		let projectPath = controller.projectPath
+			?? controller.selectedDocument?.path.map { ($0 as NSString).deletingLastPathComponent }
+			?? NSHomeDirectory()
+
+		let chooser = FileChooserController(projectPath: projectPath)
+		chooser.setOpenDocuments(controller.documents.compactMap(\.path))
+		chooser.setCurrentDocumentPath(controller.selectedDocument?.path)
+
+		chooser.onSelectFile = { [weak self] path, selectionString, symbolString in
+			guard let self else { return }
+			let url = URL(fileURLWithPath: path)
+			// Re-use the current window if it's a project window,
+			// otherwise open a new one.
+			if controller.treatAsProjectWindow {
+				controller.openFile(at: url)
+			} else {
+				openURL(url)
+			}
+			// TODO: Navigate to selectionString / symbolString when editor supports it.
+			_ = selectionString
+			_ = symbolString
+		}
+
+		chooser.showAndEnumerate(relativeTo: frame)
+	}
+
+	@objc func showBundleItemChooser(_: Any?) {
+		guard let frame = currentWindowController()?.window?.frame ?? NSApp.keyWindow?.frame else {
+			return
+		}
+
+		let chooser = BundleItemChooserController()
+
+		// Build descriptors from the bundle index.
+		let allItems = bundleSystem.bundleIndex.query(BundleQuery(kinds: .all))
+		let descriptors = allItems.map { item in
+			BundleItemDescriptor(
+				name: item.name,
+				bundleName: bundleSystem.bundleIndex.bundle(uuid: item.bundleUUID)?.name ?? "",
+				identifier: item.uuid,
+				tabTrigger: item.tabTrigger,
+				keyEquivalent: item.keyEquivalent,
+				kind: kindString(item.kind),
+				source: searchSource(for: item.kind),
+			)
+		}
+		chooser.populate(with: descriptors)
+
+		chooser.onSelectItem = { [weak self] uuid in
+			guard let self else { return }
+			if let controller = currentWindowController() {
+				bundleSystem.commandDispatcher.delegate = controller
+			}
+			Task { @MainActor in
+				await self.bundleSystem.commandDispatcher.execute(itemUUID: uuid)
+			}
+		}
+
+		chooser.showWindow(relativeTo: frame)
+	}
+
+	private func kindString(_ kind: BundleItemKind) -> String {
+		if kind.contains(.command) { return "Command" }
+		if kind.contains(.snippet) { return "Snippet" }
+		if kind.contains(.grammar) { return "Grammar" }
+		if kind.contains(.theme) { return "Theme" }
+		if kind.contains(.macro) { return "Macro" }
+		if kind.contains(.settings) { return "Settings" }
+		if kind.contains(.dragCommand) { return "Drag Command" }
+		return "Item"
+	}
+
+	private func searchSource(for kind: BundleItemKind) -> BundleSearchSource {
+		if kind.contains(.grammar) { return .grammarItems }
+		if kind.contains(.theme) { return .themeItems }
+		if kind.contains(.settings) { return .settingsItems }
+		if kind.contains(.dragCommand) { return .dragCommandItems }
+		return .actionItems
 	}
 
 	@objc func saveDocument(_: Any?) {
