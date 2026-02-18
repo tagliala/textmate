@@ -3,6 +3,7 @@ import TMBundleRuntime
 import TMBundleUI
 import TMDocumentWindow
 import TMFilterList
+import TMServices
 import TMTheme
 
 /// The main application delegate. Sets up the menu bar, loads the default
@@ -281,6 +282,33 @@ class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency BundleMenuAc
 
 	@objc func showPreferences(_: Any?) {
 		AppPreferencesWindowController.shared.showPreferences()
+	}
+
+	/// Manual "Check for Updates…" action — delegates to SoftwareUpdateEngine.
+	@objc func checkForUpdates(_: Any?) {
+		Task { @MainActor in
+			do {
+				let result = try await SoftwareUpdateEngine.shared.checkForUpdate()
+				switch result {
+				case .upToDate, .prerelease:
+					let alert = NSAlert()
+					alert.messageText = String(
+						localized: "Up to date",
+						comment: "Software update dialog",
+					)
+					alert.informativeText = String(
+						localized: "You are running the latest version.",
+						comment: "Software update dialog",
+					)
+					alert.runModal()
+				case .updateAvailable:
+					break // SoftwareUpdateEngine handles presentation
+				}
+			} catch {
+				let alert = NSAlert(error: error)
+				alert.runModal()
+			}
+		}
 	}
 
 	// MARK: - Window State Restoration

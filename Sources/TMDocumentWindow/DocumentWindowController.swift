@@ -8,6 +8,7 @@ import TMFileBrowser
 import TMGrammar
 import TMSCM
 import TMSearchReplace
+import TMServices
 import TMSettings
 import TMTheme
 
@@ -103,6 +104,9 @@ public class DocumentWindowController: NSWindowController {
 
 	/// Whether gutter line numbers are visible.
 	var isLineNumbersVisible = true
+
+	/// Whether spell checking is enabled for the current document.
+	var isSpellCheckingEnabled = false
 
 	/// SCM badge provider for file browser status indicators.
 	public var scmBadgeProvider: FileStatusBadgeProvider?
@@ -338,19 +342,131 @@ public class DocumentWindowController: NSWindowController {
 		)
 	}
 
+	// MARK: - Scroll Line Overrides
+
+	/// Scroll the viewport up by one line height.
+	@objc override public func scrollLineUp(_: Any?) {
+		let clipView = scrollView.contentView
+		var origin = clipView.bounds.origin
+		origin.y -= editorView.layoutManager.defaultLineHeight
+		clipView.setBoundsOrigin(origin)
+		scrollView.reflectScrolledClipView(clipView)
+	}
+
+	/// Scroll the viewport down by one line height.
+	@objc override public func scrollLineDown(_: Any?) {
+		let clipView = scrollView.contentView
+		var origin = clipView.bounds.origin
+		origin.y += editorView.layoutManager.defaultLineHeight
+		clipView.setBoundsOrigin(origin)
+		scrollView.reflectScrolledClipView(clipView)
+	}
+
+	// MARK: - Menu Validation
+
+	@objc public func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
+		let action = menuItem.action
+
+		// Toggle items with checkmarks
+		switch action {
+		case NSSelectorFromString("toggleFileBrowser:"):
+			menuItem.state = isFileBrowserVisible ? .on : .off
+			return true
+		case NSSelectorFromString("toggleLineNumbers:"):
+			menuItem.state = isLineNumbersVisible ? .on : .off
+			return true
+		case NSSelectorFromString("toggleSoftWrap:"):
+			menuItem.state = editorView.layoutManager.softWrap ? .on : .off
+			return true
+		case NSSelectorFromString("toggleShowInvisibles:"):
+			menuItem.state = editorView.showInvisibles ? .on : .off
+			return true
+		case NSSelectorFromString("takeTabSizeFrom:"):
+			menuItem.state = menuItem.tag == editorView.layoutManager.tabSize ? .on : .off
+			return true
+		default:
+			break
+		}
+
+		// Items that require a document
+		switch action {
+		case NSSelectorFromString("goToRelatedFile:"),
+		     NSSelectorFromString("revealFileInProject:"):
+			return selectedDocument?.path != nil
+		case NSSelectorFromString("goToProjectFolder:"):
+			return projectPath != nil
+		case NSSelectorFromString("goToNextBookmark:"),
+		     NSSelectorFromString("goToPreviousBookmark:"):
+			return !gutterView.bookmarkedLines.isEmpty
+		default:
+			break
+		}
+
+		return true
+	}
+
 	// MARK: - TMSettings Integration
 
-	/// Apply `.tm_properties` settings to a document after loading.
-	private func applySettings(to doc: TMDocument) {
+	/// Apply `.tm_properties` settings to a document and editor after loading.
+	func applySettings(to doc: TMDocument) {
 		guard let filePath = doc.path else { return }
 		let scope = documentEditor?.syntaxHighlighter.activeScope
 		let settings = SettingsResolver.settingsForPath(filePath, scope: scope)
 
+		// Tab size
 		if let tabSizeStr = settings["tabSize"], let tabSize = Int(tabSizeStr), tabSize > 0 {
 			doc.tabSize = tabSize
+			editorView.layoutManager.tabSize = tabSize
 		}
+
+		// Soft tabs
 		if let softTabsStr = settings["softTabs"] {
 			doc.softTabs = softTabsStr == "true" || softTabsStr == "1"
+		}
+
+		// Soft wrap
+		if let wrapStr = settings["softWrap"] {
+			editorView.layoutManager.softWrap = wrapStr == "true" || wrapStr == "1"
+		}
+
+		// Show invisibles
+		if let invisStr = settings["showInvisibles"] {
+			editorView.showInvisibles = invisStr == "true" || invisStr == "1"
+		}
+
+		// Font (name and/or size)
+		let fontName = settings["fontName"]
+		let fontSize = settings["fontSize"].flatMap { Double($0) }.map { CGFloat($0) }
+		if let name = fontName, let size = fontSize {
+			editorView.layoutManager.setFont(name: name, size: size)
+			gutterView.font = NSFont(name: name, size: size)
+				?? .monospacedSystemFont(ofSize: size, weight: .regular)
+		} else if let name = fontName {
+			let size = editorView.layoutManager.font.pointSize
+			editorView.layoutManager.setFont(name: name, size: size)
+			gutterView.font = NSFont(name: name, size: size)
+				?? .monospacedSystemFont(ofSize: size, weight: .regular)
+		} else if let size = fontSize {
+			editorView.layoutManager.setFont(
+				.monospacedSystemFont(ofSize: size, weight: .regular),
+			)
+			gutterView.font = .monospacedSystemFont(ofSize: size, weight: .regular)
+		}
+
+		// Wrap column
+		if let wrapColStr = settings["wrapColumn"], let wrapCol = Int(wrapColStr), wrapCol >= 0 {
+			editorView.layoutManager.wrapColumn = wrapCol
+		}
+
+		// Encoding
+		if let enc = settings["encoding"] {
+			doc.encoding = DocumentEncoding(charset: enc)
+			statusBarView.setEncoding(enc)
+		}
+
+		// Spell checking
+		if let spellStr = settings["spellChecking"] {
+			isSpellCheckingEnabled = spellStr == "true" || spellStr == "1"
 		}
 	}
 

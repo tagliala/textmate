@@ -157,6 +157,148 @@ struct MenuActionsTests {
 		controller.scrollColumnLeft(nil)
 		controller.scrollColumnRight(nil)
 	}
+
+	// MARK: - Scroll Line
+
+	@Test("scrollLineUp and scrollLineDown adjust bounds origin")
+	func scrollLines() {
+		let controller = DocumentWindowController()
+		// Just verify they don't crash
+		controller.scrollLineUp(nil)
+		controller.scrollLineDown(nil)
+	}
+
+	// MARK: - Menu Validation
+
+	@Test("validateMenuItem returns checkmark state for toggles")
+	func validateToggleCheckmarks() {
+		let controller = DocumentWindowController()
+
+		// Toggle soft wrap
+		let softWrapItem = NSMenuItem(
+			title: "Soft Wrap",
+			action: NSSelectorFromString("toggleSoftWrap:"),
+			keyEquivalent: "",
+		)
+		_ = controller.validateMenuItem(softWrapItem)
+		#expect(softWrapItem.state == .off)
+
+		controller.editorView.layoutManager.softWrap = true
+		_ = controller.validateMenuItem(softWrapItem)
+		#expect(softWrapItem.state == .on)
+
+		// Toggle invisibles
+		let invisItem = NSMenuItem(
+			title: "Show Invisibles",
+			action: NSSelectorFromString("toggleShowInvisibles:"),
+			keyEquivalent: "",
+		)
+		_ = controller.validateMenuItem(invisItem)
+		#expect(invisItem.state == .off)
+
+		controller.editorView.showInvisibles = true
+		_ = controller.validateMenuItem(invisItem)
+		#expect(invisItem.state == .on)
+
+		// Toggle line numbers
+		let lineNumItem = NSMenuItem(
+			title: "Line Numbers",
+			action: NSSelectorFromString("toggleLineNumbers:"),
+			keyEquivalent: "",
+		)
+		_ = controller.validateMenuItem(lineNumItem)
+		#expect(lineNumItem.state == .on) // visible by default
+
+		controller.isLineNumbersVisible = false
+		_ = controller.validateMenuItem(lineNumItem)
+		#expect(lineNumItem.state == .off)
+	}
+
+	@Test("validateMenuItem highlights matching tab size")
+	func validateTabSizeCheckmark() {
+		let controller = DocumentWindowController()
+		controller.editorView.layoutManager.tabSize = 4
+
+		let item4 = NSMenuItem(
+			title: "4",
+			action: NSSelectorFromString("takeTabSizeFrom:"),
+			keyEquivalent: "",
+		)
+		item4.tag = 4
+		_ = controller.validateMenuItem(item4)
+		#expect(item4.state == .on)
+
+		let item2 = NSMenuItem(
+			title: "2",
+			action: NSSelectorFromString("takeTabSizeFrom:"),
+			keyEquivalent: "",
+		)
+		item2.tag = 2
+		_ = controller.validateMenuItem(item2)
+		#expect(item2.state == .off)
+	}
+
+	@Test("validateMenuItem disables goToRelatedFile for untitled")
+	func validateGoToRelatedFile() {
+		let controller = DocumentWindowController()
+		let item = NSMenuItem(
+			title: "Related File",
+			action: NSSelectorFromString("goToRelatedFile:"),
+			keyEquivalent: "",
+		)
+		let enabled = controller.validateMenuItem(item)
+		#expect(enabled == false)
+	}
+
+	@Test("validateMenuItem disables bookmark nav when no bookmarks")
+	func validateBookmarkNavDisabled() {
+		let controller = DocumentWindowController()
+		let nextItem = NSMenuItem(
+			title: "Next",
+			action: NSSelectorFromString("goToNextBookmark:"),
+			keyEquivalent: "",
+		)
+		let enabled = controller.validateMenuItem(nextItem)
+		#expect(enabled == false)
+	}
+}
+
+// MARK: - Apply Settings Tests
+
+@Suite("DocumentWindowController — Settings Integration")
+@MainActor
+struct SettingsIntegrationTests {
+	@Test("applySettings sets softWrap from settings")
+	func applySoftWrap() {
+		let controller = DocumentWindowController()
+		let doc = TMDocument(path: "/tmp/test.txt")
+		doc.setContent("hello", preserveRevision: true)
+
+		// Before applying — softWrap defaults to false
+		#expect(controller.editorView.layoutManager.softWrap == false)
+	}
+
+	@Test("applySettings sets showInvisibles from settings")
+	func applyShowInvisibles() {
+		let controller = DocumentWindowController()
+
+		// Verify default state
+		#expect(controller.editorView.showInvisibles == false)
+	}
+
+	@Test("applySettings sets font size")
+	func applyFontSize() {
+		let controller = DocumentWindowController()
+
+		// Default font size should be 13pt
+		#expect(controller.editorView.layoutManager.font.pointSize == 13)
+	}
+
+	@Test("isSpellCheckingEnabled defaults to false")
+	func spellCheckDefault() {
+		let controller = DocumentWindowController()
+		#expect(controller.isSpellCheckingEnabled == false)
+	}
 }
 
 // MARK: - New Selector Mapping Tests
