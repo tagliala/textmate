@@ -168,6 +168,8 @@ let package = Package(
 				"TMBundleRuntime",
 				"TMCompatibility",
 				"TMHTMLOutput",
+				"TMFileBrowser",
+				"TMSCM",
 			],
 			path: "Sources/TMDocumentWindow",
 			linkerSettings: [
@@ -309,6 +311,8 @@ let package = Package(
 				"TMTheme",
 				"TMBundleRuntime",
 				"TMCompatibility",
+				"TMFileBrowser",
+				"TMSCM",
 			],
 			path: "Tests/TMDocumentWindowTests",
 		),

@@ -7,3 +7,4 @@ Frameworks/license/src/revoked_serials.cc
 .build/
 .swiftpm/
 Package.resolved
+.vscode/

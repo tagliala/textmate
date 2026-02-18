@@ -60,7 +60,10 @@ public final class EditorHUD: NSWindowController {
 			win.convertToScreen(view.convert(view.visibleRect, to: nil))
 		} ?? view.visibleRect
 
-		let insetRect = viewRect.insetBy(dx: Self.hudInset, dy: Self.hudInset)
+		let safeRect = viewRect.isEmpty
+			? NSRect(x: 100, y: 100, width: 400, height: 300)
+			: viewRect
+		let insetRect = safeRect.insetBy(dx: Self.hudInset, dy: Self.hudInset)
 		let hudFrame = NSRect(
 			x: insetRect.maxX - Self.hudWidth,
 			y: insetRect.maxY - Self.hudHeight,
@@ -155,15 +158,17 @@ public final class EditorHUD: NSWindowController {
 
 		// Reposition to the current view location.
 		if let view = lastView, let win = view.window {
-			let viewRect = win.convertToScreen(view.convert(view.visibleRect, to: nil))
-			let insetRect = viewRect.insetBy(dx: Self.hudInset, dy: Self.hudInset)
-			let hudFrame = NSRect(
-				x: insetRect.maxX - Self.hudWidth,
-				y: insetRect.maxY - Self.hudHeight,
-				width: Self.hudWidth,
-				height: Self.hudHeight,
-			)
-			window?.setFrame(hudFrame, display: false)
+			let screenRect = win.convertToScreen(view.convert(view.visibleRect, to: nil))
+			if !screenRect.isEmpty, screenRect.width.isFinite, screenRect.height.isFinite {
+				let insetRect = screenRect.insetBy(dx: Self.hudInset, dy: Self.hudInset)
+				let hudFrame = NSRect(
+					x: insetRect.maxX - Self.hudWidth,
+					y: insetRect.maxY - Self.hudHeight,
+					width: Self.hudWidth,
+					height: Self.hudHeight,
+				)
+				window?.setFrame(hudFrame, display: false)
+			}
 		}
 
 		// Snap to full opacity.

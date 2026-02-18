@@ -3,6 +3,7 @@ import TMBundleRuntime
 import TMCompatibility
 import TMCore
 import TMEditor
+import TMFileBrowser
 import TMHTMLOutput
 
 // MARK: - CommandDispatcherDelegate Conformance
@@ -300,12 +301,19 @@ extension DocumentWindowController: CommandDispatcherDelegate {
 			pid: ProcessInfo.processInfo.processIdentifier,
 		)
 
-		return EnvironmentBuilder.buildFull(
+		var env = EnvironmentBuilder.buildFull(
 			editor: editorCtx,
 			document: docCtx,
 			project: projCtx,
 			app: appCtx,
 		)
+
+		// Merge file browser variables (TM_SELECTED_FILE, TM_SELECTED_FILES).
+		for (key, value) in fileBrowserController.variables {
+			env[key] = value
+		}
+
+		return env
 	}
 
 	// MARK: - Helpers

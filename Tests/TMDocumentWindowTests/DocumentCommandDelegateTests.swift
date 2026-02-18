@@ -322,7 +322,7 @@ struct DocumentCommandDelegateTests {
 		// Move caret to end
 		let bufSize = try #require(wc.documentEditor?.editor.buffer.size)
 		let endPos = try #require(wc.documentEditor?.editor.buffer.convert(
-			offset: bufSize
+			offset: bufSize,
 		))
 		wc.documentEditor?.editor.selections = SelectionState(caret: endPos)
 

@@ -1,5 +1,6 @@
 import AppKit
 import TMDocumentManager
+import TMFileBrowser
 
 // MARK: - Session Management
 
@@ -23,6 +24,7 @@ public extension DocumentWindowController {
 		public var isZoomed: Bool = false
 		public var fileBrowserVisible: Bool = false
 		public var fileBrowserWidth: CGFloat = 250
+		public var fileBrowserState: Data?
 		public var selectedTabIndex: Int = 0
 		public var documents: [SessionDocumentInfo] = []
 	}
@@ -79,6 +81,11 @@ public extension DocumentWindowController {
 
 		info.fileBrowserVisible = isFileBrowserVisible
 		info.fileBrowserWidth = fileBrowserWidth
+		info.fileBrowserState = try? PropertyListSerialization.data(
+			fromPropertyList: fileBrowserController.sessionState,
+			format: .binary,
+			options: 0,
+		)
 		info.selectedTabIndex = selectedTabIndex
 
 		for (i, doc) in documents.enumerated() {
@@ -232,6 +239,21 @@ public extension DocumentWindowController {
 			} else {
 				controller.showWindow(nil)
 				lastWindow = controller.window
+			}
+
+			// Restore file browser state.
+			if let stateData = project.fileBrowserState,
+			   let plist = try? PropertyListSerialization.propertyList(
+			   	from: stateData, format: nil,
+			   ) as? [String: Any]
+			{
+				controller.fileBrowserController.setupView(withState: plist)
+			}
+
+			controller.isFileBrowserVisible = project.fileBrowserVisible
+			controller.fileBrowserWidth = project.fileBrowserWidth
+			if !project.fileBrowserVisible {
+				controller.projectLayoutView.fileBrowserView = nil
 			}
 
 			// Open the selected document.

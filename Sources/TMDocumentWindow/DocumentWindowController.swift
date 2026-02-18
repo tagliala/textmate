@@ -4,7 +4,9 @@ import TMCore
 import TMDocumentManager
 import TMEditor
 import TMEditorUI
+import TMFileBrowser
 import TMGrammar
+import TMSCM
 import TMSearchReplace
 import TMTheme
 
@@ -28,11 +30,12 @@ import TMTheme
 @MainActor
 public class DocumentWindowController: NSWindowController {
 	public let tabBarView = TabBarView()
-	public let fileBrowserView = FileBrowserView()
+	public let fileBrowserController = FileBrowserViewController()
 	public let gutterView = GutterView()
 	public let statusBarView = StatusBarView()
 	public let editorView = EditorView()
 	public let liveSearchBar = LiveSearchBarView()
+	public let projectLayoutView = ProjectLayoutView()
 
 	// MARK: - Multi-Document State
 
@@ -86,18 +89,21 @@ public class DocumentWindowController: NSWindowController {
 	/// Registry of all active window controllers, keyed by identifier.
 	nonisolated(unsafe) static var allControllers: [UUID: DocumentWindowController] = [:]
 
-	private let splitView = NSSplitView()
 	private let editorContainer = NSView()
 	private let scrollView = NSScrollView()
 
-	var fileBrowserWidth: CGFloat = 200
+	var fileBrowserWidth: CGFloat {
+		get { projectLayoutView.fileBrowserWidth }
+		set { projectLayoutView.fileBrowserWidth = newValue }
+	}
+
 	var isFileBrowserVisible = true
+
+	/// SCM badge provider for file browser status indicators.
+	public var scmBadgeProvider: FileStatusBadgeProvider?
 
 	/// Incremental search state backing the live search bar.
 	public let incrementalSearch = IncrementalSearchState()
-
-	/// Constraint anchoring the split view bottom to the live search bar.
-	private var splitViewBottomConstraint: NSLayoutConstraint?
 
 	/// Height constraint for the live search bar (0 when hidden).
 	private var searchBarHeightConstraint: NSLayoutConstraint?
@@ -159,7 +165,7 @@ public class DocumentWindowController: NSWindowController {
 
 	/// Set the project root for the file browser.
 	public func setProjectRoot(_ url: URL) {
-		fileBrowserView.rootURL = url
+		fileBrowserController.goToURL(url)
 		window?.title = url.lastPathComponent
 	}
 
@@ -273,12 +279,7 @@ public class DocumentWindowController: NSWindowController {
 	/// Toggle file browser visibility.
 	public func toggleFileBrowser() {
 		isFileBrowserVisible.toggle()
-		if isFileBrowserVisible {
-			splitView.setPosition(fileBrowserWidth, ofDividerAt: 0)
-		} else {
-			fileBrowserWidth = splitView.subviews[0].frame.width
-			splitView.setPosition(0, ofDividerAt: 0)
-		}
+		projectLayoutView.fileBrowserView = isFileBrowserVisible ? fileBrowserController.view : nil
 	}
 
 	// MARK: - Printing
@@ -341,24 +342,26 @@ public class DocumentWindowController: NSWindowController {
 		tabBarView.translatesAutoresizingMaskIntoConstraints = false
 		contentView.addSubview(tabBarView)
 
-		// Split view: file browser | editor area
-		splitView.isVertical = true
-		splitView.dividerStyle = .thin
-		splitView.translatesAutoresizingMaskIntoConstraints = false
-
-		// File browser (left pane)
-		fileBrowserView.translatesAutoresizingMaskIntoConstraints = false
-
-		// Editor area (right pane): gutter + text view
+		// Editor area: gutter + text view
 		editorContainer.wantsLayer = true
 		editorContainer.translatesAutoresizingMaskIntoConstraints = false
 
 		setupEditorView()
 		setupEditorContainer()
 
-		splitView.addArrangedSubview(fileBrowserView)
-		splitView.addArrangedSubview(editorContainer)
-		contentView.addSubview(splitView)
+		// Project layout: file browser | editor area (| html output)
+		projectLayoutView.translatesAutoresizingMaskIntoConstraints = false
+		projectLayoutView.documentView = editorContainer
+
+		// Wire file browser into layout
+		_ = fileBrowserController.view // force loadView
+		fileBrowserController.delegate = self
+		projectLayoutView.fileBrowserView = fileBrowserController.view
+		if let path = projectPath {
+			fileBrowserController.goToURL(URL(fileURLWithPath: path))
+		}
+
+		contentView.addSubview(projectLayoutView)
 
 		// Live search bar (initially hidden)
 		liveSearchBar.translatesAutoresizingMaskIntoConstraints = false
@@ -379,11 +382,11 @@ public class DocumentWindowController: NSWindowController {
 			tabBarView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
 			tabBarView.heightAnchor.constraint(equalToConstant: tabBarView.tabBarHeight),
 
-			// Split view
-			splitView.topAnchor.constraint(equalTo: tabBarView.bottomAnchor),
-			splitView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-			splitView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-			splitView.bottomAnchor.constraint(equalTo: liveSearchBar.topAnchor),
+			// Project layout
+			projectLayoutView.topAnchor.constraint(equalTo: tabBarView.bottomAnchor),
+			projectLayoutView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+			projectLayoutView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+			projectLayoutView.bottomAnchor.constraint(equalTo: liveSearchBar.topAnchor),
 
 			// Live search bar
 			liveSearchBar.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
@@ -391,17 +394,11 @@ public class DocumentWindowController: NSWindowController {
 			liveSearchBar.bottomAnchor.constraint(equalTo: statusBarView.topAnchor),
 			searchBarHeight,
 
-			// File browser min width
-			fileBrowserView.widthAnchor.constraint(greaterThanOrEqualToConstant: 100),
-
 			// Status bar
 			statusBarView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
 			statusBarView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
 			statusBarView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
 		])
-
-		// Set initial sidebar width
-		splitView.setPosition(fileBrowserWidth, ofDividerAt: 0)
 	}
 
 	private func setupEditorView() {
