@@ -44,6 +44,13 @@ public final class TMDocumentEditor {
 	/// Bundle index for tab trigger lookup (injected from the app layer).
 	public var bundleIndex: BundleIndex?
 
+	/// Whether auto-pairing (smart typing pairs) is enabled.
+	public var autoPairingEnabled: Bool = true
+
+	/// Smart typing pairs for the current scope (e.g. `[("(", ")"), ("[", "]")]`).
+	/// Injected from the scope-preferences layer; falls back to defaults.
+	public var smartTypingPairs: [Editor.TypingPair] = Editor.defaultSmartTypingPairs
+
 	// MARK: - Init
 
 	/// Creates a document editor.
@@ -376,7 +383,11 @@ extension TMDocumentEditor: EditorViewDelegate {
 	public func editorView(_: EditorView, insertText text: String, replacementRange _: NSRange) {
 		dismissChoiceMenu()
 		beginChangeGrouping()
-		editor.insertText(text)
+		if autoPairingEnabled, text.count == 1, !smartTypingPairs.isEmpty {
+			editor.insertWithPairing(text, pairs: smartTypingPairs)
+		} else {
+			editor.insertText(text)
+		}
 		endChangeGrouping()
 		syncAfterEdit()
 	}
@@ -458,6 +469,59 @@ extension TMDocumentEditor: EditorViewDelegate {
 				dismissChoiceMenu()
 			}
 		}
+	}
+
+	public func editorView(_: EditorView, performKeyEquivalent event: NSEvent) -> Bool {
+		guard let bundleIndex else { return false }
+
+		// Convert the event to a key equivalent string for bundle lookup.
+		let keyEquiv = keyEquivalentString(from: event)
+		guard !keyEquiv.isEmpty else { return false }
+
+		let matches = bundleIndex.query(BundleQuery(
+			field: .keyEquivalent,
+			value: keyEquiv,
+			kinds: .executable,
+		))
+		guard let item = matches.first else { return false }
+
+		// Execute the matched bundle item.
+		if item.kind.contains(.snippet), let content = item.plist?["content"] as? String {
+			beginChangeGrouping()
+			insertSnippetWithExpansion(content)
+			endChangeGrouping()
+			return true
+		}
+
+		// For commands, the execution pipeline handles it. Signal that we matched.
+		return true
+	}
+
+	public func editorView(_: EditorView, fontScaleDidChange scale: CGFloat) {
+		guard let view = editorView else { return }
+		let currentSize = view.layoutManager.font.pointSize
+		let newSize = max(6, min(currentSize * scale, 200))
+		let newFont = NSFont.monospacedSystemFont(ofSize: newSize, weight: .regular)
+		view.layoutManager.setFont(newFont)
+		view.needsDisplay = true
+	}
+
+	public func editorViewNeedsContextMenu(_: EditorView, for _: NSEvent) -> NSMenu? {
+		let menu = NSMenu()
+		menu.addItem(withTitle: "Cut", action: #selector(NSText.cut(_:)), keyEquivalent: "")
+		menu.addItem(withTitle: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "")
+		menu.addItem(withTitle: "Paste", action: #selector(NSText.paste(_:)), keyEquivalent: "")
+		menu.addItem(.separator())
+		menu.addItem(withTitle: "Select All", action: #selector(NSText.selectAll(_:)), keyEquivalent: "")
+		return menu
+	}
+
+	public func editorView(_: EditorView, validateMenuItem menuItem: NSMenuItem) -> Bool {
+		let action = menuItem.action
+		if action == #selector(NSText.cut(_:)) || action == #selector(NSText.copy(_:)) {
+			return editor.hasSelection
+		}
+		return true
 	}
 }
 
@@ -681,5 +745,25 @@ extension TMDocumentEditor {
 
 		endChangeGrouping()
 		syncAfterEdit()
+	}
+}
+
+// MARK: - Key Equivalent String
+
+extension TMDocumentEditor {
+	/// Converts an NSEvent to the TextMate key equivalent string format.
+	///
+	/// Uses the `@` (Cmd), `^` (Ctrl), `~` (Option), `$` (Shift) modifier
+	/// prefix notation followed by the key character.
+	func keyEquivalentString(from event: NSEvent) -> String {
+		guard let chars = event.charactersIgnoringModifiers, !chars.isEmpty else { return "" }
+		let flags = event.modifierFlags
+		var result = ""
+		if flags.contains(.control) { result += "^" }
+		if flags.contains(.option) { result += "~" }
+		if flags.contains(.shift) { result += "$" }
+		if flags.contains(.command) { result += "@" }
+		result += chars.lowercased()
+		return result
 	}
 }

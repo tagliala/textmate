@@ -34,6 +34,9 @@ public final class Editor: @unchecked Sendable {
 	/// The macro recorder.
 	public let macroRecorder: MacroRecorder
 
+	/// Bracket pair tracker for auto-pairing (auto-close brackets/quotes).
+	public let pairTracker: BracketPairTracker = .init()
+
 	/// The mark position (set with Ctrl-Space, used by deleteToMark/selectToMark/swapWithMark).
 	public var mark: TextPosition?
 
@@ -84,6 +87,7 @@ public final class Editor: @unchecked Sendable {
 
 		let pos = TextPosition.zero
 		selections = SelectionState(caret: pos)
+		buffer.addCallback(pairTracker)
 	}
 
 	/// Creates an editor wrapping an existing buffer.
@@ -100,6 +104,7 @@ public final class Editor: @unchecked Sendable {
 
 		let pos = TextPosition.zero
 		selections = SelectionState(caret: pos)
+		buffer.addCallback(pairTracker)
 	}
 
 	// MARK: - Content Access
@@ -254,6 +259,133 @@ public final class Editor: @unchecked Sendable {
 	/// Whether any selection is non-empty.
 	public var hasSelection: Bool {
 		selections.selections.contains { !$0.isEmpty }
+	}
+
+	// MARK: - Insert with Auto-Pairing
+
+	/// A typing pair (opener + closer) for auto-pairing.
+	public struct TypingPair: Sendable, Equatable {
+		public let opener: String
+		public let closer: String
+
+		public init(_ opener: String, _ closer: String) {
+			self.opener = opener
+			self.closer = closer
+		}
+	}
+
+	/// Default smart typing pairs used when no scope-specific pairs are configured.
+	public static let defaultSmartTypingPairs: [TypingPair] = [
+		TypingPair("(", ")"),
+		TypingPair("[", "]"),
+		TypingPair("{", "}"),
+		TypingPair("\"", "\""),
+		TypingPair("'", "'"),
+	]
+
+	/// Inserts text with auto-pairing support.
+	///
+	/// Mimics the C++ `insert_with_pairing` from `editor.cc`:
+	/// 1. If the caret sits at a tracked closer and the typed string matches → skip over.
+	/// 2. If there is a selection and a pair is found → surround the selection.
+	/// 3. If the next character is a word character → plain insert.
+	/// 4. For same-char pairs (quotes) → only pair if the count on the line is even.
+	/// 5. Otherwise → insert both opener and closer, place cursor between them.
+	///
+	/// - Parameters:
+	///   - string: The typed string (usually a single character).
+	///   - pairs: The smart typing pairs for the current scope.
+	public func insertWithPairing(_ string: String, pairs: [TypingPair]) {
+		guard !string.isEmpty else { return }
+
+		// Find matching pair for this string.
+		let matchedPair = pairs.first { $0.opener == string }
+
+		undoManager.beginUndoGroup(selections: selections)
+
+		let sortedSels = selections.selections.sorted { $0.start.offset > $1.start.offset }
+		var newRanges: [TextRange] = []
+
+		for sel in sortedSels {
+			let from = sel.start.offset
+			let to = sel.end.offset
+
+			// 1. Skip over tracked closer.
+			if sel.isEmpty, pairTracker.isLast(at: from) {
+				let nextEnd = from < buffer.size
+					? nextCharacterBoundary(after: from)
+					: from
+				let nextChar = from < buffer.size
+					? buffer.substring(from: from, to: nextEnd)
+					: ""
+				if nextChar == string {
+					// Move past the closer and remove tracking.
+					pairTracker.remove(at: from)
+					let endPos = buffer.convert(offset: nextEnd)
+					newRanges.append(TextRange(caret: endPos))
+					continue
+				}
+			}
+
+			// 2. Surround selection with pair.
+			if !sel.isEmpty, let pair = matchedPair {
+				let combined = pair.opener + buffer.substring(from: from, to: to) + pair.closer
+				let end = buffer.replace(from: from, to: to, with: combined)
+				snippetController.adjustForEdit(at: from, oldLength: to - from, newLength: combined.utf8.count)
+				// Select the inner content (excluding opener/closer).
+				let innerStart = from + pair.opener.utf8.count
+				let innerEnd = end - pair.closer.utf8.count
+				newRanges.append(TextRange(
+					anchor: buffer.convert(offset: innerStart),
+					head: buffer.convert(offset: innerEnd),
+				))
+				continue
+			}
+
+			guard let pair = matchedPair else {
+				// No matching pair — plain insert.
+				let end = buffer.replace(from: from, to: to, with: string)
+				snippetController.adjustForEdit(at: from, oldLength: to - from, newLength: string.utf8.count)
+				newRanges.append(TextRange(caret: buffer.convert(offset: end)))
+				continue
+			}
+
+			// 3. Next char is word char → plain insert.
+			if to < buffer.size, isWordCharacter(at: to) {
+				let end = buffer.replace(from: from, to: to, with: string)
+				snippetController.adjustForEdit(at: from, oldLength: to - from, newLength: string.utf8.count)
+				newRanges.append(TextRange(caret: buffer.convert(offset: end)))
+				continue
+			}
+
+			// 4. Same-char pairs (quotes): only pair if even count on line.
+			if pair.opener == pair.closer {
+				let pos = buffer.convert(offset: from)
+				let lineStart = buffer.lineStart(pos.line)
+				let lineEnd = buffer.lineEnd(pos.line)
+				let lineContent = buffer.substring(from: lineStart, to: lineEnd)
+				let count = lineContent.components(separatedBy: pair.opener).count - 1
+				if count % 2 != 0 {
+					// Odd count → closing, just insert the single char.
+					let end = buffer.replace(from: from, to: to, with: string)
+					snippetController.adjustForEdit(at: from, oldLength: to - from, newLength: string.utf8.count)
+					newRanges.append(TextRange(caret: buffer.convert(offset: end)))
+					continue
+				}
+			}
+
+			// 5. Insert both opener + closer, cursor between.
+			let both = pair.opener + pair.closer
+			let end = buffer.replace(from: from, to: to, with: both)
+			snippetController.adjustForEdit(at: from, oldLength: to - from, newLength: both.utf8.count)
+			let cursorPos = from + pair.opener.utf8.count
+			let closerPos = end - pair.closer.utf8.count
+			pairTracker.addPair(first: cursorPos, last: closerPos)
+			newRanges.append(TextRange(caret: buffer.convert(offset: cursorPos)))
+		}
+
+		undoManager.endUndoGroup(selections: SelectionState(newRanges))
+		selections = SelectionState(newRanges)
 	}
 }
 
@@ -1732,7 +1864,7 @@ extension Editor {
 	}
 
 	/// Whether the character at offset is a word character (alphanumeric or underscore).
-	private func isWordCharacter(at offset: Int) -> Bool {
+	func isWordCharacter(at offset: Int) -> Bool {
 		guard offset < buffer.size else { return false }
 		let byte = buffer[offset]
 		return (byte >= UInt8(ascii: "a") && byte <= UInt8(ascii: "z"))

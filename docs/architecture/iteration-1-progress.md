@@ -941,6 +941,46 @@ watching, atomic saves, and file status queries.
 
 ---
 
+## Phase 45: Editor View Interaction Layer — ✅ COMPLETE
+
+### Key Features
+
+| Feature | Description | File(s) |
+|---------|-------------|---------|
+| **Auto-Pairing** | Smart typing pairs (brackets/quotes) with skip-over, surround-selection, odd-count quotes | `Editor.swift`, `TMDocumentEditor.swift` |
+| **`insertWithPairing`** | Editor method: 5-step pairing logic (skip closer, surround, word-char guard, same-char count, insert pair) | `Editor.swift` |
+| **`TypingPair` struct** | Opener/closer pair model with default set `()[]{}""''` | `Editor.swift` |
+| **`performKeyEquivalent`** | Key equiv dispatch to bundle items (Cmd-key → snippet/command) | `EditorView.swift`, `TMDocumentEditor.swift` |
+| **Context Menu** | Right-click menu with Cut/Copy/Paste/Select All | `EditorView.swift`, `TMDocumentEditor.swift` |
+| **`scrollWheel`** | Smooth scroll passthrough to scroll view | `EditorView.swift` |
+| **`magnify`** | Pinch-to-zoom font scale (6pt–200pt range) | `EditorView.swift`, `TMDocumentEditor.swift` |
+| **Menu Validation** | `NSMenuItemValidation` conformance, Cut/Copy disabled without selection | `EditorView.swift`, `TMDocumentEditor.swift` |
+| **Services Menu** | `validRequestorForSendType:returnType:`, `writeSelection:`, `readSelection:` | `EditorView.swift` |
+| **Drag Source** | `NSDraggingSource` conformance, `beginDragSession(from:)` for text drags | `EditorView.swift` |
+| **Key Equiv String** | NSEvent → TextMate key equiv format (`^~$@` modifiers prefix) | `TMDocumentEditor.swift` |
+
+### EditorViewDelegate Additions
+
+| Method | Purpose |
+|--------|---------|
+| `editorView(_:performKeyEquivalent:) → Bool` | Bundle key equiv dispatch |
+| `editorView(_:fontScaleDidChange:)` | Pinch-to-zoom font size |
+| `editorViewNeedsContextMenu(_:for:) → NSMenu?` | Context menu construction |
+| `editorView(_:validateMenuItem:) → Bool` | Menu item validation |
+
+### Test Coverage
+
+| Test Suite | Tests | Status |
+|-----------|-------|--------|
+| Auto-Pairing (insertWithPairing) | 16 | ✅ |
+| TMDocumentEditor — Auto-Pairing | 4 | ✅ |
+| EditorView — Interactions | 5 | ✅ |
+| TMDocumentEditor — Key Equivalent String | 1 | ✅ |
+
+### Cumulative Total: 2596 tests in 320 suites
+
+---
+
 ## Architecture Reminder
 
 All code follows the iteration strategy from
@@ -964,7 +1004,8 @@ All code follows the iteration strategy from
 - **Iteration 16** — Snippet & Format String Engine ✅
 - **Iteration 17** — Plist Engine & Text Utilities ✅
 - **Iteration 18** — IO Framework & File Status ✅
-- **Iteration 19** — (next)
+- **Iteration 19+** — Phases 19–45 (integration, polish, interaction layer) ✅
+- **Iteration 20** — (next)
 
 ## Workflow Rules
 

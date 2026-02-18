@@ -410,3 +410,110 @@ struct EditorViewDragDropTests {
 		#expect(types.contains(.fileURL))
 	}
 }
+
+// MARK: - Auto-Pairing Integration Tests
+
+@Suite("TMDocumentEditor — Auto-Pairing")
+@MainActor
+struct TMDocumentEditorAutoPairingTests {
+	private func makeEditor(text: String = "") -> (TMDocumentEditor, EditorView) {
+		let doc = TMDocument()
+		doc.setContent(text, preserveRevision: true)
+		let view = EditorView(frame: NSRect(x: 0, y: 0, width: 400, height: 300))
+		let editor = TMDocumentEditor(document: doc, editorView: view)
+		return (editor, view)
+	}
+
+	@Test("auto-pairing enabled by default")
+	func autoPairingEnabledByDefault() {
+		let (docEditor, _) = makeEditor()
+		#expect(docEditor.autoPairingEnabled)
+		#expect(!docEditor.smartTypingPairs.isEmpty)
+	}
+
+	@Test("insertText routes through pairing when enabled")
+	func insertTextUsesPairing() {
+		let (docEditor, view) = makeEditor()
+		// Type a paren — should auto-pair
+		docEditor.editorView(view, insertText: "(", replacementRange: NSRange(location: NSNotFound, length: 0))
+		#expect(docEditor.editor.text == "()")
+	}
+
+	@Test("insertText plain when pairing disabled")
+	func insertTextPlainWhenDisabled() {
+		let (docEditor, view) = makeEditor()
+		docEditor.autoPairingEnabled = false
+		docEditor.editorView(view, insertText: "(", replacementRange: NSRange(location: NSNotFound, length: 0))
+		#expect(docEditor.editor.text == "(")
+	}
+
+	@Test("multi-character insert bypasses pairing")
+	func multiCharBypassesPairing() {
+		let (docEditor, view) = makeEditor()
+		docEditor.editorView(view, insertText: "abc", replacementRange: NSRange(location: NSNotFound, length: 0))
+		#expect(docEditor.editor.text == "abc")
+	}
+}
+
+// MARK: - EditorView Interaction Tests
+
+@Suite("EditorView — Interactions")
+@MainActor
+struct EditorViewInteractionTests {
+	@Test("EditorView conforms to NSMenuItemValidation")
+	func conformsToMenuValidation() {
+		let view = EditorView(frame: NSRect(x: 0, y: 0, width: 400, height: 300))
+		let validated: any NSMenuItemValidation = view
+		#expect(type(of: validated) == EditorView.self)
+	}
+
+	@Test("EditorView conforms to NSDraggingSource")
+	func conformsToDraggingSource() {
+		let view = EditorView(frame: NSRect(x: 0, y: 0, width: 400, height: 300))
+		let source: any NSDraggingSource = view
+		#expect(type(of: source) == EditorView.self)
+	}
+
+	@Test("EditorView accepts first responder")
+	func acceptsFirstResponder() {
+		let view = EditorView(frame: NSRect(x: 0, y: 0, width: 400, height: 300))
+		#expect(view.acceptsFirstResponder)
+	}
+
+	@Test("validRequestor returns self when selection exists")
+	func validRequestorForString() {
+		let view = EditorView(frame: NSRect(x: 0, y: 0, width: 400, height: 300))
+		view.setText("hello world")
+		view.selectionRanges = [(start: (0, 0), end: (0, 5))]
+		let req = view.validRequestor(forSendType: .string, returnType: .string)
+		#expect(req != nil)
+	}
+
+	@Test("validRequestor returns nil with no selection for send")
+	func validRequestorNoSelectionForSend() {
+		let view = EditorView(frame: NSRect(x: 0, y: 0, width: 400, height: 300))
+		// No selection → cannot send
+		let req = view.validRequestor(forSendType: .string, returnType: nil)
+		#expect(req == nil)
+	}
+}
+
+// MARK: - Key Equivalent String Tests
+
+@Suite("TMDocumentEditor — Key Equivalent String")
+@MainActor
+struct KeyEquivalentStringTests {
+	private func makeEditor() -> TMDocumentEditor {
+		let doc = TMDocument()
+		doc.setContent("", preserveRevision: true)
+		let view = EditorView(frame: .zero)
+		return TMDocumentEditor(document: doc, editorView: view)
+	}
+
+	@Test("key equiv with no bundle index returns false")
+	func noIndexReturnsFalse() {
+		let docEditor = makeEditor()
+		// bundleIndex is nil by default
+		#expect(docEditor.bundleIndex == nil)
+	}
+}

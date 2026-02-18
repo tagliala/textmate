@@ -10,7 +10,7 @@ import CoreText
 /// Counterpart of the C++ `OakTextView` in
 /// `Frameworks/OakTextView/src/OakTextView.h`.
 @MainActor
-public class EditorView: NSView, @preconcurrency NSTextInputClient {
+public class EditorView: NSView, @preconcurrency NSTextInputClient, NSMenuItemValidation {
 	// MARK: - Layout Manager
 
 	/// The layout manager that produces laid-out lines.
@@ -445,11 +445,33 @@ public class EditorView: NSView, @preconcurrency NSTextInputClient {
 		}
 	}
 
+	// MARK: - Scroll & Zoom
+
+	override public func scrollWheel(with event: NSEvent) {
+		// Let the scroll view handle the scroll event natively.
+		super.scrollWheel(with: event)
+	}
+
+	override public func magnify(with event: NSEvent) {
+		delegate?.editorView(self, fontScaleDidChange: 1.0 + event.magnification)
+	}
+
 	// MARK: - Keyboard Events
 
 	override public func keyDown(with event: NSEvent) {
 		resetCaretBlink()
 		interpretKeyEvents([event])
+	}
+
+	override public func performKeyEquivalent(with event: NSEvent) -> Bool {
+		// Only handle when we are first responder in an active key window.
+		guard let win = window, win.isKeyWindow, win.firstResponder === self else {
+			return super.performKeyEquivalent(with: event)
+		}
+		if let handled = delegate?.editorView(self, performKeyEquivalent: event), handled {
+			return true
+		}
+		return super.performKeyEquivalent(with: event)
 	}
 
 	// MARK: - NSTextInputClient
@@ -691,6 +713,71 @@ public class EditorView: NSView, @preconcurrency NSTextInputClient {
 		}
 	}
 
+	// MARK: - Context Menu
+
+	override public func menu(for event: NSEvent) -> NSMenu? {
+		if let menu = delegate?.editorViewNeedsContextMenu(self, for: event) {
+			return menu
+		}
+		return super.menu(for: event)
+	}
+
+	// MARK: - Menu Validation
+
+	@objc public func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
+		if let result = delegate?.editorView(self, validateMenuItem: menuItem) {
+			return result
+		}
+		return true
+	}
+
+	// MARK: - Services Menu
+
+	override public func validRequestor(
+		forSendType sendType: NSPasteboard.PasteboardType?,
+		returnType: NSPasteboard.PasteboardType?,
+	) -> Any? {
+		let canSend = (sendType == nil || sendType == .string) && !selectionRanges.isEmpty
+		let canReturn = returnType == nil || returnType == .string
+		if canSend, canReturn {
+			return self
+		}
+		return super.validRequestor(forSendType: sendType, returnType: returnType)
+	}
+
+	public func writeSelection(
+		to pboard: NSPasteboard,
+		types: [NSPasteboard.PasteboardType],
+	) -> Bool {
+		guard types.contains(.string), let selectedText = accessibilitySelectedText() else {
+			return false
+		}
+		pboard.clearContents()
+		pboard.setString(selectedText, forType: .string)
+		return true
+	}
+
+	public func readSelection(from pboard: NSPasteboard) -> Bool {
+		guard let text = pboard.string(forType: .string), !text.isEmpty else {
+			return false
+		}
+		delegate?.editorView(self, insertText: text, replacementRange: NSRange(location: NSNotFound, length: 0))
+		return true
+	}
+
+	// MARK: - Drag Source
+
+	/// Begins a drag session when the user drags selected text.
+	public func beginDragSession(from event: NSEvent) {
+		guard let selectedText = accessibilitySelectedText(), !selectedText.isEmpty else { return }
+
+		let item = NSDraggingItem(pasteboardWriter: selectedText as NSString)
+		let point = convert(event.locationInWindow, from: nil)
+		item.setDraggingFrame(NSRect(origin: point, size: NSSize(width: 100, height: 20)), contents: nil)
+
+		beginDraggingSession(with: [item], event: event, source: self)
+	}
+
 	// MARK: - Scroll Support
 
 	/// Scroll to make the primary caret visible.
@@ -847,6 +934,17 @@ public extension EditorView {
 	}
 }
 
+// MARK: - NSDraggingSource
+
+extension EditorView: NSDraggingSource {
+	public func draggingSession(
+		_: NSDraggingSession,
+		sourceOperationMaskFor _: NSDraggingContext,
+	) -> NSDragOperation {
+		.copy
+	}
+}
+
 // MARK: - Editor View Delegate
 
 /// Delegate protocol for `EditorView` events.
@@ -877,6 +975,19 @@ public protocol EditorViewDelegate: AnyObject {
 
 	/// Called when files are dropped onto the editor.
 	func editorView(_ view: EditorView, didReceiveFileDrop urls: [URL], atLine line: Int, index: Int)
+
+	/// Called for key equivalents (Cmd+key shortcuts for bundle dispatch).
+	/// Return `true` if handled, `false` to pass through.
+	func editorView(_ view: EditorView, performKeyEquivalent event: NSEvent) -> Bool
+
+	/// Called when pinch-to-zoom changes the font scale.
+	func editorView(_ view: EditorView, fontScaleDidChange scale: CGFloat)
+
+	/// Called to build the right-click context menu.
+	func editorViewNeedsContextMenu(_ view: EditorView, for event: NSEvent) -> NSMenu?
+
+	/// Called to validate a menu item's enabled state.
+	func editorView(_ view: EditorView, validateMenuItem menuItem: NSMenuItem) -> Bool
 }
 
 /// Default no-op implementations.
@@ -889,6 +1000,18 @@ public extension EditorViewDelegate {
 	func editorViewDidTripleClick(_: EditorView, event _: NSEvent) {}
 	func editorView(_: EditorView, doCommandBySelector _: Selector) {}
 	func editorView(_: EditorView, didReceiveFileDrop _: [URL], atLine _: Int, index _: Int) {}
+	func editorView(_: EditorView, performKeyEquivalent _: NSEvent) -> Bool {
+		false
+	}
+
+	func editorView(_: EditorView, fontScaleDidChange _: CGFloat) {}
+	func editorViewNeedsContextMenu(_: EditorView, for _: NSEvent) -> NSMenu? {
+		nil
+	}
+
+	func editorView(_: EditorView, validateMenuItem _: NSMenuItem) -> Bool {
+		true
+	}
 }
 
 // MARK: - Editor View Action
