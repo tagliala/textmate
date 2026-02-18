@@ -1,4 +1,6 @@
 import AppKit
+import TMBundleRuntime
+import TMBundleUI
 import TMDocumentWindow
 import TMTheme
 
@@ -9,7 +11,7 @@ import TMTheme
 /// Matches TextMate's initial launch behaviour: one untitled document window
 /// with the default theme applied.
 @MainActor
-class AppDelegate: NSObject, NSApplicationDelegate {
+class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency BundleMenuActionTarget {
 	private var windowControllers: [DocumentWindowController] = []
 
 	/// The currently loaded theme, applied to every new window.
@@ -21,12 +23,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 	/// Event monitor for custom key bindings.
 	private var keyEventMonitor: Any?
 
+	/// The bundle system: loader, index, menu builder, command dispatch.
+	private let bundleSystem = BundleSystemController()
+
 	// MARK: - Application Lifecycle
 
 	func applicationDidFinishLaunching(_: Notification) {
 		NSApp.mainMenu = MainMenuBuilder.buildMainMenu()
 		loadDefaultTheme()
 		loadKeyBindings()
+		loadBundles()
 		restoreWindowState() ?? newDocument(nil)
 	}
 
@@ -46,6 +52,26 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 			newDocument(nil)
 		}
 		return true
+	}
+
+	// MARK: - Bundles
+
+	private func loadBundles() {
+		bundleSystem.loadBundles()
+		if let mainMenu = NSApp.mainMenu {
+			bundleSystem.installBundlesMenu(in: mainMenu)
+		}
+	}
+
+	// MARK: - Bundle Item Execution (Responder Chain)
+
+	@objc func performBundleItem(sender: Any?) {
+		guard let menuItem = sender as? NSMenuItem,
+		      let uuid = menuItem.representedObject as? String
+		else {
+			return
+		}
+		bundleSystem.executeItem(uuid: uuid)
 	}
 
 	// MARK: - Theme

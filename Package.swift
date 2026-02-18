@@ -176,6 +176,8 @@ let package = Package(
 				"TMAppKit",
 				"TMDocumentWindow",
 				"TMPreferences",
+				"TMBundleRuntime",
+				"TMBundleUI",
 			],
 			path: "Sources/TMApp",
 			exclude: ["Info.plist"],
