@@ -1,5 +1,7 @@
 import AppKit
 import Testing
+import TMAppKit
+import TMBundleRuntime
 import TMCore
 import TMDocumentManager
 import TMEditor
@@ -262,5 +264,149 @@ struct TMDocumentEditorActionMappingTests {
 			let mapped = TMDocumentEditor.editorAction(from: viewAction)
 			#expect(mapped.rawValue.isEmpty == false, "Mapping for \(viewAction) should produce a valid action")
 		}
+	}
+}
+
+// MARK: - Tab Trigger Expansion Tests
+
+@Suite("TMDocumentEditor — Tab Trigger Expansion")
+@MainActor
+struct TabTriggerExpansionTests {
+	private func makeEditor(text: String) -> TMDocumentEditor {
+		let doc = TMDocument()
+		doc.setContent(text, preserveRevision: true)
+		let view = EditorView(frame: NSRect(x: 0, y: 0, width: 400, height: 300))
+		return TMDocumentEditor(document: doc, editorView: view)
+	}
+
+	@Test("expandTabTrigger returns false without bundleIndex")
+	func noIndexReturnsFalse() {
+		let editor = makeEditor(text: "hello")
+		editor.editor.perform(.moveToEndOfDocument)
+		#expect(editor.expandTabTrigger() == false)
+	}
+
+	@Test("expandTabTrigger returns false at empty line")
+	func emptyLineReturnsFalse() {
+		let editor = makeEditor(text: "")
+		let index = BundleIndex()
+		editor.bundleIndex = index
+		#expect(editor.expandTabTrigger() == false)
+	}
+
+	@Test("expandTabTrigger returns false when no match")
+	func noMatchReturnsFalse() {
+		let editor = makeEditor(text: "xyz")
+		let index = BundleIndex()
+		editor.bundleIndex = index
+		editor.editor.perform(.moveToEndOfDocument)
+		#expect(editor.expandTabTrigger() == false)
+	}
+
+	@Test("expandTabTrigger expands matching snippet")
+	func expandsMatchingSnippet() {
+		let editor = makeEditor(text: "fun")
+		let index = BundleIndex()
+		let item = BundleItem(
+			uuid: "test-snippet",
+			name: "Function",
+			kind: .snippet,
+			bundleUUID: "bundle-1",
+			tabTrigger: "fun",
+			plist: ["content": "function $1() {\n\t$0\n}"],
+		)
+		index.setIndex(items: [item], bundles: [])
+		editor.bundleIndex = index
+		editor.editor.perform(.moveToEndOfDocument)
+
+		let result = editor.expandTabTrigger()
+		#expect(result == true)
+		// The trigger "fun" should be replaced with the expanded snippet.
+		let text = editor.editor.text
+		#expect(text.hasPrefix("function "))
+		#expect(text.contains("{"))
+		#expect(text.contains("}"))
+	}
+
+	@Test("expandTabTrigger pushes snippet session")
+	func pushesSnippetSession() {
+		let editor = makeEditor(text: "fun")
+		let index = BundleIndex()
+		let item = BundleItem(
+			uuid: "test-snippet",
+			name: "Function",
+			kind: .snippet,
+			bundleUUID: "bundle-1",
+			tabTrigger: "fun",
+			plist: ["content": "function $1() {\n\t$0\n}"],
+		)
+		index.setIndex(items: [item], bundles: [])
+		editor.bundleIndex = index
+		editor.editor.perform(.moveToEndOfDocument)
+
+		_ = editor.expandTabTrigger()
+		#expect(!editor.editor.snippetController.isEmpty)
+	}
+
+	@Test("insertSnippetWithExpansion inserts plain text for snippet without tab stops")
+	func insertPlainSnippet() {
+		let editor = makeEditor(text: "")
+		editor.insertSnippetWithExpansion("hello world")
+		#expect(editor.editor.text == "hello world")
+		// No active snippet — $0 auto-added at end then popped
+	}
+
+	@Test("insertSnippetWithExpansion selects first tab stop")
+	func selectsFirstTabStop() {
+		let editor = makeEditor(text: "")
+		editor.insertSnippetWithExpansion("name: ${1:default}")
+		// The expanded text should be "name: default"
+		#expect(editor.editor.text == "name: default")
+		// First tab stop should be selected (the word "default")
+		let sel = editor.editor.selections.primary
+		#expect(sel != nil)
+		#expect(!editor.editor.snippetController.isEmpty)
+	}
+}
+
+// MARK: - Gutter Theme Tests
+
+@Suite("GutterView — Theme Application")
+@MainActor
+struct GutterThemeTests {
+	@Test("gutter colors are settable")
+	func gutterColorsSettable() {
+		let gutter = GutterView()
+		gutter.foregroundColor = .red
+		gutter.backgroundColor = .blue
+		gutter.selectedForegroundColor = .green
+		gutter.selectedBackgroundColor = .yellow
+		#expect(gutter.foregroundColor == .red)
+		#expect(gutter.backgroundColor == .blue)
+		#expect(gutter.selectedForegroundColor == .green)
+		#expect(gutter.selectedBackgroundColor == .yellow)
+	}
+
+	@Test("gutter defaults are system colors")
+	func gutterDefaults() {
+		let gutter = GutterView()
+		#expect(gutter.foregroundColor == .secondaryLabelColor)
+		#expect(gutter.backgroundColor == .controlBackgroundColor)
+		#expect(gutter.selectedForegroundColor == .labelColor)
+		#expect(gutter.selectedBackgroundColor == .controlBackgroundColor)
+	}
+}
+
+// MARK: - Editor View Drag-and-Drop Tests
+
+@Suite("EditorView — Drag and Drop")
+@MainActor
+struct EditorViewDragDropTests {
+	@Test("EditorView registers for drag types")
+	func registersForDragTypes() {
+		let view = EditorView(frame: NSRect(x: 0, y: 0, width: 400, height: 300))
+		let types = view.registeredDraggedTypes
+		#expect(types.contains(.string))
+		#expect(types.contains(.fileURL))
 	}
 }

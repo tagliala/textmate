@@ -39,10 +39,21 @@ public class GutterView: NSView {
 	/// Delegate for gutter interactions.
 	public weak var delegate: GutterViewDelegate?
 
-	private var foregroundColor: NSColor = .secondaryLabelColor
-	private var backgroundColor: NSColor = .controlBackgroundColor
-	private var selectedForegroundColor: NSColor = .labelColor
-	private var selectedBackgroundColor: NSColor = .controlBackgroundColor
+	public var foregroundColor: NSColor = .secondaryLabelColor {
+		didSet { needsDisplay = true }
+	}
+
+	public var backgroundColor: NSColor = .controlBackgroundColor {
+		didSet { needsDisplay = true }
+	}
+
+	public var selectedForegroundColor: NSColor = .labelColor {
+		didSet { needsDisplay = true }
+	}
+
+	public var selectedBackgroundColor: NSColor = .controlBackgroundColor {
+		didSet { needsDisplay = true }
+	}
 
 	/// Width of the fold marker column.
 	private let foldColumnWidth: CGFloat = 14

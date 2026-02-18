@@ -187,14 +187,12 @@ extension DocumentWindowController: CommandDispatcherDelegate {
 		editor.perform(.complete)
 	}
 
-	public func insertSnippet(_ snippet: String, disableAutoIndent _: Bool) {
+	public func insertSnippet(_ snippet: String, disableAutoIndent: Bool) {
 		guard let docEditor = documentEditor else { return }
-		docEditor.beginChangeGrouping()
-		defer { docEditor.endChangeGrouping() }
-
-		// For now, insert as plain text. Full snippet expansion (tab stops,
-		// mirrors, transformations) is deferred to a future phase.
-		docEditor.editor.insertText(snippet)
+		docEditor.insertSnippetWithExpansion(
+			snippet,
+			disableAutoIndent: disableAutoIndent,
+		)
 		syncEditorToView()
 	}
 

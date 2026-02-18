@@ -1,4 +1,5 @@
 import AppKit
+import TMBundleRuntime
 import TMCore
 import TMDocumentManager
 import TMEditor
@@ -39,6 +40,9 @@ public final class TMDocumentEditor {
 
 	/// Observation token for document change callbacks.
 	private var documentObservationID: UUID?
+
+	/// Bundle index for tab trigger lookup (injected from the app layer).
+	public var bundleIndex: BundleIndex?
 
 	// MARK: - Init
 
@@ -378,6 +382,14 @@ extension TMDocumentEditor: EditorViewDelegate {
 	}
 
 	public func editorView(_: EditorView, performAction action: EditorViewAction) {
+		// Intercept Tab to check for tab trigger expansion before passing to editor.
+		if action == .insertTab, editor.snippetController.isEmpty {
+			if expandTabTrigger() {
+				syncAfterEdit()
+				return
+			}
+		}
+
 		let editorAction = Self.editorAction(from: action)
 		let needsGroup = editorAction.isDeletion || editorAction.isClipboard || editorAction.isTextTransform
 		if needsGroup { beginChangeGrouping() }
@@ -519,5 +531,155 @@ extension TMDocumentEditor {
 		)
 		guard let window = view.window else { return belowCaret }
 		return window.convertPoint(toScreen: view.convert(belowCaret, to: nil))
+	}
+}
+
+// MARK: - Tab Trigger Expansion & Snippet Insertion
+
+extension TMDocumentEditor {
+	/// Expands a tab trigger at the caret position, if one matches.
+	///
+	/// Scans backward from the caret for identifier characters, queries the
+	/// bundle index for a matching tab trigger, and inserts the snippet.
+	///
+	/// - Returns: `true` if a trigger was expanded.
+	func expandTabTrigger() -> Bool {
+		guard let bundleIndex else { return false }
+		guard let primary = editor.selections.primary, primary.isEmpty else { return false }
+
+		let caretOffset = primary.head.offset
+		guard caretOffset > 0 else { return false }
+
+		// Scan backward for word characters to find the trigger text.
+		let bufString = editor.buffer.string
+		let utf8 = bufString.utf8
+		var startOffset = caretOffset
+		while startOffset > 0 {
+			let prevIdx = utf8.index(utf8.startIndex, offsetBy: startOffset - 1)
+			let byte = utf8[prevIdx]
+			// Accept ASCII word characters: [a-zA-Z0-9_.]
+			if (byte >= 0x61 && byte <= 0x7A) || (byte >= 0x41 && byte <= 0x5A) ||
+				(byte >= 0x30 && byte <= 0x39) || byte == 0x5F || byte == 0x2E
+			{
+				startOffset -= 1
+			} else {
+				break
+			}
+		}
+
+		guard startOffset < caretOffset else { return false }
+		let trigger = editor.buffer.substring(from: startOffset, to: caretOffset)
+		guard !trigger.isEmpty else { return false }
+
+		// Query for matching tab trigger.
+		let matches = bundleIndex.query(BundleQuery(
+			field: .tabTrigger,
+			value: trigger,
+			kinds: [.snippet, .command],
+		))
+		guard let item = matches.first else { return false }
+
+		// Extract snippet content from the bundle item's plist.
+		guard item.kind.contains(.snippet),
+		      let content = item.plist?["content"] as? String
+		else { return false }
+
+		// Select the trigger text so insertText will replace it.
+		let startPos = editor.buffer.convert(offset: startOffset)
+		let endPos = editor.buffer.convert(offset: caretOffset)
+		editor.selections = SelectionState([TMCore.TextRange(anchor: startPos, head: endPos)])
+
+		// Insert the snippet with full expansion.
+		insertSnippetWithExpansion(content)
+		return true
+	}
+
+	/// Parses a snippet body and inserts it with full tab-stop support.
+	///
+	/// Replaces the current selection with the expanded snippet text and pushes
+	/// a snippet session for tab-stop navigation.
+	///
+	/// - Parameters:
+	///   - snippet: The raw snippet body (with `$1`, `${2:placeholder}`, etc.).
+	///   - disableAutoIndent: If `true`, skips indent adjustment.
+	public func insertSnippetWithExpansion(
+		_ snippet: String,
+		disableAutoIndent: Bool = false,
+	) {
+		// Determine indent string from the current line.
+		var indentString = ""
+		if !disableAutoIndent, let primary = editor.selections.primary {
+			let lineStart = editor.buffer.lineStart(primary.head.line)
+			let lineText = editor.buffer.substring(
+				from: lineStart,
+				to: min(lineStart + 256, editor.buffer.size),
+			)
+			for ch in lineText {
+				if ch == "\t" || ch == " " { indentString.append(ch) } else { break }
+			}
+		}
+
+		// Parse the snippet.
+		let state = SnippetState.parse(snippet, indentString: indentString)
+		let expandedText = state.text
+
+		// Record the insertion base offset (start of current selection).
+		let baseOffset: Int = if let primary = editor.selections.primary {
+			primary.start.offset
+		} else {
+			0
+		}
+
+		// Insert the expanded text (replaces current selection).
+		beginChangeGrouping()
+		editor.insertText(expandedText)
+
+		// Build tab stops from the snippet state's fields.
+		var tabStops: [SnippetController.TabStop] = []
+		let sortedFieldKeys = state.fields.keys.sorted()
+		for key in sortedFieldKeys where key != 0 {
+			if let field = state.fields[key] {
+				let startOff = baseOffset + field.range.from.offset
+				let endOff = baseOffset + field.range.to.offset
+				let startPos = editor.buffer.convert(offset: min(startOff, editor.buffer.size))
+				let endPos = editor.buffer.convert(offset: min(endOff, editor.buffer.size))
+				let placeholder = field.range.substring(of: expandedText)
+				tabStops.append(SnippetController.TabStop(
+					index: key,
+					range: TMCore.TextRange(anchor: startPos, head: endPos),
+					placeholder: placeholder,
+					choices: field.choices,
+				))
+			}
+		}
+		// Add $0 (exit) as the last tab stop.
+		if let exitField = state.fields[0] {
+			let startOff = baseOffset + exitField.range.from.offset
+			let endOff = baseOffset + exitField.range.to.offset
+			let startPos = editor.buffer.convert(offset: min(startOff, editor.buffer.size))
+			let endPos = editor.buffer.convert(offset: min(endOff, editor.buffer.size))
+			tabStops.append(SnippetController.TabStop(
+				index: 0,
+				range: TMCore.TextRange(anchor: startPos, head: endPos),
+				placeholder: exitField.range.substring(of: expandedText),
+			))
+		}
+
+		// Push the snippet session and select the first tab stop.
+		if !tabStops.isEmpty {
+			let session = SnippetController.Session(
+				snippetText: expandedText,
+				tabStops: tabStops,
+			)
+			editor.snippetController.push(session)
+
+			// Select the first tab stop.
+			if let first = tabStops.first {
+				editor.selections = SelectionState([first.range])
+			}
+		}
+
+		endChangeGrouping()
+		syncAfterEdit()
 	}
 }

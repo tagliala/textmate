@@ -163,6 +163,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency BundleMenuAc
 
 	@objc func newDocument(_: Any?) {
 		let controller = DocumentWindowController()
+		controller.bundleIndex = bundleSystem.bundleIndex
 		applyTheme(to: controller)
 		windowControllers.append(controller)
 		controller.showWindow(nil)
@@ -348,8 +349,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency BundleMenuAc
 		guard DocumentWindowController.restoreSession() else { return nil }
 		// Populate our tracking array with the restored controllers.
 		windowControllers = DocumentWindowController.sortedControllers
-		// Apply theme to all restored windows.
+		// Apply theme and bundle index to all restored windows.
 		for controller in windowControllers {
+			controller.bundleIndex = bundleSystem.bundleIndex
 			applyTheme(to: controller)
 		}
 		return ()
@@ -362,6 +364,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency BundleMenuAc
 		FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir)
 
 		let controller = DocumentWindowController()
+		controller.bundleIndex = bundleSystem.bundleIndex
 		applyTheme(to: controller)
 
 		if isDir.boolValue {

@@ -1,5 +1,6 @@
 import AppKit
 import TMAppKit
+import TMBundleRuntime
 import TMCore
 import TMDocumentManager
 import TMEditor
@@ -88,8 +89,11 @@ public class DocumentWindowController: NSWindowController {
 	/// Theme engine for scope-based styling (optional).
 	public var themeEngine: ThemeEngine?
 
+	/// Bundle index for tab trigger lookup (optional, injected from app layer).
+	public var bundleIndex: BundleIndex?
+
 	/// Registry of all active window controllers, keyed by identifier.
-	nonisolated(unsafe) public static var allControllers: [UUID: DocumentWindowController] = [:]
+	public nonisolated(unsafe) static var allControllers: [UUID: DocumentWindowController] = [:]
 
 	let editorContainer = NSView()
 	let scrollView = NSScrollView()
@@ -189,6 +193,13 @@ public class DocumentWindowController: NSWindowController {
 		editorView.caretColor = theme.globalSettings.caret.nsColor
 		editorView.selectionColor = theme.globalSettings.selection.nsColor
 		scrollView.backgroundColor = bg
+
+		// Gutter
+		let gs = theme.gutterSettings
+		gutterView.foregroundColor = gs.foreground.nsColor
+		gutterView.backgroundColor = gs.background.nsColor
+		gutterView.selectedForegroundColor = gs.selectionForeground.nsColor
+		gutterView.selectedBackgroundColor = gs.selectionBackground.nsColor
 	}
 
 	/// Set the project root for the file browser.
@@ -629,6 +640,7 @@ public class DocumentWindowController: NSWindowController {
 			editorView: editorView,
 			clipboards: clipboards,
 		)
+		documentEditor?.bundleIndex = bundleIndex
 
 		// Configure syntax highlighting if a grammar registry is available.
 		if let registry = grammarRegistry, let engine = themeEngine {

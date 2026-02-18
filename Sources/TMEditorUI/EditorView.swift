@@ -102,6 +102,9 @@ public class EditorView: NSView, @preconcurrency NSTextInputClient {
 		// Accept first responder for keyboard input
 		// (handled via override below)
 
+		// Register for drag-and-drop
+		registerForDraggedTypes([.string, .fileURL])
+
 		// Set up cursor tracking
 		let trackingArea = NSTrackingArea(
 			rect: .zero,
@@ -805,6 +808,45 @@ public extension EditorView {
 	}
 }
 
+// MARK: - Drag and Drop
+
+public extension EditorView {
+	override func draggingEntered(_ sender: any NSDraggingInfo) -> NSDragOperation {
+		let pb = sender.draggingPasteboard
+		if pb.types?.contains(.string) == true || pb.types?.contains(.fileURL) == true {
+			return .copy
+		}
+		return []
+	}
+
+	override func draggingUpdated(_ sender: any NSDraggingInfo) -> NSDragOperation {
+		let point = convert(sender.draggingLocation, from: nil)
+		let hit = layoutManager.characterIndex(at: point)
+		carets = [(hit.line, hit.index)]
+		return .copy
+	}
+
+	override func performDragOperation(_ sender: any NSDraggingInfo) -> Bool {
+		let pb = sender.draggingPasteboard
+		let point = convert(sender.draggingLocation, from: nil)
+		let hit = layoutManager.characterIndex(at: point)
+
+		// Handle file URL drops.
+		if let urls = pb.readObjects(forClasses: [NSURL.self]) as? [URL], !urls.isEmpty {
+			delegate?.editorView(self, didReceiveFileDrop: urls, atLine: hit.line, index: hit.index)
+			return true
+		}
+
+		// Handle text drops.
+		if let text = pb.string(forType: .string), !text.isEmpty {
+			delegate?.editorView(self, insertText: text, replacementRange: NSRange(location: NSNotFound, length: 0))
+			return true
+		}
+
+		return false
+	}
+}
+
 // MARK: - Editor View Delegate
 
 /// Delegate protocol for `EditorView` events.
@@ -832,6 +874,9 @@ public protocol EditorViewDelegate: AnyObject {
 
 	/// Called for unhandled selectors (passed through from the key binding system).
 	func editorView(_ view: EditorView, doCommandBySelector selector: Selector)
+
+	/// Called when files are dropped onto the editor.
+	func editorView(_ view: EditorView, didReceiveFileDrop urls: [URL], atLine line: Int, index: Int)
 }
 
 /// Default no-op implementations.
@@ -843,6 +888,7 @@ public extension EditorViewDelegate {
 	func editorViewDidDoubleClick(_: EditorView, event _: NSEvent) {}
 	func editorViewDidTripleClick(_: EditorView, event _: NSEvent) {}
 	func editorView(_: EditorView, doCommandBySelector _: Selector) {}
+	func editorView(_: EditorView, didReceiveFileDrop _: [URL], atLine _: Int, index _: Int) {}
 }
 
 // MARK: - Editor View Action
