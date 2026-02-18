@@ -292,6 +292,11 @@ public final class TextBuffer: @unchecked Sendable {
 			insertInternal(at: from, bytes: bytes)
 		}
 
+		// Notify callbacks after mutation.
+		for cb in callbacks {
+			cb.didReplace(from: from, to: to, length: bytes.count)
+		}
+
 		return from + bytes.count
 	}
 
@@ -419,7 +424,8 @@ public final class TextBuffer: @unchecked Sendable {
 
 // MARK: - Buffer Callback Protocol
 
-/// Protocol for observing buffer mutations (used by `TextUndoManager`).
+/// Protocol for observing buffer mutations (used by `TextUndoManager`,
+/// `BufferMarks`, `BracketPairTracker`, etc.).
 public protocol BufferCallback: AnyObject, Sendable {
 	/// Called before a replacement occurs.
 	///
@@ -428,6 +434,22 @@ public protocol BufferCallback: AnyObject, Sendable {
 	///   - to: End byte offset of the range being replaced.
 	///   - bytes: The replacement bytes about to be inserted.
 	func willReplace(from: Int, to: Int, bytes: [UInt8])
+
+	/// Called after a replacement has been applied.
+	///
+	/// Buffer metadata subsystems use this to adjust position-indexed data
+	/// structures (marks, pairs, misspellings, etc.).
+	///
+	/// - Parameters:
+	///   - from: Start byte offset of the range that was replaced.
+	///   - to: End byte offset of the range that was replaced (pre-mutation).
+	///   - length: Length of the replacement text in bytes.
+	func didReplace(from: Int, to: Int, length: Int)
+}
+
+/// Default implementations so existing conformers need not add `didReplace`.
+public extension BufferCallback {
+	func didReplace(from _: Int, to _: Int, length _: Int) {}
 }
 
 // MARK: - Equatable
