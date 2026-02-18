@@ -426,5 +426,15 @@ let package = Package(
 			dependencies: ["TMAppKit"],
 			path: "Tests/TMAppKitTests",
 		),
+
+		.testTarget(
+			name: "TMAppTests",
+			dependencies: [
+				"TMApp",
+				"TMDocumentWindow",
+				"TMTheme",
+			],
+			path: "Tests/TMAppTests",
+		),
 	],
 )

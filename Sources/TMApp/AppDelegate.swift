@@ -12,8 +12,26 @@ import TMTheme
 ///
 /// Matches TextMate's initial launch behaviour: one untitled document window
 /// with the default theme applied.
+@main
 @MainActor
 class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency BundleMenuActionTarget {
+	/// Application entry point.
+	///
+	/// Bootstraps `NSApplication` with our `AppDelegate`. This is functionally
+	/// equivalent to the traditional `NSApplicationMain` call.
+	///
+	/// `setActivationPolicy(.regular)` is required for SPM-built executables
+	/// so that the app appears in the Dock, owns a menu bar, and receives
+	/// focus like a normal macOS GUI application.
+	static func main() {
+		let app = NSApplication.shared
+		app.setActivationPolicy(.regular)
+		let delegate = AppDelegate()
+		app.delegate = delegate
+		app.activate()
+		app.run()
+	}
+
 	private var windowControllers: [DocumentWindowController] = []
 
 	/// The currently loaded theme, applied to every new window.
@@ -313,36 +331,22 @@ class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency BundleMenuAc
 
 	// MARK: - Window State Restoration
 
-	private static let restorationKey = "TMOpenDocumentURLs"
-
 	private func saveWindowState() {
-		let urls = windowControllers.compactMap { ctrl -> String? in
-			guard let path = ctrl.textDocument.path else { return nil }
-			return URL(fileURLWithPath: path).absoluteString
-		}
-		UserDefaults.standard.set(urls, forKey: Self.restorationKey)
+		DocumentWindowController.saveSession(includeUntitled: true)
 	}
 
-	/// Restore previously open document windows. Calls `newDocument` if
-	/// no state is saved, and returns non-nil to indicate restoration occurred.
+	/// Restore full session (documents, tabs, window frames, file browser
+	/// state). Falls back to nil when no session is saved on disk.
 	@discardableResult
 	private func restoreWindowState() -> Void? {
-		guard let urls = UserDefaults.standard.stringArray(forKey: Self.restorationKey),
-		      !urls.isEmpty
-		else {
-			return nil
+		guard DocumentWindowController.restoreSession() else { return nil }
+		// Populate our tracking array with the restored controllers.
+		windowControllers = DocumentWindowController.sortedControllers
+		// Apply theme to all restored windows.
+		for controller in windowControllers {
+			applyTheme(to: controller)
 		}
-
-		var restoredAny = false
-		for string in urls {
-			if let url = URL(string: string),
-			   FileManager.default.fileExists(atPath: url.path)
-			{
-				openURL(url)
-				restoredAny = true
-			}
-		}
-		return restoredAny ? () : nil
+		return ()
 	}
 
 	// MARK: - Helpers

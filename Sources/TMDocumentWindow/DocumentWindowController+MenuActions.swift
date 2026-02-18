@@ -5,6 +5,7 @@ import TMDocumentManager
 import TMEditor
 import TMEditorUI
 import TMSearchReplace
+import TMServices
 
 // MARK: - Menu Actions (Responder Chain)
 
@@ -254,6 +255,51 @@ public extension DocumentWindowController {
 
 	@objc func orderFrontRunCommandWindow(_: Any?) {
 		// Run command window deferred to a future phase.
+	}
+
+	// MARK: - Spell Checking
+
+	/// Opens the macOS Spelling panel.
+	@objc func showGuessPanel(_: Any?) {
+		NSSpellChecker.shared.spellingPanel.orderFront(nil)
+	}
+
+	/// Finds the next misspelled word from the caret and selects it.
+	@objc func checkSpelling(_: Any?) {
+		guard let editor = documentEditor?.editor else { return }
+		let text = editor.text
+		guard !text.isEmpty else { return }
+
+		let caretOffset = editor.selections.primary?.head.offset ?? 0
+
+		// Search from caret to end, then wrap from start to caret.
+		let results = SpellCheckService.shared.spellCheck(
+			text,
+			tag: spellDocumentTag,
+		)
+		guard !results.isEmpty else { return }
+
+		// Find the first misspelled range starting at or after the caret.
+		let match = results.first(where: { $0.start >= caretOffset })
+			?? results.first // wrap around
+
+		guard let misspelled = match else { return }
+
+		let startPos = editor.buffer.convert(offset: min(misspelled.start, editor.buffer.size))
+		let endPos = editor.buffer.convert(offset: min(misspelled.end, editor.buffer.size))
+		let range = TMCore.TextRange(anchor: startPos, head: endPos)
+		editor.selections = SelectionState([range])
+		editorView.carets = [(endPos.line, endPos.column)]
+		editorView.selectionRanges = [
+			(start: (startPos.line, startPos.column), end: (endPos.line, endPos.column)),
+		]
+		editorView.scrollToCaret()
+
+		// Update the spelling panel with the misspelled word.
+		let startIdx = text.utf8.index(text.startIndex, offsetBy: misspelled.start)
+		let endIdx = text.utf8.index(text.startIndex, offsetBy: misspelled.end)
+		let word = String(text[startIdx ..< endIdx])
+		NSSpellChecker.shared.updateSpellingPanel(withMisspelledWord: word)
 	}
 
 	// MARK: - Helpers

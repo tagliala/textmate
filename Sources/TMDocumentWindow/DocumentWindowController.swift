@@ -108,6 +108,9 @@ public class DocumentWindowController: NSWindowController {
 	/// Whether spell checking is enabled for the current document.
 	var isSpellCheckingEnabled = false
 
+	/// Document-scoped spell check tag for tracking learned words.
+	public lazy var spellDocumentTag = SpellCheckService.DocumentTag()
+
 	/// SCM badge provider for file browser status indicators.
 	public var scmBadgeProvider: FileStatusBadgeProvider?
 
@@ -576,6 +579,7 @@ public class DocumentWindowController: NSWindowController {
 	func updateWindowTitle() {
 		let title = textDocument.displayName
 		window?.title = textDocument.isModified ? "● \(title)" : title
+		window?.representedURL = textDocument.path.map { URL(fileURLWithPath: $0) }
 	}
 
 	/// Sync the tab bar with the current documents array.
@@ -613,6 +617,8 @@ public class DocumentWindowController: NSWindowController {
 				themeEngine: engine,
 			)
 		}
+
+		updateWindowTitle()
 	}
 
 	/// Returns the index of a "disposable" document (untitled, empty, unmodified)
