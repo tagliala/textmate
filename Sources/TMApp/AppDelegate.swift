@@ -71,7 +71,16 @@ class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency BundleMenuAc
 		else {
 			return
 		}
-		bundleSystem.executeItem(uuid: uuid)
+
+		// Wire the active document window as the command dispatcher's delegate
+		// so commands can read/write editor content and build TM_* environment.
+		if let controller = currentWindowController() {
+			bundleSystem.commandDispatcher.delegate = controller
+		}
+
+		Task { @MainActor in
+			await bundleSystem.commandDispatcher.execute(itemUUID: uuid)
+		}
 	}
 
 	// MARK: - Theme

@@ -165,8 +165,14 @@ let package = Package(
 				"TMGrammar",
 				"TMDocumentManager",
 				"TMSearchReplace",
+				"TMBundleRuntime",
+				"TMCompatibility",
+				"TMHTMLOutput",
 			],
 			path: "Sources/TMDocumentWindow",
+			linkerSettings: [
+				.linkedFramework("WebKit"),
+			],
 		),
 
 		.executableTarget(
@@ -296,7 +302,14 @@ let package = Package(
 
 		.testTarget(
 			name: "TMDocumentWindowTests",
-			dependencies: ["TMDocumentWindow", "TMBundle", "TMGrammar", "TMTheme"],
+			dependencies: [
+				"TMDocumentWindow",
+				"TMBundle",
+				"TMGrammar",
+				"TMTheme",
+				"TMBundleRuntime",
+				"TMCompatibility",
+			],
 			path: "Tests/TMDocumentWindowTests",
 		),
 
