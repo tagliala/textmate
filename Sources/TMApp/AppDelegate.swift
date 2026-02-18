@@ -67,6 +67,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency BundleMenuAc
 		false
 	}
 
+	func applicationDidBecomeActive(_: Notification) {
+		for controller in DocumentWindowController.allControllers.values {
+			controller.checkForExternalChanges()
+		}
+	}
+
 	func applicationShouldHandleReopen(_: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
 		if !flag {
 			newDocument(nil)

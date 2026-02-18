@@ -31,6 +31,9 @@ public class FileBrowserViewController: NSViewController,
 
 	public weak var delegate: FileBrowserDelegate?
 
+	/// Optional closure that maps a file URL to an SCM status for badge overlays.
+	public var scmStatusProvider: (@MainActor (URL) -> FileItemImage.SCMStatus)?
+
 	/// The root file item for the current location.
 	public private(set) var fileItem: FileItem?
 
@@ -1393,13 +1396,14 @@ public class FileBrowserViewController: NSViewController,
 			cellView?.nameField.delegate = self
 		}
 
+		let scmStatus = scmStatusProvider?(fileItem.url) ?? .none
 		let icon = FileItemImage.iconImage(
 			for: fileItem.url,
 			isModified: false,
 			isMissing: fileItem.isMissing,
 			isDirectory: fileItem.isDirectory,
 			isSymbolicLink: fileItem.isSymbolicLink,
-			scmStatus: .none,
+			scmStatus: scmStatus,
 			size: NSSize(width: 16, height: 16),
 		)
 

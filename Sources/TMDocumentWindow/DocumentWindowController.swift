@@ -89,7 +89,7 @@ public class DocumentWindowController: NSWindowController {
 	public var themeEngine: ThemeEngine?
 
 	/// Registry of all active window controllers, keyed by identifier.
-	nonisolated(unsafe) static var allControllers: [UUID: DocumentWindowController] = [:]
+	nonisolated(unsafe) public static var allControllers: [UUID: DocumentWindowController] = [:]
 
 	let editorContainer = NSView()
 	let scrollView = NSScrollView()
@@ -113,6 +113,12 @@ public class DocumentWindowController: NSWindowController {
 
 	/// SCM badge provider for file browser status indicators.
 	public var scmBadgeProvider: FileStatusBadgeProvider?
+
+	/// File watcher for detecting external changes to open documents.
+	private var fileWatcher: FileWatcher?
+
+	/// Watch tokens keyed by document path.
+	private var watchTokens: [String: FileWatcher.WatchToken] = [:]
 
 	/// Incremental search state backing the live search bar.
 	public let incrementalSearch = IncrementalSearchState()
@@ -149,6 +155,16 @@ public class DocumentWindowController: NSWindowController {
 
 		setupLayout()
 		wireDocumentEditor()
+
+		// Set ourselves as the window delegate for lifecycle events.
+		window.delegate = self
+	}
+
+	deinit {
+		fileWatcher?.unwatchAll()
+		if let id = identifier {
+			Self.allControllers.removeValue(forKey: id)
+		}
 	}
 
 	@available(*, unavailable)
@@ -497,6 +513,10 @@ public class DocumentWindowController: NSWindowController {
 		// Wire file browser into layout
 		_ = fileBrowserController.view // force loadView
 		fileBrowserController.delegate = self
+		fileBrowserController.scmStatusProvider = { [weak self] url in
+			guard self != nil else { return .none }
+			return SCMManager.shared.status(for: url.path).toFileBrowserStatus
+		}
 		projectLayoutView.fileBrowserView = fileBrowserController.view
 		if let path = projectPath {
 			fileBrowserController.goToURL(URL(fileURLWithPath: path))
@@ -619,6 +639,7 @@ public class DocumentWindowController: NSWindowController {
 		}
 
 		updateWindowTitle()
+		watchDocumentFile(doc)
 	}
 
 	/// Returns the index of a "disposable" document (untitled, empty, unmodified)
@@ -713,5 +734,145 @@ extension DocumentWindowController: LiveSearchBarViewDelegate {
 			(start: (start.line, start.column), end: (end.line, end.column)),
 		]
 		editorView.scrollToCaret()
+	}
+}
+
+// MARK: - NSWindowDelegate
+
+extension DocumentWindowController: NSWindowDelegate {
+	public func windowShouldClose(_: NSWindow) -> Bool {
+		handleWindowShouldClose()
+	}
+
+	public func windowWillClose(_: Notification) {
+		// Save session before the window disappears.
+		Self.scheduleSessionBackup()
+
+		// Stop watching files.
+		fileWatcher?.unwatchAll()
+		watchTokens.removeAll()
+
+		// Remove from the global controller registry.
+		if let id = identifier {
+			Self.allControllers.removeValue(forKey: id)
+		}
+	}
+}
+
+// MARK: - File Watching
+
+extension DocumentWindowController {
+	/// Start watching the given document's backing file for external changes.
+	func watchDocumentFile(_ doc: TMDocument) {
+		guard let filePath = doc.path else { return }
+
+		// Don't re-watch the same path.
+		if watchTokens[filePath] != nil { return }
+
+		if fileWatcher == nil {
+			fileWatcher = FileWatcher()
+		}
+
+		let token = fileWatcher!.watch(filePath, events: [.written, .renamed, .deleted]) {
+			[weak self] path, events in
+			Task { @MainActor [weak self] in
+				self?.handleFileWatchEvent(path: path, events: events)
+			}
+		}
+		watchTokens[filePath] = token
+	}
+
+	/// Stop watching a specific file path.
+	func unwatchDocumentFile(_ path: String) {
+		guard let token = watchTokens.removeValue(forKey: path) else { return }
+		fileWatcher?.unwatch(token)
+	}
+
+	/// Handle a file watch event on the main thread.
+	private func handleFileWatchEvent(path: String, events: FileWatchEvent) {
+		guard let doc = documents.first(where: { $0.path == path }) else {
+			unwatchDocumentFile(path)
+			return
+		}
+
+		if events.contains(.deleted) {
+			// Mark the document as modified (file was removed from disk).
+			updateWindowTitle()
+			updateTabBar()
+			return
+		}
+
+		if events.contains(.written) || events.contains(.renamed) {
+			guard doc.hasExternalChanges() else { return }
+			promptForExternalChange(doc)
+		}
+	}
+
+	/// Show an alert asking the user whether to reload a file changed on disk.
+	private func promptForExternalChange(_ doc: TMDocument) {
+		let alert = NSAlert()
+		alert.alertStyle = .informational
+		alert.messageText = String(
+			localized: "The document \"\(doc.displayName)\" has been changed by another application.",
+			comment: "External change alert",
+		)
+		if doc.isModified {
+			alert.informativeText = String(
+				localized: "Do you want to keep your version or reload the file from disk? Your unsaved changes will be merged if possible.",
+				comment: "External change alert detail (modified)",
+			)
+			alert.addButton(withTitle: String(localized: "Reload and Merge", comment: "Button"))
+			alert.addButton(withTitle: String(localized: "Keep Mine", comment: "Button"))
+		} else {
+			alert.informativeText = String(
+				localized: "Do you want to reload the file from disk?",
+				comment: "External change alert detail (clean)",
+			)
+			alert.addButton(withTitle: String(localized: "Reload", comment: "Button"))
+			alert.addButton(withTitle: String(localized: "Keep Current", comment: "Button"))
+		}
+
+		guard let window else { return }
+		alert.beginSheetModal(for: window) { [weak self] response in
+			guard response == .alertFirstButtonReturn else { return }
+			Task { @MainActor in
+				do {
+					try await doc.reload(mergeChanges: doc.isModified)
+					self?.documentEditor?.reloadFromDocument()
+					self?.updateWindowTitle()
+					self?.updateTabBar()
+				} catch {
+					let errAlert = NSAlert(error: error)
+					errAlert.runModal()
+				}
+			}
+		}
+	}
+
+	/// Check all open documents for external changes (e.g., on app re-activation).
+	public func checkForExternalChanges() {
+		for doc in documents {
+			guard doc.path != nil, doc.hasExternalChanges() else { continue }
+			promptForExternalChange(doc)
+			return // Process one at a time (alert is sheet-modal).
+		}
+	}
+}
+
+// MARK: - SCM Status Mapping
+
+extension SCMStatus {
+	/// Converts TMSCM's ``SCMStatus`` to the file browser's ``FileItemImage/SCMStatus``.
+	var toFileBrowserStatus: FileItemImage.SCMStatus {
+		switch self {
+		case .modified: .modified
+		case .added: .added
+		case .deleted: .deleted
+		case .conflicted: .conflicted
+		case .unversioned: .unversioned
+		case .mixed: .mixed
+		case .unknown: .unknown
+		case .none, .ignored: .none
+		}
 	}
 }

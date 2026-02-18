@@ -246,6 +246,13 @@ public final class TMDocumentEditor {
 		}
 	}
 
+	/// Reloads the editor content from the backing document.
+	///
+	/// Call this after the document has been reloaded from disk.
+	public func reloadFromDocument() {
+		documentDidChange()
+	}
+
 	// MARK: - Syntax Highlighting Setup
 
 	/// Configures the syntax highlighting pipeline for an editor view.

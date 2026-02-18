@@ -1,7 +1,6 @@
 #if canImport(AppKit)
 import Foundation
 import Testing
-
 @testable import TMDocumentWindow
 
 @Suite("Session Save/Restore")
