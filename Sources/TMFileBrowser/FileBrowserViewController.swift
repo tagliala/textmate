@@ -466,7 +466,7 @@ public class FileBrowserViewController: NSViewController,
 
 	/// Create a new folder in the appropriate directory.
 	@discardableResult
-	public func newFolder(_: Any?) -> URL? {
+	@objc public func newFolder(_: Any?) -> URL? {
 		guard let dirURL = directoryURLForNewItems else { return nil }
 
 		let newFolderURL = dirURL.appendingPathComponent("untitled folder", isDirectory: true)

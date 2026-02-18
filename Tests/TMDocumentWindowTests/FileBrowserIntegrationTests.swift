@@ -99,11 +99,11 @@ struct FileBrowserIntegrationTests {
 		#expect(controller.isFileBrowserVisible == true)
 		#expect(controller.projectLayoutView.fileBrowserView != nil)
 
-		controller.toggleFileBrowser()
+		controller.toggleFileBrowser(nil)
 		#expect(controller.isFileBrowserVisible == false)
 		#expect(controller.projectLayoutView.fileBrowserView == nil)
 
-		controller.toggleFileBrowser()
+		controller.toggleFileBrowser(nil)
 		#expect(controller.isFileBrowserVisible == true)
 		#expect(controller.projectLayoutView.fileBrowserView != nil)
 	}

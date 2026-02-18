@@ -90,8 +90,9 @@ public class DocumentWindowController: NSWindowController {
 	/// Registry of all active window controllers, keyed by identifier.
 	nonisolated(unsafe) static var allControllers: [UUID: DocumentWindowController] = [:]
 
-	private let editorContainer = NSView()
-	private let scrollView = NSScrollView()
+	let editorContainer = NSView()
+	let scrollView = NSScrollView()
+	var gutterWidthConstraint: NSLayoutConstraint?
 
 	var fileBrowserWidth: CGFloat {
 		get { projectLayoutView.fileBrowserWidth }
@@ -99,6 +100,9 @@ public class DocumentWindowController: NSWindowController {
 	}
 
 	var isFileBrowserVisible = true
+
+	/// Whether gutter line numbers are visible.
+	var isLineNumbersVisible = true
 
 	/// SCM badge provider for file browser status indicators.
 	public var scmBadgeProvider: FileStatusBadgeProvider?
@@ -279,7 +283,7 @@ public class DocumentWindowController: NSWindowController {
 	}
 
 	/// Toggle file browser visibility.
-	public func toggleFileBrowser() {
+	@objc public func toggleFileBrowser(_: Any?) {
 		isFileBrowserVisible.toggle()
 		projectLayoutView.fileBrowserView = isFileBrowserVisible ? fileBrowserController.view : nil
 	}
@@ -437,11 +441,14 @@ public class DocumentWindowController: NSWindowController {
 		editorContainer.addSubview(gutterView)
 		editorContainer.addSubview(scrollView)
 
+		let gwConstraint = gutterView.widthAnchor.constraint(equalToConstant: gutterView.gutterWidth)
+		gutterWidthConstraint = gwConstraint
+
 		NSLayoutConstraint.activate([
 			gutterView.topAnchor.constraint(equalTo: editorContainer.topAnchor),
 			gutterView.leadingAnchor.constraint(equalTo: editorContainer.leadingAnchor),
 			gutterView.bottomAnchor.constraint(equalTo: editorContainer.bottomAnchor),
-			gutterView.widthAnchor.constraint(equalToConstant: gutterView.gutterWidth),
+			gwConstraint,
 
 			scrollView.topAnchor.constraint(equalTo: editorContainer.topAnchor),
 			scrollView.leadingAnchor.constraint(equalTo: gutterView.trailingAnchor),

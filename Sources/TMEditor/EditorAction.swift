@@ -273,6 +273,14 @@ public extension EditorAction {
 			self = .pageDownAndModifySelection
 		case "selectWord:":
 			self = .selectWord
+		case "selectParagraph:":
+			self = .selectParagraph
+		case "selectHardLine:":
+			self = .selectLine
+		case "selectCurrentScope:":
+			self = .selectScope
+		case "selectBlock:":
+			self = .selectParagraph
 		case "selectAll:":
 			self = .selectAll
 		// Delete
@@ -309,6 +317,10 @@ public extension EditorAction {
 			self = .pastePrevious
 		case "yank:":
 			self = .yank
+		case "copySelectionToFindPboard:":
+			self = .copySelectionToFindClipboard
+		case "copySelectionToReplacePboard:":
+			self = .copySelectionToReplaceClipboard
 		// Transform
 		case "transpose:":
 			self = .transposeCharacters
@@ -316,6 +328,8 @@ public extension EditorAction {
 			self = .capitalize
 		case "changeCaseOfLetter:":
 			self = .changeCaseOfLetter
+		case "changeCaseOfWord:":
+			self = .changeCaseOfWord
 		case "uppercaseWord:":
 			self = .uppercase
 		case "lowercaseWord:":
@@ -328,6 +342,8 @@ public extension EditorAction {
 			self = .indent
 		case "reformatText:":
 			self = .reformatText
+		case "reformatTextAndJustify:":
+			self = .reformatTextAndJustify
 		case "unwrapText:":
 			self = .unwrapText
 		// Tab / Newline

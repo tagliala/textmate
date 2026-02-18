@@ -144,8 +144,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency BundleMenuAc
 	}
 
 	@objc func newDocumentInTab(_: Any?) {
-		// Placeholder — will add to current window's tab group in Iteration 2.
-		newDocument(nil)
+		if let controller = currentWindowController() {
+			controller.newDocumentInTab(nil)
+		} else {
+			newDocument(nil)
+		}
 	}
 
 	@objc func openDocument(_: Any?) {
