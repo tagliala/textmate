@@ -34,8 +34,42 @@ public class DocumentWindowController: NSWindowController {
 	public let editorView = EditorView()
 	public let liveSearchBar = LiveSearchBarView()
 
+	// MARK: - Multi-Document State
+
+	/// Unique identifier for this window controller (used by AllControllers registry).
+	public var identifier: UUID? {
+		didSet {
+			if let old = oldValue { Self.allControllers.removeValue(forKey: old) }
+			if let id = identifier { Self.allControllers[id] = self }
+		}
+	}
+
+	/// All open documents in tab order.
+	public internal(set) var documents: [TMDocument] = [] {
+		didSet { updateTabBar() }
+	}
+
+	/// The index of the currently selected tab.
+	public internal(set) var selectedTabIndex: Int = 0
+
+	/// UUIDs of documents marked as "sticky" (won't auto-close).
+	public internal(set) var stickyDocumentIdentifiers: Set<UUID> = []
+
+	/// The effective project path (derived from document or explicitly set).
+	public internal(set) var projectPath: String?
+
+	/// The default project path set by the user or session restore.
+	public var defaultProjectPath: String?
+
+	/// The currently selected document (forwarding to documents array).
+	public var selectedDocument: TMDocument? {
+		guard selectedTabIndex >= 0, selectedTabIndex < documents.count else { return nil }
+		return documents[selectedTabIndex]
+	}
+
 	/// The document model for the currently displayed file.
-	public private(set) var textDocument: TMDocument
+	/// - Note: Legacy property; prefer `selectedDocument` for multi-tab workflows.
+	public internal(set) var textDocument: TMDocument
 
 	/// The bridge connecting the document, editor engine, and editor view.
 	public private(set) var documentEditor: TMDocumentEditor?
@@ -49,12 +83,15 @@ public class DocumentWindowController: NSWindowController {
 	/// Theme engine for scope-based styling (optional).
 	public var themeEngine: ThemeEngine?
 
+	/// Registry of all active window controllers, keyed by identifier.
+	nonisolated(unsafe) static var allControllers: [UUID: DocumentWindowController] = [:]
+
 	private let splitView = NSSplitView()
 	private let editorContainer = NSView()
 	private let scrollView = NSScrollView()
 
-	private var fileBrowserWidth: CGFloat = 200
-	private var isFileBrowserVisible = true
+	var fileBrowserWidth: CGFloat = 200
+	var isFileBrowserVisible = true
 
 	/// Incremental search state backing the live search bar.
 	public let incrementalSearch = IncrementalSearchState()
@@ -69,7 +106,8 @@ public class DocumentWindowController: NSWindowController {
 
 	/// Creates a new document window with the standard TextMate layout.
 	public init(document: TMDocument? = nil) {
-		textDocument = document ?? TMDocument()
+		let doc = document ?? TMDocument()
+		textDocument = doc
 
 		let window = NSWindow(
 			contentRect: NSRect(x: 0, y: 0, width: 900, height: 600),
@@ -84,6 +122,13 @@ public class DocumentWindowController: NSWindowController {
 		window.center()
 
 		super.init(window: window)
+
+		identifier = UUID()
+		// didSet is not called during init, so register manually.
+		if let id = identifier { Self.allControllers[id] = self }
+		documents = [doc]
+		selectedTabIndex = 0
+
 		setupLayout()
 		wireDocumentEditor()
 	}
@@ -125,6 +170,14 @@ public class DocumentWindowController: NSWindowController {
 			do {
 				try await doc.load()
 				self.textDocument = doc
+				// Replace disposable document, or append as new tab.
+				if let disposable = self.disposableDocumentIndex {
+					self.documents[disposable] = doc
+					self.selectedTabIndex = disposable
+				} else {
+					self.documents.append(doc)
+					self.selectedTabIndex = self.documents.count - 1
+				}
 				self.wireDocumentEditor()
 				window?.title = doc.displayName
 				statusBarView.setEncoding(doc.encoding.charset)
@@ -382,20 +435,35 @@ public class DocumentWindowController: NSWindowController {
 		])
 	}
 
-	private func updateWindowTitle() {
+	func updateWindowTitle() {
 		let title = textDocument.displayName
 		window?.title = textDocument.isModified ? "● \(title)" : title
 	}
 
+	/// Sync the tab bar with the current documents array.
+	func updateTabBar() {
+		let tabs = documents.map { doc in
+			TabBarView.Tab(
+				identifier: doc.id.uuidString,
+				title: doc.displayName,
+				isModified: doc.isModified,
+			)
+		}
+		tabBarView.setTabs(tabs, selectedIndex: selectedTabIndex)
+	}
+
 	/// Wires or re-wires the document editor for the current document.
-	private func wireDocumentEditor() {
+	func wireDocumentEditor() {
+		let doc = selectedDocument ?? textDocument
+		textDocument = doc
+
 		// Ensure the document has content (treat nil as empty for untitled).
-		if textDocument.content == nil {
-			textDocument.setContent("", preserveRevision: true)
+		if doc.content == nil {
+			doc.setContent("", preserveRevision: true)
 		}
 
 		documentEditor = TMDocumentEditor(
-			document: textDocument,
+			document: doc,
 			editorView: editorView,
 			clipboards: clipboards,
 		)
@@ -406,6 +474,38 @@ public class DocumentWindowController: NSWindowController {
 				registry: registry,
 				themeEngine: engine,
 			)
+		}
+	}
+
+	/// Returns the index of a "disposable" document (untitled, empty, unmodified)
+	/// at the selected tab, or `nil` if none.
+	var disposableDocumentIndex: Int? {
+		guard selectedTabIndex < documents.count else { return nil }
+		let doc = documents[selectedTabIndex]
+		if doc.path == nil, doc.isModified == false,
+		   (doc.content ?? "").isEmpty
+		{
+			return selectedTabIndex
+		}
+		return nil
+	}
+
+	/// Whether this window looks like a project window (has a project path and
+	/// either a visible file browser or multiple tabs).
+	public var treatAsProjectWindow: Bool {
+		projectPath != nil && (isFileBrowserVisible || documents.count > 1)
+	}
+
+	/// The suggested save path for untitled documents.
+	public var untitledSavePath: String? {
+		projectPath ?? selectedDocument?.path.map { ($0 as NSString).deletingLastPathComponent }
+	}
+
+	/// Sorted list of all window controllers by window ordering.
+	public static var sortedControllers: [DocumentWindowController] {
+		allControllers.values.sorted { a, b in
+			guard let wa = a.window, let wb = b.window else { return false }
+			return wa.orderedIndex < wb.orderedIndex
 		}
 	}
 }
