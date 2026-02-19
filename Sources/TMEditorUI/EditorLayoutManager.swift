@@ -91,6 +91,10 @@ public final class EditorLayoutManager {
 	/// The layout manager calls this when laying out lines that need styling.
 	public var styleProvider: ((Int, String) -> [StyleRun])?
 
+	/// Misspelling callback: given a hard line index, returns misspelled byte ranges.
+	/// Called during drawing to retrieve spelling underline data per line.
+	public var misspellingProvider: ((Int) -> [MisspelledRange])?
+
 	// MARK: - Init
 
 	/// Creates a layout manager with the given font.

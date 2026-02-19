@@ -5,6 +5,7 @@ import TMDocumentManager
 import TMEditor
 import TMEditorUI
 import TMGrammar
+import TMServices
 import TMTheme
 
 /// Bridges a `TMDocument` to an `Editor` and an `EditorView`.
@@ -51,6 +52,31 @@ public final class TMDocumentEditor {
 	/// Injected from the scope-preferences layer; falls back to defaults.
 	public var smartTypingPairs: [Editor.TypingPair] = Editor.defaultSmartTypingPairs
 
+	/// Whether continuous spell checking is enabled for this editor.
+	public var isContinuousSpellCheckingEnabled: Bool = false {
+		didSet {
+			editorView?.isContinuousSpellCheckingEnabled = isContinuousSpellCheckingEnabled
+			if isContinuousSpellCheckingEnabled {
+				recheckSpelling()
+			} else {
+				spellCheckCache.removeAll()
+				editorView?.needsDisplay = true
+			}
+		}
+	}
+
+	/// The spell checking language (nil = auto-detect).
+	public var spellingLanguage: String?
+
+	/// Document-scoped spell check tag.
+	public let spellDocumentTag = SpellCheckService.DocumentTag()
+
+	/// Cached misspelled ranges per hard line index.
+	private var spellCheckCache: [Int: [MisspelledRange]] = [:]
+
+	/// The macro recorder for this editor.
+	public let macroRecorder = MacroRecorder()
+
 	// MARK: - Init
 
 	/// Creates a document editor.
@@ -88,6 +114,11 @@ public final class TMDocumentEditor {
 
 		// Wire syntax highlighting into the layout manager.
 		setupSyntaxHighlighting(editorView: editorView)
+
+		// Wire the misspelling provider into the layout manager.
+		editorView.layoutManager.misspellingProvider = { [weak self] lineIndex in
+			self?.misspellingsForLine(lineIndex) ?? []
+		}
 
 		// Restore selection from document metadata if available.
 		if let selectionString = document.selection {
@@ -209,6 +240,9 @@ public final class TMDocumentEditor {
 		// the changed lines using IncrementalParser.replaceLines.
 		syntaxHighlighter.setText(text)
 		syntaxHighlighter.parseSync()
+
+		// Invalidate spell check cache so misspellings re-compute on draw.
+		invalidateSpellCheckCache()
 
 		syncSelectionToView()
 	}
@@ -388,6 +422,7 @@ extension TMDocumentEditor: EditorViewDelegate {
 		} else {
 			editor.insertText(text)
 		}
+		macroRecorder.record(action: .nop, text: text)
 		endChangeGrouping()
 		syncAfterEdit()
 	}
@@ -402,6 +437,7 @@ extension TMDocumentEditor: EditorViewDelegate {
 		}
 
 		let editorAction = Self.editorAction(from: action)
+		macroRecorder.record(action: editorAction)
 		let needsGroup = editorAction.isDeletion || editorAction.isClipboard || editorAction.isTextTransform
 		if needsGroup { beginChangeGrouping() }
 		editor.perform(editorAction)
@@ -765,5 +801,119 @@ extension TMDocumentEditor {
 		if flags.contains(.command) { result += "@" }
 		result += chars.lowercased()
 		return result
+	}
+}
+
+// MARK: - Spell Checking
+
+extension TMDocumentEditor {
+	/// Rechecks spelling for all lines and invalidates the display.
+	func recheckSpelling() {
+		guard isContinuousSpellCheckingEnabled else { return }
+		spellCheckCache.removeAll()
+		editorView?.needsDisplay = true
+	}
+
+	/// Returns misspelled ranges for a specific line.
+	/// Uses a per-line cache that is invalidated on edits.
+	func misspellingsForLine(_ lineIndex: Int) -> [MisspelledRange] {
+		guard isContinuousSpellCheckingEnabled else { return [] }
+
+		if let cached = spellCheckCache[lineIndex] {
+			return cached
+		}
+
+		guard let lineText = editorView?.layoutManager.lineText(lineIndex),
+		      !lineText.isEmpty
+		else {
+			spellCheckCache[lineIndex] = []
+			return []
+		}
+
+		let serviceRanges = SpellCheckService.shared.spellCheck(
+			lineText,
+			language: spellingLanguage,
+			tag: spellDocumentTag,
+		)
+
+		let result = serviceRanges.map {
+			MisspelledRange(from: $0.start, to: $0.end)
+		}
+		spellCheckCache[lineIndex] = result
+		return result
+	}
+
+	/// Invalidates the spell check cache after an edit.
+	func invalidateSpellCheckCache() {
+		spellCheckCache.removeAll()
+	}
+
+	/// Returns spelling suggestions for the word at a given point.
+	func spellingSuggestions(at point: NSPoint) -> [String] {
+		guard let view = editorView else { return [] }
+		let localPoint = view.convert(point, from: nil)
+		let (line, idx) = view.layoutManager.characterIndex(at: localPoint)
+
+		guard let lineText = view.layoutManager.lineText(line), !lineText.isEmpty else { return [] }
+
+		// Find the word boundaries around the clicked position.
+		let chars = Array(lineText)
+		var wordStart = min(idx, chars.count - 1)
+		var wordEnd = wordStart
+
+		while wordStart > 0, chars[wordStart - 1].isLetter || chars[wordStart - 1] == "'" {
+			wordStart -= 1
+		}
+		while wordEnd < chars.count, chars[wordEnd].isLetter || chars[wordEnd] == "'" {
+			wordEnd += 1
+		}
+
+		guard wordEnd > wordStart else { return [] }
+		let word = String(chars[wordStart ..< wordEnd])
+
+		return SpellCheckService.shared.suggestions(for: word, language: spellingLanguage)
+	}
+}
+
+// MARK: - Spell Delegate Methods
+
+public extension TMDocumentEditor {
+	func editorViewSpellDocumentTag(_: EditorView) -> Int {
+		spellDocumentTag.value()
+	}
+
+	func editorView(_: EditorView, misspellingsForLine lineIndex: Int) -> [MisspelledRange] {
+		misspellingsForLine(lineIndex)
+	}
+
+	func editorView(_: EditorView, spellingSuggestionsAt point: NSPoint) -> [String] {
+		spellingSuggestions(at: point)
+	}
+}
+
+// MARK: - Macro Recording & Playback
+
+public extension TMDocumentEditor {
+	/// Toggles macro recording on/off.
+	/// Returns the completed macro if recording was stopped.
+	@discardableResult
+	func toggleMacroRecording() -> MacroRecorder.Macro? {
+		macroRecorder.toggleRecording()
+	}
+
+	/// Replays the last recorded macro through the editor.
+	func replayMacro() {
+		guard let macro = macroRecorder.lastMacro, !macro.isEmpty else { return }
+		beginChangeGrouping()
+		macroRecorder.replay(macro: macro) { [weak self] action in
+			guard let self else { return }
+			if let text = action.text {
+				editor.insertText(text)
+			} else {
+				editor.perform(action.action)
+			}
+		}
+		endChangeGrouping()
+		syncAfterEdit()
 	}
 }

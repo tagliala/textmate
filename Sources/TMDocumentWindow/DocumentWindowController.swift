@@ -414,6 +414,15 @@ public class DocumentWindowController: NSWindowController {
 		case NSSelectorFromString("takeTabSizeFrom:"):
 			menuItem.state = menuItem.tag == editorView.layoutManager.tabSize ? .on : .off
 			return true
+		case NSSelectorFromString("toggleContinuousSpellChecking:"):
+			menuItem.state = isSpellCheckingEnabled ? .on : .off
+			return true
+		case NSSelectorFromString("toggleMacroRecording:"):
+			menuItem.title = documentEditor?.macroRecorder.isRecording == true
+				? "Stop Recording" : "Start Recording"
+			return true
+		case NSSelectorFromString("replayMacro:"):
+			return documentEditor?.macroRecorder.lastMacro != nil
 		default:
 			break
 		}
@@ -497,6 +506,7 @@ public class DocumentWindowController: NSWindowController {
 		// Spell checking
 		if let spellStr = settings["spellChecking"] {
 			isSpellCheckingEnabled = spellStr == "true" || spellStr == "1"
+			documentEditor?.isContinuousSpellCheckingEnabled = isSpellCheckingEnabled
 		}
 	}
 
@@ -542,6 +552,7 @@ public class DocumentWindowController: NSWindowController {
 
 		// Status bar at the bottom
 		statusBarView.translatesAutoresizingMaskIntoConstraints = false
+		statusBarView.delegate = self
 		contentView.addSubview(statusBarView)
 
 		let searchBarHeight = liveSearchBar.heightAnchor.constraint(equalToConstant: 0)
@@ -768,6 +779,14 @@ extension DocumentWindowController: NSWindowDelegate {
 		if let id = identifier {
 			Self.allControllers.removeValue(forKey: id)
 		}
+	}
+}
+
+// MARK: - StatusBarViewDelegate
+
+extension DocumentWindowController: StatusBarViewDelegate {
+	public func statusBarViewDidToggleMacroRecording(_: StatusBarView) {
+		toggleMacroRecording(nil)
 	}
 }
 

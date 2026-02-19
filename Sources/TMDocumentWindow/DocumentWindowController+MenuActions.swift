@@ -264,6 +264,12 @@ public extension DocumentWindowController {
 		NSSpellChecker.shared.spellingPanel.orderFront(nil)
 	}
 
+	/// Toggles continuous (live) spell checking underlines.
+	@objc func toggleContinuousSpellChecking(_: Any?) {
+		isSpellCheckingEnabled.toggle()
+		documentEditor?.isContinuousSpellCheckingEnabled = isSpellCheckingEnabled
+	}
+
 	/// Finds the next misspelled word from the caret and selects it.
 	@objc func checkSpelling(_: Any?) {
 		guard let editor = documentEditor?.editor else { return }
@@ -313,6 +319,20 @@ public extension DocumentWindowController {
 		editor.selections = SelectionState(caret: pos)
 		editorView.carets = [(pos.line, pos.column)]
 		editorView.scrollToCaret()
+	}
+
+	// MARK: - Macro Recording
+
+	/// Toggles macro recording on/off.
+	@objc func toggleMacroRecording(_: Any?) {
+		guard let docEditor = documentEditor else { return }
+		docEditor.toggleMacroRecording()
+		statusBarView.isRecordingMacro = docEditor.macroRecorder.isRecording
+	}
+
+	/// Replays the last recorded macro.
+	@objc func replayMacro(_: Any?) {
+		documentEditor?.replayMacro()
 	}
 }
 

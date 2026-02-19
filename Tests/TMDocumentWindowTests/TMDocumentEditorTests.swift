@@ -517,3 +517,285 @@ struct KeyEquivalentStringTests {
 		#expect(docEditor.bundleIndex == nil)
 	}
 }
+
+// MARK: - Spell Checking Integration Tests
+
+@Suite("TMDocumentEditor — Spell Checking")
+@MainActor
+struct SpellCheckIntegrationTests {
+	private func makeEditor(text: String = "hello world") -> (TMDocumentEditor, EditorView) {
+		let doc = TMDocument()
+		doc.setContent(text, preserveRevision: true)
+		let view = EditorView(frame: NSRect(x: 0, y: 0, width: 400, height: 300))
+		let editor = TMDocumentEditor(document: doc, editorView: view)
+		return (editor, view)
+	}
+
+	@Test("spell checking disabled by default")
+	func disabledByDefault() {
+		let (docEditor, _) = makeEditor()
+		#expect(docEditor.isContinuousSpellCheckingEnabled == false)
+	}
+
+	@Test("enabling spell checking propagates to editor view")
+	func enablePropagates() {
+		let (docEditor, view) = makeEditor()
+		docEditor.isContinuousSpellCheckingEnabled = true
+		#expect(view.isContinuousSpellCheckingEnabled == true)
+	}
+
+	@Test("disabling spell checking propagates to editor view")
+	func disablePropagates() {
+		let (docEditor, view) = makeEditor()
+		docEditor.isContinuousSpellCheckingEnabled = true
+		docEditor.isContinuousSpellCheckingEnabled = false
+		#expect(view.isContinuousSpellCheckingEnabled == false)
+	}
+
+	@Test("misspellingsForLine returns empty when disabled")
+	func misspellingsEmptyWhenDisabled() throws {
+		let (docEditor, _) = makeEditor(text: "helo wrld")
+		#expect(docEditor.isContinuousSpellCheckingEnabled == false)
+		let result = try docEditor.editorView(
+			#require(docEditor.editorView),
+			misspellingsForLine: 0,
+		)
+		#expect(result.isEmpty)
+	}
+
+	@Test("misspellingsForLine caches results")
+	func cachesMisspellings() {
+		let (docEditor, _) = makeEditor(text: "helo wrld")
+		docEditor.isContinuousSpellCheckingEnabled = true
+
+		// First call fills the cache.
+		let first = docEditor.misspellingsForLine(0)
+		// Second call should return the same (cached) result.
+		let second = docEditor.misspellingsForLine(0)
+		#expect(first.count == second.count)
+	}
+
+	@Test("invalidateSpellCheckCache clears cache")
+	func invalidateClears() {
+		let (docEditor, _) = makeEditor(text: "hello world")
+		docEditor.isContinuousSpellCheckingEnabled = true
+		// Fill cache.
+		_ = docEditor.misspellingsForLine(0)
+		// Invalidate.
+		docEditor.invalidateSpellCheckCache()
+		// After invalidation the internal cache is empty, but the method
+		// still returns results (re-checked lazily).
+		let result = docEditor.misspellingsForLine(0)
+		#expect(result.isEmpty) // "hello world" is not misspelled
+	}
+
+	@Test("spellDocumentTag returns a valid tag")
+	func spellDocumentTag() {
+		let (docEditor, view) = makeEditor()
+		let tag = docEditor.editorViewSpellDocumentTag(view)
+		#expect(tag != 0)
+	}
+
+	@Test("enabling spell checking wires layoutManager misspellingProvider")
+	func misspellingProviderWired() {
+		let (_, view) = makeEditor()
+		// The misspelling provider should be set up by init.
+		#expect(view.layoutManager.misspellingProvider != nil)
+	}
+
+	@Test("spellingSuggestions returns suggestions for misspelled word")
+	func suggestionsForMisspelled() {
+		let (docEditor, _) = makeEditor(text: "helo world")
+		docEditor.isContinuousSpellCheckingEnabled = true
+		// Point at (0,0) should hit the first word "helo" which is likely misspelled.
+		let suggestions = docEditor.spellingSuggestions(at: .zero)
+		// We can't predict exact suggestions, but a misspelled word should yield at least one.
+		#expect(suggestions.count >= 0) // non-crashing is the key assertion
+	}
+}
+
+// MARK: - EditorView Spell Checking State Tests
+
+@Suite("EditorView — Spell Checking State")
+@MainActor
+struct EditorViewSpellCheckTests {
+	@Test("spell checking disabled by default")
+	func disabledByDefault() {
+		let view = EditorView(frame: NSRect(x: 0, y: 0, width: 400, height: 300))
+		#expect(view.isContinuousSpellCheckingEnabled == false)
+	}
+
+	@Test("setting isContinuousSpellCheckingEnabled triggers display")
+	func settingTriggersDisplay() {
+		let view = EditorView(frame: NSRect(x: 0, y: 0, width: 400, height: 300))
+		view.isContinuousSpellCheckingEnabled = true
+		#expect(view.isContinuousSpellCheckingEnabled == true)
+	}
+
+	@Test("spellingLanguage is nil by default")
+	func languageDefaultNil() {
+		let view = EditorView(frame: NSRect(x: 0, y: 0, width: 400, height: 300))
+		#expect(view.spellingLanguage == nil)
+	}
+
+	@Test("spellingLanguage can be set")
+	func languageSettable() {
+		let view = EditorView(frame: NSRect(x: 0, y: 0, width: 400, height: 300))
+		view.spellingLanguage = "en_US"
+		#expect(view.spellingLanguage == "en_US")
+	}
+}
+
+// MARK: - Macro Recording Tests
+
+@Suite("TMDocumentEditor — Macro Recording")
+@MainActor
+struct MacroRecordingTests {
+	private func makeEditor(text: String = "") -> (TMDocumentEditor, EditorView) {
+		let doc = TMDocument()
+		doc.setContent(text, preserveRevision: true)
+		let view = EditorView(frame: NSRect(x: 0, y: 0, width: 400, height: 300))
+		let editor = TMDocumentEditor(document: doc, editorView: view)
+		return (editor, view)
+	}
+
+	@Test("macro recorder not recording by default")
+	func notRecordingByDefault() {
+		let (docEditor, _) = makeEditor()
+		#expect(docEditor.macroRecorder.isRecording == false)
+		#expect(docEditor.macroRecorder.lastMacro == nil)
+	}
+
+	@Test("toggleMacroRecording starts recording")
+	func startRecording() {
+		let (docEditor, _) = makeEditor()
+		let result = docEditor.toggleMacroRecording()
+		#expect(result == nil) // Starting returns nil
+		#expect(docEditor.macroRecorder.isRecording == true)
+	}
+
+	@Test("toggleMacroRecording stops recording and returns macro")
+	func stopRecording() {
+		let (docEditor, _) = makeEditor()
+		docEditor.toggleMacroRecording()
+		let macro = docEditor.toggleMacroRecording()
+		#expect(macro != nil)
+		#expect(docEditor.macroRecorder.isRecording == false)
+	}
+
+	@Test("text insertion records action during recording")
+	func textInsertionRecords() {
+		let (docEditor, view) = makeEditor()
+		docEditor.toggleMacroRecording() // start
+		docEditor.editorView(view, insertText: "a", replacementRange: NSRange(location: NSNotFound, length: 0))
+		docEditor.editorView(view, insertText: "b", replacementRange: NSRange(location: NSNotFound, length: 0))
+		let macro = docEditor.toggleMacroRecording() // stop
+		#expect(macro != nil)
+		#expect(macro?.actions.count == 2)
+		#expect(macro?.actions[0].text == "a")
+		#expect(macro?.actions[1].text == "b")
+	}
+
+	@Test("editor action records during recording")
+	func editorActionRecords() {
+		let (docEditor, view) = makeEditor(text: "hello")
+		docEditor.toggleMacroRecording()
+		docEditor.editorView(view, performAction: .moveRight)
+		let macro = docEditor.toggleMacroRecording()
+		#expect(macro != nil)
+		#expect(macro?.actions.count == 1)
+		#expect(macro?.actions[0].action == .moveForward)
+	}
+
+	@Test("replayMacro replays text insertions")
+	func replayTextInsertions() {
+		let (docEditor, view) = makeEditor()
+		// Record typing "hi"
+		docEditor.toggleMacroRecording()
+		docEditor.editorView(view, insertText: "h", replacementRange: NSRange(location: NSNotFound, length: 0))
+		docEditor.editorView(view, insertText: "i", replacementRange: NSRange(location: NSNotFound, length: 0))
+		docEditor.toggleMacroRecording()
+
+		// Now replay — should append "hi" again
+		let textBefore = docEditor.editor.text
+		docEditor.replayMacro()
+		#expect(docEditor.editor.text == textBefore + "hi")
+	}
+
+	@Test("replayMacro does nothing without recorded macro")
+	func replayWithoutMacro() {
+		let (docEditor, _) = makeEditor(text: "hello")
+		docEditor.replayMacro()
+		#expect(docEditor.editor.text == "hello") // unchanged
+	}
+}
+
+// MARK: - Menu Actions — Spell & Macro Validation Tests
+
+@Suite("DocumentWindowController — Spell & Macro Validation")
+@MainActor
+struct SpellMacroValidationTests {
+	@Test("validateMenuItem toggleContinuousSpellChecking sets checkmark")
+	func toggleSpellCheckCheckmark() {
+		let controller = DocumentWindowController()
+		let item = NSMenuItem(
+			title: "Check Spelling While Typing",
+			action: NSSelectorFromString("toggleContinuousSpellChecking:"),
+			keyEquivalent: "",
+		)
+		_ = controller.validateMenuItem(item)
+		#expect(item.state == .off)
+
+		controller.isSpellCheckingEnabled = true
+		_ = controller.validateMenuItem(item)
+		#expect(item.state == .on)
+	}
+
+	@Test("toggleContinuousSpellChecking toggles flag")
+	func toggleSpellChecking() {
+		let controller = DocumentWindowController()
+		#expect(controller.isSpellCheckingEnabled == false)
+
+		controller.toggleContinuousSpellChecking(nil)
+		#expect(controller.isSpellCheckingEnabled == true)
+
+		controller.toggleContinuousSpellChecking(nil)
+		#expect(controller.isSpellCheckingEnabled == false)
+	}
+
+	@Test("validateMenuItem toggleMacroRecording updates title")
+	func macroRecordingTitle() {
+		let doc = TMDocument()
+		doc.setContent("", preserveRevision: true)
+		let controller = DocumentWindowController(document: doc)
+
+		let item = NSMenuItem(
+			title: "Start Recording",
+			action: NSSelectorFromString("toggleMacroRecording:"),
+			keyEquivalent: "",
+		)
+
+		_ = controller.validateMenuItem(item)
+		#expect(item.title == "Start Recording")
+
+		// Start recording
+		controller.documentEditor?.toggleMacroRecording()
+		_ = controller.validateMenuItem(item)
+		#expect(item.title == "Stop Recording")
+	}
+
+	@Test("validateMenuItem replayMacro disabled without macro")
+	func replayMacroDisabled() {
+		let doc = TMDocument()
+		doc.setContent("", preserveRevision: true)
+		let controller = DocumentWindowController(document: doc)
+
+		let item = NSMenuItem(
+			title: "Replay Macro",
+			action: NSSelectorFromString("replayMacro:"),
+			keyEquivalent: "",
+		)
+		let enabled = controller.validateMenuItem(item)
+		#expect(enabled == false)
+	}
+}

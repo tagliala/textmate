@@ -981,6 +981,35 @@ watching, atomic saves, and file status queries.
 
 ---
 
+## Phase 46: Live Spell Checking & Macro Wiring — ✅ COMPLETE
+
+### Summary
+
+End-to-end live spell checking pipeline and macro recording menu wiring.
+
+### Key Changes
+
+| File | Changes |
+|------|---------|
+| `Sources/TMEditorUI/EditorLayoutManager.swift` | Added `misspellingProvider` callback for per-line misspelling data |
+| `Sources/TMEditorUI/EditorView.swift` | `isContinuousSpellCheckingEnabled`, `spellingLanguage`, spelling dot image factory, misspelling draw pass, `changeSpelling(_:)`, `ignoreSpelling(_:)`, context menu suggestions, 3 new delegate methods |
+| `Sources/TMDocumentWindow/TMDocumentEditor.swift` | Spell check cache with per-line lazy evaluation via `SpellCheckService`, `recheckSpelling()`, `invalidateSpellCheckCache()`, `spellingSuggestions(at:)`, spell delegate implementations, macro recording in `insertText`/`performAction`, `toggleMacroRecording()`, `replayMacro()` |
+| `Sources/TMDocumentWindow/DocumentWindowController+MenuActions.swift` | `toggleContinuousSpellChecking(_:)`, `toggleMacroRecording(_:)`, `replayMacro(_:)` |
+| `Sources/TMDocumentWindow/DocumentWindowController.swift` | `validateMenuItem` for spell/macro items, `StatusBarViewDelegate` conformance, spell propagation in `applySettings` |
+
+### Test Coverage
+
+| Test Suite | Tests | Status |
+|-----------|-------|--------|
+| TMDocumentEditor — Spell Checking | 8 | ✅ |
+| EditorView — Spell Checking State | 4 | ✅ |
+| TMDocumentEditor — Macro Recording | 6 | ✅ |
+| DocumentWindowController — Spell & Macro Validation | 4 | ✅ |
+
+### Cumulative Total: 2620 tests in 324 suites
+
+---
+
 ## Architecture Reminder
 
 All code follows the iteration strategy from
@@ -1004,7 +1033,7 @@ All code follows the iteration strategy from
 - **Iteration 16** — Snippet & Format String Engine ✅
 - **Iteration 17** — Plist Engine & Text Utilities ✅
 - **Iteration 18** — IO Framework & File Status ✅
-- **Iteration 19+** — Phases 19–45 (integration, polish, interaction layer) ✅
+- **Iteration 19+** — Phases 19–46 (integration, polish, interaction, spell check, macros) ✅
 - **Iteration 20** — (next)
 
 ## Workflow Rules

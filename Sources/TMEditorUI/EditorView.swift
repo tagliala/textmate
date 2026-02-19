@@ -36,6 +36,17 @@ public class EditorView: NSView, @preconcurrency NSTextInputClient, NSMenuItemVa
 		didSet { needsDisplay = true }
 	}
 
+	/// Whether continuous spell checking underlines are drawn.
+	public var isContinuousSpellCheckingEnabled: Bool = false {
+		didSet { needsDisplay = true }
+	}
+
+	/// The spelling language (nil = auto-detect).
+	public var spellingLanguage: String?
+
+	/// Cached spelling dot image for misspelling underlines.
+	private lazy var spellingDotImage: CGImage? = Self.createSpellingDotImage()
+
 	/// The invisible character representations.
 	public var invisibleSpace: String = "·"
 	public var invisibleTab: String = "‣"
@@ -270,6 +281,26 @@ public class EditorView: NSView, @preconcurrency NSTextInputClient, NSMenuItemVa
 			// Invisible characters
 			if showInvisibles {
 				drawInvisibles(for: line, in: context, baseline: baseline)
+			}
+
+			// Misspelling underlines
+			if isContinuousSpellCheckingEnabled,
+			   let provider = layoutManager.misspellingProvider
+			{
+				let ranges = provider(line.lineIndex)
+				if !ranges.isEmpty {
+					let drawPoint = CGPoint(
+						x: line.origin.x,
+						y: line.origin.y + baseline,
+					)
+					line.drawMisspellings(
+						ranges,
+						at: drawPoint,
+						spellingDotImage: spellingDotImage,
+						isFlipped: isFlipped,
+						in: context,
+					)
+				}
 			}
 		}
 
@@ -717,9 +748,29 @@ public class EditorView: NSView, @preconcurrency NSTextInputClient, NSMenuItemVa
 
 	override public func menu(for event: NSEvent) -> NSMenu? {
 		if let menu = delegate?.editorViewNeedsContextMenu(self, for: event) {
+			// Prepend spelling suggestions if spell checking is enabled.
+			if isContinuousSpellCheckingEnabled {
+				let point = convert(event.locationInWindow, from: nil)
+				let suggestions = delegate?.editorView(self, spellingSuggestionsAt: point) ?? []
+				if !suggestions.isEmpty {
+					for (i, suggestion) in suggestions.prefix(5).enumerated() {
+						let item = NSMenuItem(title: suggestion, action: #selector(applySuggestion(_:)), keyEquivalent: "")
+						item.target = self
+						item.representedObject = suggestion
+						menu.insertItem(item, at: i)
+					}
+					menu.insertItem(.separator(), at: min(suggestions.count, 5))
+				}
+			}
 			return menu
 		}
 		return super.menu(for: event)
+	}
+
+	/// Applies a spelling suggestion from the context menu.
+	@objc private func applySuggestion(_ sender: NSMenuItem) {
+		guard let word = sender.representedObject as? String else { return }
+		delegate?.editorView(self, insertText: word, replacementRange: selectedRange())
 	}
 
 	// MARK: - Menu Validation
@@ -809,6 +860,47 @@ public class EditorView: NSView, @preconcurrency NSTextInputClient, NSMenuItemVa
 			remaining -= lineLen
 		}
 		return (max(0, layoutManager.lineCount - 1), remaining)
+	}
+
+	// MARK: - Spelling Dot Image
+
+	/// Creates the tiled red dot image used for misspelling underlines.
+	private static func createSpellingDotImage() -> CGImage? {
+		let width = 4
+		let height = 3
+		guard let ctx = CGContext(
+			data: nil,
+			width: width,
+			height: height,
+			bitsPerComponent: 8,
+			bytesPerRow: width * 4,
+			space: CGColorSpaceCreateDeviceRGB(),
+			bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue,
+		) else { return nil }
+
+		ctx.setFillColor(red: 1, green: 0, blue: 0, alpha: 0.8)
+		ctx.fillEllipse(in: CGRect(x: 0, y: 0, width: 4, height: 3))
+		return ctx.makeImage()
+	}
+
+	// MARK: - NSChangeSpelling / NSIgnoreMisspelledWords
+
+	/// Called by the spell checker when the user picks a correction.
+	@objc public func changeSpelling(_ sender: Any?) {
+		guard let panel = sender as? NSObject,
+		      let word = panel.value(forKey: "stringValue") as? String
+		else { return }
+		delegate?.editorView(self, insertText: word, replacementRange: selectedRange())
+	}
+
+	/// Called by the spell checker when the user picks "Ignore Spelling".
+	@objc public func ignoreSpelling(_: Any?) {
+		guard let selectedText = accessibilitySelectedText(), !selectedText.isEmpty else { return }
+		NSSpellChecker.shared.ignoreWord(
+			selectedText,
+			inSpellDocumentWithTag: delegate?.editorViewSpellDocumentTag(self) ?? 0,
+		)
+		needsDisplay = true
 	}
 }
 
@@ -988,6 +1080,15 @@ public protocol EditorViewDelegate: AnyObject {
 
 	/// Called to validate a menu item's enabled state.
 	func editorView(_ view: EditorView, validateMenuItem menuItem: NSMenuItem) -> Bool
+
+	/// Returns the spell document tag for the editor's document.
+	func editorViewSpellDocumentTag(_ view: EditorView) -> Int
+
+	/// Returns misspelled ranges for a specific line index.
+	func editorView(_ view: EditorView, misspellingsForLine lineIndex: Int) -> [MisspelledRange]
+
+	/// Called to build spelling suggestions for the context menu.
+	func editorView(_ view: EditorView, spellingSuggestionsAt point: NSPoint) -> [String]
 }
 
 /// Default no-op implementations.
@@ -1011,6 +1112,18 @@ public extension EditorViewDelegate {
 
 	func editorView(_: EditorView, validateMenuItem _: NSMenuItem) -> Bool {
 		true
+	}
+
+	func editorViewSpellDocumentTag(_: EditorView) -> Int {
+		0
+	}
+
+	func editorView(_: EditorView, misspellingsForLine _: Int) -> [MisspelledRange] {
+		[]
+	}
+
+	func editorView(_: EditorView, spellingSuggestionsAt _: NSPoint) -> [String] {
+		[]
 	}
 }
 
