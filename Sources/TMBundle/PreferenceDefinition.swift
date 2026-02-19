@@ -170,7 +170,7 @@ public struct PreferenceDefinition: Sendable {
 			decreaseIndentPattern: BundlePlistParser.optionalString(dict, key: "decreaseIndentPattern"),
 			indentNextLinePattern: BundlePlistParser.optionalString(dict, key: "indentNextLinePattern"),
 			unIndentedLinePattern: BundlePlistParser.optionalString(dict, key: "unIndentedLinePattern"),
-			symbolTransformation: BundlePlistParser.optionalString(dict, key: "showInSymbolList"),
+			symbolTransformation: BundlePlistParser.optionalString(dict, key: "symbolTransformation"),
 			highlightPairs: highlightPairs,
 			showInSymbolList: BundlePlistParser.optionalBool(dict, key: "showInSymbolList"),
 			comment: comment,

@@ -1091,6 +1091,45 @@ Wired the `folderPopUpButton` in the file browser header to dynamically populate
 
 ---
 
+## Phase 50: Symbol Extraction Pipeline — ✅ COMPLETE
+
+### Summary
+
+Connected the syntax highlighter to the symbol chooser (⌘⇧T) and status bar symbol popup (⌃6). Previously, the symbol extraction scaffolding existed in TMCore (`SymbolExtractor`, `SymbolTransformation`), TMFilterList (`SymbolChooserState`, `SymbolDescriptor`), and TMDocumentWindow (`SymbolChooserController`) — but the pipeline was disconnected: the chooser was fed an empty `symbols: []` array and the status bar popup handler was unimplemented.
+
+### Bug Fix
+
+`PreferenceDefinition.swift` line 173 was parsing the `symbolTransformation` field from the wrong plist key (`"showInSymbolList"` instead of `"symbolTransformation"`).
+
+### Key Changes
+
+| File | Changes |
+|------|---------|
+| `Sources/TMBundle/PreferenceDefinition.swift` | **Fix** — `symbolTransformation` now parsed from correct key `"symbolTransformation"` |
+| `Sources/TMDocumentWindow/SyntaxHighlighter+Symbols.swift` | **New** — Extension adding `extractSymbols(bundleIndex:lines:)`: queries BundleIndex for `.settings` items, walks parser scope maps, matches scopes against bundle preferences via `ScopeSelector.doesMatch()` with rank-based priority, caches lookups, extracts text from symbol runs, applies `SymbolTransformation` |
+| `Sources/TMDocumentWindow/DocumentWindowController+Choosers.swift` | **Rewritten** — `showSymbolChooser` now feeds real extracted symbols; added `extractCurrentSymbols()`, `navigateToSelectionString(_:)`, `populateSymbolMenu(_:)`, `symbolMenuItemSelected(_:)` |
+| `Sources/TMDocumentWindow/DocumentWindowController.swift` | Added `statusBarViewWillShowSymbolMenu(_:popup:)` to `StatusBarViewDelegate` conformance |
+
+### Algorithm (mirrors C++ `symbols_t::did_parse`)
+
+1. Query `BundleIndex` for all `.settings` preference items
+2. For each scope in the parser's scope maps, check if any preference with matching scope selector has `showInSymbolList: true`
+3. Use `ScopeSelector.doesMatch(ScopeContext(scope))` for matching, pick highest-rank match
+4. Cache scope→transformation lookups in `[Scope: SymbolTransformation?]`
+5. Walk lines, extract text from symbol runs (UTF-8 byte offset substrings), apply `SymbolTransformation`
+6. Return `[SymbolDescriptor]` sorted by position
+
+### Test Coverage
+
+| Test Suite | Tests | Status |
+|-----------|-------|--------|
+| SyntaxHighlighter — Symbol Extraction | 9 | ✅ |
+| PreferenceDefinition (symbol settings) | 2 | ✅ |
+
+### Cumulative Total: 2680 tests in 331 suites
+
+---
+
 ## Architecture Reminder
 
 All code follows the iteration strategy from

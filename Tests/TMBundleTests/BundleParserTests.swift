@@ -395,4 +395,28 @@ struct PreferenceDefinitionTests {
 		#expect(pref.settings.shellVariables.isEmpty)
 		#expect(pref.settings.smartTypingPairs == nil)
 	}
+
+	@Test func parseSymbolSettings() throws {
+		let dict: [String: Any] = [
+			"settings": [
+				"showInSymbolList": true,
+				"symbolTransformation": "s/^\\s*//;s/\\s*\\(.*//",
+			] as [String: Any],
+		]
+		let pref = try PreferenceDefinition.parse(dict)
+		#expect(pref.settings.showInSymbolList == true)
+		#expect(pref.settings.symbolTransformation == "s/^\\s*//;s/\\s*\\(.*//")
+	}
+
+	@Test func symbolTransformationNotConfusedWithShowInSymbolList() throws {
+		// Regression: symbolTransformation was parsed from key "showInSymbolList"
+		let dict: [String: Any] = [
+			"settings": [
+				"showInSymbolList": true,
+			] as [String: Any],
+		]
+		let pref = try PreferenceDefinition.parse(dict)
+		#expect(pref.settings.showInSymbolList == true)
+		#expect(pref.settings.symbolTransformation == nil)
+	}
 }

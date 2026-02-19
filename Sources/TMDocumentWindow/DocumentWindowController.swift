@@ -797,6 +797,10 @@ extension DocumentWindowController: StatusBarViewDelegate {
 	public func statusBarViewDidToggleMacroRecording(_: StatusBarView) {
 		toggleMacroRecording(nil)
 	}
+
+	public func statusBarViewWillShowSymbolMenu(_: StatusBarView, popup: NSPopUpButton) {
+		populateSymbolMenu(popup)
+	}
 }
 
 // MARK: - GutterViewDelegate

@@ -1,7 +1,10 @@
 import AppKit
 import Testing
 import TMBundle
+import TMBundleRuntime
+import TMCore
 import TMEditorUI
+import TMFilterList
 import TMGrammar
 import TMTheme
 @testable import TMDocumentWindow
@@ -430,5 +433,169 @@ struct SyntaxHighlighterLayoutTests {
 		#expect(!laid.isEmpty)
 		// The laid-out line should have style runs
 		#expect(!laid[0].styleRuns.isEmpty)
+	}
+}
+
+// MARK: - Symbol Extraction Tests
+
+/// Helper: Creates a ``BundleIndex`` containing a single preference item
+/// that marks `keyword.test` scopes for the symbol list.
+private func makeSymbolBundleIndex(
+	showInSymbolList: Bool = true,
+	symbolTransformation: String? = nil,
+	scopeSelector: String = "keyword.test",
+) -> BundleIndex {
+	var settings: [String: Any] = [
+		"showInSymbolList": showInSymbolList,
+	]
+	if let symbolTransformation {
+		settings["symbolTransformation"] = symbolTransformation
+	}
+
+	let item = BundleItem(
+		uuid: "sym-pref-001",
+		name: "Symbol Preferences",
+		kind: .settings,
+		scopeSelector: scopeSelector,
+		bundleUUID: "bundle-001",
+		plist: ["settings": settings],
+	)
+
+	let index = BundleIndex()
+	index.addItems([item])
+	return index
+}
+
+@Suite("SyntaxHighlighter — Symbol Extraction")
+@MainActor
+struct SyntaxHighlighterSymbolTests {
+	@Test("extracts symbol from keyword scope with showInSymbolList")
+	func basicSymbolExtraction() {
+		let hl = makeHighlighter()
+		let text = "hello keyword world\n"
+		hl.setText(text)
+		hl.parseSync()
+
+		let index = makeSymbolBundleIndex()
+		let lines = text.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+		let symbols = hl.extractSymbols(bundleIndex: index, lines: lines)
+
+		#expect(symbols.count == 1)
+		#expect(symbols.first?.name == "keyword")
+		#expect(symbols.first?.selectionString == "1")
+	}
+
+	@Test("returns empty when no preferences match")
+	func noMatchingPreferences() {
+		let hl = makeHighlighter()
+		let text = "hello keyword world\n"
+		hl.setText(text)
+		hl.parseSync()
+
+		// Scope selector that doesn't match keyword.test
+		let index = makeSymbolBundleIndex(scopeSelector: "string.quoted")
+		let lines = text.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+		let symbols = hl.extractSymbols(bundleIndex: index, lines: lines)
+
+		#expect(symbols.isEmpty)
+	}
+
+	@Test("returns empty when showInSymbolList is false")
+	func showInSymbolListFalse() {
+		let hl = makeHighlighter()
+		let text = "hello keyword world\n"
+		hl.setText(text)
+		hl.parseSync()
+
+		let index = makeSymbolBundleIndex(showInSymbolList: false)
+		let lines = text.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+		let symbols = hl.extractSymbols(bundleIndex: index, lines: lines)
+
+		#expect(symbols.isEmpty)
+	}
+
+	@Test("returns empty when text has no matching scopes")
+	func noKeywordsInText() {
+		let hl = makeHighlighter()
+		let text = "hello world\n"
+		hl.setText(text)
+		hl.parseSync()
+
+		let index = makeSymbolBundleIndex()
+		let lines = text.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+		let symbols = hl.extractSymbols(bundleIndex: index, lines: lines)
+
+		#expect(symbols.isEmpty)
+	}
+
+	@Test("applies symbolTransformation to extracted text")
+	func symbolTransformation() {
+		let hl = makeHighlighter()
+		let text = "hello keyword world\n"
+		hl.setText(text)
+		hl.parseSync()
+
+		// Transform: prepend "SYM:" to the symbol name
+		let index = makeSymbolBundleIndex(symbolTransformation: "s/.*/SYM: $0/")
+		let lines = text.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+		let symbols = hl.extractSymbols(bundleIndex: index, lines: lines)
+
+		#expect(symbols.count == 1)
+		#expect(symbols.first?.name == "SYM: keyword")
+	}
+
+	@Test("extracts multiple keywords across lines")
+	func multipleSymbolsAcrossLines() {
+		let hl = makeHighlighter()
+		let text = "keyword one\nplain\nkeyword two\n"
+		hl.setText(text)
+		hl.parseSync()
+
+		let index = makeSymbolBundleIndex()
+		let lines = text.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+		let symbols = hl.extractSymbols(bundleIndex: index, lines: lines)
+
+		#expect(symbols.count == 2)
+		#expect(symbols[0].name == "keyword")
+		#expect(symbols[0].selectionString == "1")
+		#expect(symbols[1].name == "keyword")
+		#expect(symbols[1].selectionString == "3")
+	}
+
+	@Test("returns empty when no parser is set")
+	func noParser() {
+		let hl = SyntaxHighlighter()
+		let index = makeSymbolBundleIndex()
+		let symbols = hl.extractSymbols(bundleIndex: index, lines: ["hello\n"])
+
+		#expect(symbols.isEmpty)
+	}
+
+	@Test("returns empty for empty document")
+	func emptyDocument() {
+		let hl = makeHighlighter()
+		hl.setText("")
+		hl.parseSync()
+
+		let index = makeSymbolBundleIndex()
+		let symbols = hl.extractSymbols(bundleIndex: index, lines: [""])
+
+		#expect(symbols.isEmpty)
+	}
+
+	@Test("symbol offset reflects byte position in document")
+	func symbolOffset() {
+		let hl = makeHighlighter()
+		// "hello " = 6 bytes, then "keyword" starts at offset 6
+		let text = "hello keyword\n"
+		hl.setText(text)
+		hl.parseSync()
+
+		let index = makeSymbolBundleIndex()
+		let lines = text.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+		let symbols = hl.extractSymbols(bundleIndex: index, lines: lines)
+
+		#expect(symbols.count == 1)
+		#expect(symbols.first?.offset == 6)
 	}
 }
