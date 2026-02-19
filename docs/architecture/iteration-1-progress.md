@@ -1068,6 +1068,29 @@ Wired the Find panel (`FindPanelController`/`FindServer`) end-to-end to the edit
 
 ---
 
+## Phase 49: File Browser Breadcrumb Navigation — ✅ COMPLETE
+
+### Summary
+
+Wired the `folderPopUpButton` in the file browser header to dynamically populate a breadcrumb menu showing the current location, its parent chain up to root, a Computer entry, "Other…" for Go to Folder, and "Use as Project Folder" for file:// URLs. The popup button was previously present in the UI but completely non-functional.
+
+### Key Changes
+
+| File | Changes |
+|------|---------|
+| `Sources/TMFileBrowser/FileBrowserViewController.swift` | Added `currentLocationMenuItem` property; `updateCurrentLocationItem()` syncs title/icon/representedObject on navigation; `folderPopUpButtonWillPopUp(_:)` notification handler; `populateFolderMenu(_:)` builds parent chain via `FileManager.displayName(atPath:)`, Computer entry, "Other…" (via `orderFrontGoToFolder:`), and "Use as Project Folder" (via responder chain to `takeProjectPathFrom:`); `takeURLFrom(_:)` action navigates to selected parent; `folderIcon(for:)` returns 16×16 icon |
+| `Sources/TMDocumentWindow/DocumentWindowController+MenuActions.swift` | Added `takeProjectPathFrom(_:)` — reads `representedObject` as String path, sets `projectPath` |
+
+### Test Coverage
+
+| Test Suite | Tests | Status |
+|-----------|-------|--------|
+| FileBrowserBreadcrumb | 5 | ✅ |
+
+### Cumulative Total: 2669 tests in 330 suites
+
+---
+
 ## Architecture Reminder
 
 All code follows the iteration strategy from

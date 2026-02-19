@@ -285,4 +285,98 @@ struct FileItemTableCellViewTests {
 		#expect(cell.nameField.stringValue == item.displayName)
 	}
 }
+
+// MARK: - Breadcrumb Popup Menu Tests
+
+@Suite("FileBrowserViewController breadcrumb popup")
+struct FileBrowserBreadcrumbTests {
+	@MainActor private func buildMenu(for vc: FileBrowserViewController) -> NSMenu {
+		let menu = NSMenu()
+		menu.addItem(NSMenuItem(title: "loc", action: nil, keyEquivalent: ""))
+		vc.populateFolderMenu(menu)
+		return menu
+	}
+
+	@Test("populateFolderMenu builds items with nil fileItem")
+	@MainActor func populateNilFileItem() {
+		let vc = FileBrowserViewController()
+		vc.loadView()
+		let menu = buildMenu(for: vc)
+
+		// loc + Computer + separator + Other…
+		#expect(menu.numberOfItems == 4)
+		#expect(menu.item(at: 1)?.title == FileManager.default.displayName(atPath: "/"))
+		#expect(menu.item(at: 3)?.title == "Other\u{2026}")
+	}
+
+	@Test("populateFolderMenu builds parent chain for deep path")
+	@MainActor func populateParentChain() throws {
+		let base = FileManager.default.temporaryDirectory
+			.appendingPathComponent("tmfb-bc-\(UUID())")
+		let deep = base.appendingPathComponent("sub")
+		try FileManager.default.createDirectory(at: deep, withIntermediateDirectories: true)
+		defer { try? FileManager.default.removeItem(at: base) }
+
+		let vc = FileBrowserViewController()
+		vc.loadView()
+		vc.goToURL(deep)
+		let menu = buildMenu(for: vc)
+
+		// loc + parent entries (varies by depth) + Computer + separator + Other… + separator + "Use … as Project Folder"
+		// The parent chain should include at least the base dir name
+		let titles = (0 ..< menu.numberOfItems).compactMap { menu.item(at: $0)?.title }
+		#expect(titles.contains(FileManager.default.displayName(atPath: base.path)))
+	}
+
+	@Test("populateFolderMenu includes Computer entry")
+	@MainActor func populateComputerEntry() throws {
+		let dir = FileManager.default.temporaryDirectory
+			.appendingPathComponent("tmfb-bc-comp-\(UUID())")
+		try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+		defer { try? FileManager.default.removeItem(at: dir) }
+
+		let vc = FileBrowserViewController()
+		vc.loadView()
+		vc.goToURL(dir)
+		let menu = buildMenu(for: vc)
+
+		let computerTitle = FileManager.default.displayName(atPath: "/")
+		let titles = (0 ..< menu.numberOfItems).compactMap { menu.item(at: $0)?.title }
+		#expect(titles.contains(computerTitle))
+	}
+
+	@Test("populateFolderMenu includes Other item")
+	@MainActor func populateOtherItem() throws {
+		let dir = FileManager.default.temporaryDirectory
+			.appendingPathComponent("tmfb-bc-other-\(UUID())")
+		try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+		defer { try? FileManager.default.removeItem(at: dir) }
+
+		let vc = FileBrowserViewController()
+		vc.loadView()
+		vc.goToURL(dir)
+		let menu = buildMenu(for: vc)
+
+		let titles = (0 ..< menu.numberOfItems).compactMap { menu.item(at: $0)?.title }
+		#expect(titles.contains("Other\u{2026}"))
+	}
+
+	@Test("populateFolderMenu includes project folder item")
+	@MainActor func populateProjectFolderItem() throws {
+		let dir = FileManager.default.temporaryDirectory
+			.appendingPathComponent("tmfb-bc-proj-\(UUID())")
+		try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+		defer { try? FileManager.default.removeItem(at: dir) }
+
+		let vc = FileBrowserViewController()
+		vc.loadView()
+		vc.goToURL(dir)
+		let menu = buildMenu(for: vc)
+
+		let displayName = FileManager.default.displayName(atPath: dir.path)
+		let expected = "Use \u{201C}\(displayName)\u{201D} as Project Folder"
+		let titles = (0 ..< menu.numberOfItems).compactMap { menu.item(at: $0)?.title }
+		#expect(titles.contains(expected))
+	}
+}
 #endif

@@ -83,6 +83,9 @@ public class FileBrowserViewController: NSViewController,
 	private var loadingURLs: Set<URL> = []
 	private var loadingCompletionHandlers: [() -> Void] = []
 
+	/// The menu item showing the current folder location in the popup button.
+	private var currentLocationMenuItem: NSMenuItem?
+
 	// MARK: - Computed Properties
 
 	/// The current location URL.
@@ -203,6 +206,24 @@ public class FileBrowserViewController: NSViewController,
 		header.goForwardButton.target = self
 		header.goForwardButton.action = #selector(goForward(_:))
 		header.goForwardButton.isEnabled = false
+
+		// Configure folder popup button with initial current-location item
+		let folderMenu = header.folderPopUpButton.menu!
+		folderMenu.removeAllItems()
+		let locationItem = NSMenuItem(
+			title: "", action: #selector(takeURLFrom(_:)), keyEquivalent: "",
+		)
+		locationItem.target = self
+		folderMenu.addItem(locationItem)
+		header.folderPopUpButton.selectItem(at: 0)
+		currentLocationMenuItem = locationItem
+
+		NotificationCenter.default.addObserver(
+			self,
+			selector: #selector(folderPopUpButtonWillPopUp(_:)),
+			name: NSPopUpButton.willPopUpNotification,
+			object: header.folderPopUpButton,
+		)
 
 		// Configure actions buttons
 		let actions = fileBrowserView.actionsView
@@ -381,6 +402,96 @@ public class FileBrowserViewController: NSViewController,
 		fileBrowserView?.headerView.goForwardButton.isEnabled = canGoForward
 	}
 
+	/// Updates the current location item in the folder popup button.
+	private func updateCurrentLocationItem() {
+		guard let item = fileItem, let menuItem = currentLocationMenuItem else { return }
+		menuItem.title = item.displayName
+		menuItem.representedObject = item.resolvedURL
+		menuItem.image = folderIcon(for: item.url)
+		fileBrowserView?.headerView.folderPopUpButton.selectItem(at: 0)
+	}
+
+	/// Returns a 16×16 icon for the given URL.
+	private func folderIcon(for url: URL) -> NSImage {
+		let icon: NSImage = if url.isFileURL {
+			NSWorkspace.shared.icon(forFile: url.path)
+		} else {
+			NSWorkspace.shared.icon(for: .folder)
+		}
+		icon.size = NSSize(width: 16, height: 16)
+		return icon
+	}
+
+	// MARK: - Folder Popup Menu
+
+	@objc private func folderPopUpButtonWillPopUp(_: Notification) {
+		guard let menu = fileBrowserView?.headerView.folderPopUpButton.menu else { return }
+		populateFolderMenu(menu)
+	}
+
+	/// Populates the given menu with the parent chain,
+	/// Computer, "Other…", and "Use as Project Folder" items.
+	/// The first item (current location) is preserved; all others are replaced.
+	func populateFolderMenu(_ menu: NSMenu) {
+		// Keep the first item (current location), remove the rest
+		while menu.numberOfItems > 1 {
+			menu.removeItem(at: menu.numberOfItems - 1)
+		}
+
+		// Walk the parent chain to build breadcrumb items
+		var parentURL = fileItem?.parentURL
+		while let pURL = parentURL, pURL.path != "/" {
+			let menuItem = NSMenuItem(
+				title: FileManager.default.displayName(atPath: pURL.path),
+				action: #selector(takeURLFrom(_:)),
+				keyEquivalent: "",
+			)
+			menuItem.representedObject = pURL
+			menuItem.target = self
+			menu.addItem(menuItem)
+			parentURL = pURL.deletingLastPathComponent()
+		}
+
+		// Computer entry for the root
+		let computerItem = NSMenuItem(
+			title: FileManager.default.displayName(atPath: "/"),
+			action: #selector(goToComputer(_:)),
+			keyEquivalent: "",
+		)
+		computerItem.target = self
+		menu.addItem(computerItem)
+
+		menu.addItem(.separator())
+
+		// "Other…" opens the Go to Folder panel
+		let otherItem = NSMenuItem(
+			title: "Other\u{2026}",
+			action: #selector(orderFrontGoToFolder(_:)),
+			keyEquivalent: "",
+		)
+		otherItem.target = self
+		menu.addItem(otherItem)
+
+		// "Use as Project Folder" for file:// locations
+		if let item = fileItem, item.url.isFileURL {
+			menu.addItem(.separator())
+			let projectItem = NSMenuItem(
+				title: "Use \u{201C}\(item.displayName)\u{201D} as Project Folder",
+				action: Selector(("takeProjectPathFrom:")),
+				keyEquivalent: "",
+			)
+			projectItem.representedObject = item.url.path
+			menu.addItem(projectItem)
+		}
+	}
+
+	@objc private func takeURLFrom(_ sender: Any?) {
+		guard let menuItem = sender as? NSMenuItem,
+		      let url = menuItem.representedObject as? URL
+		else { return }
+		goToURL(url)
+	}
+
 	// MARK: - URL / FileItem Management
 
 	/// Set the root URL and reload the tree.
@@ -403,6 +514,7 @@ public class FileBrowserViewController: NSViewController,
 		}
 
 		fileItem = item
+		updateCurrentLocationItem()
 
 		outlineView.reloadData()
 		outlineView.deselectAll(self)

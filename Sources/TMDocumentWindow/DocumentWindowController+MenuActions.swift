@@ -249,6 +249,14 @@ public extension DocumentWindowController {
 		}
 	}
 
+	/// Set the project folder from a menu item's represented object (responder chain target).
+	@objc func takeProjectPathFrom(_ sender: Any?) {
+		guard let menuItem = sender as? NSMenuItem,
+		      let path = menuItem.representedObject as? String
+		else { return }
+		projectPath = path
+	}
+
 	@objc func newDocumentInDirectory(_: Any?) {
 		fileBrowserController.newFile(nil)
 	}
