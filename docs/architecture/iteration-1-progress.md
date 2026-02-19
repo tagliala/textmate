@@ -1041,6 +1041,33 @@ Wired the FoldManager engine (built in a prior phase) end-to-end: data source ad
 
 ---
 
+## Phase 48: Find Panel ↔ Editor Bridge — ✅ COMPLETE
+
+### Summary
+
+Wired the Find panel (`FindPanelController`/`FindServer`) end-to-end to the editor via `FindClient` conformance on `DocumentWindowController`. ⌘G, ⇧⌘G, Replace, Replace All, and all find panel operations now reach the editor. Find matches are highlighted in the editor view with a yellow overlay.
+
+### Key Changes
+
+| File | Changes |
+|------|---------|
+| `Sources/TMDocumentWindow/TMDocumentEditor+Find.swift` | **New** — Bridge translating FindServer queries into BufferSearcher calls; `findNext`, `findAll`, `countMatches`, `replaceCurrent`, `replaceAll`, `allMatchRanges`; capture-aware replacement via `ReplacementTemplate`; `matchCaptures` storage via `ObjectIdentifier`-keyed static dictionary |
+| `Sources/TMDocumentWindow/DocumentWindowController+Find.swift` | **New** — `FindClient` conformance dispatching all 8 `FindOperation` cases; `updateHighlights`/`clearHighlights` wiring byte ranges to EditorView |
+| `Sources/TMDocumentWindow/TMDocumentEditor.swift` | `syncAfterEdit()` and `syncSelectionToView()` changed from `private` to `internal` for cross-file extension access |
+| `Sources/TMDocumentWindow/DocumentWindowController+MenuActions.swift` | Added `findNext:`, `findPrevious:`, `useSelectionForFind:`, `useSelectionForReplace:` menu actions |
+| `Sources/TMEditorUI/EditorView.swift` | Added `highlightRanges` property (array of line/index tuples) with `didSet { needsDisplay = true }`; `highlightColor` property; `drawHighlight(range:forLine:in:)` drawing pass before selection highlights |
+
+### Test Coverage
+
+| Test Suite | Tests | Status |
+|-----------|-------|--------|
+| FindBridge | 21 | ✅ |
+| FindClientConformance | 1 | ✅ |
+
+### Cumulative Total: 2664 tests in 329 suites
+
+---
+
 ## Architecture Reminder
 
 All code follows the iteration strategy from

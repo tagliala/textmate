@@ -67,6 +67,15 @@ public class EditorView: NSView, @preconcurrency NSTextInputClient, NSMenuItemVa
 	/// Selection ranges as (start, end) pairs of (line, index).
 	public var selectionRanges: [(start: (line: Int, index: Int), end: (line: Int, index: Int))] = []
 
+	/// Highlighted match ranges for find-all (byte ranges in the buffer).
+	/// Drawn with a translucent overlay. Set to empty to clear highlights.
+	public var highlightRanges: [(start: (line: Int, index: Int), end: (line: Int, index: Int))] = [] {
+		didSet { needsDisplay = true }
+	}
+
+	/// The color used to draw find-match highlights.
+	public var highlightColor: NSColor = .findHighlightColor
+
 	/// Whether the caret is currently visible (blink state).
 	private var caretVisible: Bool = true
 
@@ -254,6 +263,15 @@ public class EditorView: NSView, @preconcurrency NSTextInputClient, NSMenuItemVa
 				defaultBackground: layoutManager.backgroundColor.cgColor,
 			)
 
+			// Find highlight
+			for hl in highlightRanges {
+				drawHighlight(
+					range: hl,
+					forLine: line,
+					in: context,
+				)
+			}
+
 			// Selection highlight
 			for sel in selectionRanges {
 				drawSelectionHighlight(
@@ -316,6 +334,44 @@ public class EditorView: NSView, @preconcurrency NSTextInputClient, NSMenuItemVa
 	}
 
 	// MARK: - Drawing Helpers
+
+	private func drawHighlight(
+		range: (start: (line: Int, index: Int), end: (line: Int, index: Int)),
+		forLine line: LayoutLine,
+		in context: CGContext,
+	) {
+		let lineIdx = line.lineIndex
+		guard lineIdx >= range.start.line, lineIdx <= range.end.line else { return }
+
+		let startIdx: Int
+		let endIdx: Int
+
+		if lineIdx == range.start.line, lineIdx == range.end.line {
+			startIdx = range.start.index
+			endIdx = range.end.index
+		} else if lineIdx == range.start.line {
+			startIdx = range.start.index
+			endIdx = line.text.count
+		} else if lineIdx == range.end.line {
+			startIdx = 0
+			endIdx = range.end.index
+		} else {
+			startIdx = 0
+			endIdx = line.text.count
+		}
+
+		let startX = line.offset(forIndex: startIdx) + line.origin.x
+		let endX = line.offset(forIndex: endIdx) + line.origin.x
+		let rect = CGRect(
+			x: startX,
+			y: line.origin.y,
+			width: max(endX - startX, 1),
+			height: line.height,
+		)
+
+		context.setFillColor(highlightColor.cgColor)
+		context.fill(rect)
+	}
 
 	private func drawSelectionHighlight(
 		selection: (start: (line: Int, index: Int), end: (line: Int, index: Int)),

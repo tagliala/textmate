@@ -164,6 +164,24 @@ public extension DocumentWindowController {
 		FindPanelController.shared.showPanel(withSelection: selection)
 	}
 
+	@objc func findNext(_: Any?) {
+		FindPanelController.shared.findNext()
+	}
+
+	@objc func findPrevious(_: Any?) {
+		FindPanelController.shared.findPrevious()
+	}
+
+	@objc func useSelectionForFind(_: Any?) {
+		guard let text = documentEditor?.editor.selectedText, !text.isEmpty else { return }
+		FindPasteboard.shared.findString = text
+	}
+
+	@objc func useSelectionForReplace(_: Any?) {
+		guard let text = documentEditor?.editor.selectedText, !text.isEmpty else { return }
+		FindPasteboard.shared.replaceString = text
+	}
+
 	// MARK: - Go to Line
 
 	@objc func orderFrontGoToLinePanel(_: Any?) {

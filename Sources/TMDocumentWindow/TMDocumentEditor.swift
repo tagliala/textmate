@@ -243,7 +243,7 @@ public final class TMDocumentEditor {
 	// MARK: - Content Sync
 
 	/// Syncs the editor's content to the document and updates the view.
-	private func syncAfterEdit() {
+	func syncAfterEdit() {
 		let text = editor.text
 		document.setContent(text)
 		editorView?.setText(text)
@@ -261,7 +261,7 @@ public final class TMDocumentEditor {
 	}
 
 	/// Updates the view's carets and selection ranges to match the editor state.
-	private func syncSelectionToView() {
+	func syncSelectionToView() {
 		guard let view = editorView else { return }
 
 		let sels = editor.selections.selections
