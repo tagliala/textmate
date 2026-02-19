@@ -278,6 +278,8 @@ public final class FoldManager: @unchecked Sendable {
 		public var isIgnoreLine: Bool = false
 		/// Whether the line is blank/empty.
 		public var isEmpty: Bool = false
+
+		public init() {}
 	}
 
 	/// Compute fold info for a given line.

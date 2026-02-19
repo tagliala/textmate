@@ -597,6 +597,7 @@ public class DocumentWindowController: NSWindowController {
 
 	private func setupEditorContainer() {
 		gutterView.translatesAutoresizingMaskIntoConstraints = false
+		gutterView.delegate = self
 		scrollView.translatesAutoresizingMaskIntoConstraints = false
 
 		editorContainer.addSubview(gutterView)
@@ -622,6 +623,13 @@ public class DocumentWindowController: NSWindowController {
 		let title = textDocument.displayName
 		window?.title = textDocument.isModified ? "● \(title)" : title
 		window?.representedURL = textDocument.path.map { URL(fileURLWithPath: $0) }
+	}
+
+	/// Update the gutter's foldable/folded line sets from the fold manager.
+	func updateGutterFoldState() {
+		guard let de = documentEditor else { return }
+		gutterView.foldableLines = de.foldableLineNumbers()
+		gutterView.foldedLines = de.foldedLineNumbers()
 	}
 
 	/// Sync the tab bar with the current documents array.
@@ -663,6 +671,7 @@ public class DocumentWindowController: NSWindowController {
 
 		updateWindowTitle()
 		watchDocumentFile(doc)
+		updateGutterFoldState()
 	}
 
 	/// Returns the index of a "disposable" document (untitled, empty, unmodified)
@@ -787,6 +796,21 @@ extension DocumentWindowController: NSWindowDelegate {
 extension DocumentWindowController: StatusBarViewDelegate {
 	public func statusBarViewDidToggleMacroRecording(_: StatusBarView) {
 		toggleMacroRecording(nil)
+	}
+}
+
+// MARK: - GutterViewDelegate
+
+extension DocumentWindowController: GutterViewDelegate {
+	public func gutterView(_: GutterView, didToggleBookmarkAtLine _: Int) {
+		// Bookmark state is managed locally by GutterView; nothing to propagate.
+	}
+
+	public func gutterView(_: GutterView, didToggleFoldAtLine line: Int) {
+		// line is 1-based from GutterView; FoldManager uses 0-based.
+		let zeroBasedLine = line - 1
+		documentEditor?.toggleFold(atLine: zeroBasedLine)
+		updateGutterFoldState()
 	}
 }
 

@@ -95,6 +95,60 @@ public final class EditorLayoutManager {
 	/// Called during drawing to retrieve spelling underline data per line.
 	public var misspellingProvider: ((Int) -> [MisspelledRange])?
 
+	/// The fold manager providing fold state for the layout engine.
+	/// When set, folded regions are hidden from the layout.
+	public var foldManager: FoldManager? {
+		didSet { invalidateAllLines() }
+	}
+
+	// MARK: - Fold Queries
+
+	/// The set of hard-line indices that are hidden because they fall inside
+	/// a folded region. Lazily recomputed when folds change.
+	private var _hiddenLines: Set<Int>?
+
+	/// Returns the set of line indices that are hidden by active folds.
+	private var hiddenLines: Set<Int> {
+		if let cached = _hiddenLines { return cached }
+		guard let fm = foldManager else {
+			_hiddenLines = []
+			return []
+		}
+		var hidden = Set<Int>()
+		for range in fm.foldedRanges {
+			// Find the line that contains `range.from` — that line stays visible.
+			// Lines whose start falls within (range.from, range.to] are hidden.
+			let startLine = lineIndex(forByteOffset: range.from)
+			let endLine = lineIndex(forByteOffset: range.to)
+			if endLine > startLine {
+				for l in (startLine + 1) ... endLine {
+					hidden.insert(l)
+				}
+			}
+		}
+		_hiddenLines = hidden
+		return hidden
+	}
+
+	/// Whether the given hard line is hidden by a fold.
+	public func isLineFolded(_ lineIndex: Int) -> Bool {
+		hiddenLines.contains(lineIndex)
+	}
+
+	/// Returns the hard line index for a byte offset (simple linear scan).
+	private func lineIndex(forByteOffset offset: Int) -> Int {
+		// Approximate: each line is terminated by \n (1 byte).
+		var pos = 0
+		for (i, line) in lines.enumerated() {
+			let lineLen = line.utf8.count + 1 // +1 for the newline
+			if pos + lineLen > offset {
+				return i
+			}
+			pos += lineLen
+		}
+		return max(0, lines.count - 1)
+	}
+
 	// MARK: - Init
 
 	/// Creates a layout manager with the given font.
@@ -169,14 +223,16 @@ public final class EditorLayoutManager {
 	public var totalHeight: CGFloat {
 		if let cached = cachedTotalHeight { return cached }
 		var height = margin.top + margin.bottom
+		let hidden = hiddenLines
 		if softWrap {
-			// Sum the actual height of every hard line (may have multiple visual lines).
-			for i in 0 ..< lines.count {
+			// Sum the actual height of every visible hard line.
+			for i in 0 ..< lines.count where !hidden.contains(i) {
 				let laid = layoutLine(i)
 				height += laid.reduce(0) { $0 + $1.height }
 			}
 		} else {
-			height += CGFloat(lines.count) * defaultLineHeight
+			let visibleCount = lines.count - hidden.count
+			height += CGFloat(visibleCount) * defaultLineHeight
 		}
 		cachedTotalHeight = height
 		return height
@@ -205,14 +261,36 @@ public final class EditorLayoutManager {
 			return layoutLinesSoftWrap(in: visibleRect, overscan: overscan)
 		}
 
-		let firstLine = max(0, Int((visibleRect.minY - margin.top) / lineHeight) - overscan)
-		let lastLine = min(lines.count - 1, Int((visibleRect.maxY - margin.top) / lineHeight) + overscan)
-		guard firstLine <= lastLine else { return [] }
+		let hidden = hiddenLines
 
+		if hidden.isEmpty {
+			// Fast path: no folds — use direct indexing.
+			let firstLine = max(0, Int((visibleRect.minY - margin.top) / lineHeight) - overscan)
+			let lastLine = min(lines.count - 1, Int((visibleRect.maxY - margin.top) / lineHeight) + overscan)
+			guard firstLine <= lastLine else { return [] }
+
+			var result: [LayoutLine] = []
+			for lineIdx in firstLine ... lastLine {
+				let laid = layoutLine(lineIdx)
+				result.append(contentsOf: laid)
+			}
+			return result
+		}
+
+		// Fold-aware path: scan from top because y positions depend on hidden lines.
 		var result: [LayoutLine] = []
-		for lineIdx in firstLine ... lastLine {
-			let laid = layoutLine(lineIdx)
-			result.append(contentsOf: laid)
+		var y = margin.top
+		for lineIdx in 0 ..< lines.count {
+			if hidden.contains(lineIdx) { continue }
+			let lineBottom = y + lineHeight
+			if lineBottom >= visibleRect.minY - CGFloat(overscan) * lineHeight,
+			   y <= visibleRect.maxY + CGFloat(overscan) * lineHeight
+			{
+				let laid = layoutLineAtY(lineIdx, y: y)
+				result.append(contentsOf: laid)
+			}
+			if y > visibleRect.maxY + CGFloat(overscan) * lineHeight { break }
+			y = lineBottom
 		}
 		return result
 	}
@@ -224,8 +302,10 @@ public final class EditorLayoutManager {
 		var y = margin.top
 		var firstVisual = -1
 		var visualCount = 0
+		let hidden = hiddenLines
 
 		for lineIdx in 0 ..< lines.count {
+			if hidden.contains(lineIdx) { continue }
 			let laid = layoutLine(lineIdx)
 			let lineBottom = y + laid.reduce(0) { $0 + $1.height }
 
@@ -245,6 +325,41 @@ public final class EditorLayoutManager {
 			y = lineBottom
 		}
 		return result
+	}
+
+	/// Lay out a single hard line at a specific y position (fold-aware variant).
+	private func layoutLineAtY(_ lineIndex: Int, y: CGFloat) -> [LayoutLine] {
+		let text = lineIndex < lines.count ? lines[lineIndex] : ""
+		let lineHeight = defaultLineHeight
+		let runs = styleProvider?(lineIndex, text) ?? []
+		let attrString = createAttributedString(text: text, styleRuns: runs)
+		let ctLine = CTLineCreateWithAttributedString(attrString)
+
+		var tabs: [Int] = []
+		var spaces: [Int] = []
+		for (i, ch) in text.enumerated() {
+			if ch == "\t" { tabs.append(i) }
+			else if ch == " " { spaces.append(i) }
+		}
+
+		var ascent: CGFloat = 0
+		var descent: CGFloat = 0
+		var leading: CGFloat = 0
+		let width = CGFloat(CTLineGetTypographicBounds(ctLine, &ascent, &descent, &leading))
+
+		let layout = LayoutLine(
+			lineIndex: lineIndex,
+			softWrapOffset: 0,
+			origin: CGPoint(x: margin.left, y: y),
+			height: lineHeight,
+			width: width,
+			ctLine: ctLine,
+			styleRuns: runs,
+			text: text,
+			tabLocations: tabs,
+			spaceLocations: spaces,
+		)
+		return [layout]
 	}
 
 	/// Lay out a single hard line, returning one or more LayoutLines
@@ -551,8 +666,19 @@ public final class EditorLayoutManager {
 		}
 		let lineHeight = defaultLineHeight
 		guard lineHeight > 0 else { return 0 }
-		let line = Int((y - margin.top) / lineHeight)
-		return max(0, min(line, lines.count - 1))
+		let hidden = hiddenLines
+		if hidden.isEmpty {
+			let line = Int((y - margin.top) / lineHeight)
+			return max(0, min(line, lines.count - 1))
+		}
+		// Scan through visible lines to find the one at y.
+		var currentY = margin.top
+		for i in 0 ..< lines.count {
+			if hidden.contains(i) { continue }
+			if currentY + lineHeight > y { return i }
+			currentY += lineHeight
+		}
+		return max(0, lines.count - 1)
 	}
 
 	/// Returns the y-coordinate for the top of the given line.
@@ -560,7 +686,16 @@ public final class EditorLayoutManager {
 		if softWrap {
 			return yPositionForSoftWrappedLine(lineIndex)
 		}
-		return yPositionNoWrap(forLine: lineIndex)
+		let hidden = hiddenLines
+		if hidden.isEmpty {
+			return yPositionNoWrap(forLine: lineIndex)
+		}
+		var y = margin.top
+		for i in 0 ..< lineIndex {
+			if hidden.contains(i) { continue }
+			y += defaultLineHeight
+		}
+		return y
 	}
 
 	/// Returns the rect for the given line index.
@@ -706,6 +841,7 @@ public final class EditorLayoutManager {
 		layoutLines.removeAll()
 		dirtyLines = IndexSet(integersIn: 0 ..< max(1, lines.count))
 		cachedTotalHeight = nil
+		_hiddenLines = nil
 	}
 
 	/// Mark a range of lines as needing re-layout.
@@ -715,10 +851,17 @@ public final class EditorLayoutManager {
 			layoutLines.removeValue(forKey: lineIdx)
 		}
 		cachedTotalHeight = nil
+		_hiddenLines = nil
 	}
 
 	/// Mark lines as dirty due to a scope/style change (no text change).
 	public func invalidateStyles(from lineIndex: Int, to endIndex: Int) {
 		invalidateLines(lineIndex ..< endIndex)
+	}
+
+	/// Invalidate fold state, recomputing which lines are hidden.
+	public func invalidateFolds() {
+		_hiddenLines = nil
+		cachedTotalHeight = nil
 	}
 }

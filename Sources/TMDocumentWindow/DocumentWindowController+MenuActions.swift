@@ -145,26 +145,16 @@ public extension DocumentWindowController {
 
 	@objc func toggleCurrentFolding(_: Any?) {
 		guard let caret = editorView.carets.first else { return }
-		let line = caret.line + 1
-		gutterView.toggleFold(atLine: line)
+		let line = caret.line // 0-based
+		documentEditor?.toggleFold(atLine: line)
+		updateGutterFoldState()
 	}
 
 	@objc func takeLevelToFoldFrom(_ sender: Any?) {
 		guard let menuItem = sender as? NSMenuItem else { return }
 		let level = menuItem.tag
-		if level == 0 {
-			// Toggle all foldable lines
-			for line in gutterView.foldableLines {
-				gutterView.toggleFold(atLine: line)
-			}
-		} else {
-			// Fold/unfold lines at a specific nesting level — for now,
-			// treat level as a line number threshold (refined in a future phase
-			// when indentation-based folding is implemented).
-			for line in gutterView.foldableLines {
-				gutterView.toggleFold(atLine: line)
-			}
-		}
+		documentEditor?.toggleAllFolds(atLevel: level)
+		updateGutterFoldState()
 	}
 
 	// MARK: - Find Panel

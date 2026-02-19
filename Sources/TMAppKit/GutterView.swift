@@ -34,7 +34,9 @@ public class GutterView: NSView {
 	}
 
 	/// Lines that are currently folded (collapsed).
-	public private(set) var foldedLines: Set<Int> = []
+	public var foldedLines: Set<Int> = [] {
+		didSet { needsDisplay = true }
+	}
 
 	/// Delegate for gutter interactions.
 	public weak var delegate: GutterViewDelegate?

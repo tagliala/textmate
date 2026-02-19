@@ -1010,6 +1010,37 @@ End-to-end live spell checking pipeline and macro recording menu wiring.
 
 ---
 
+## Phase 47: Code Folding End-to-End Wiring — ✅ COMPLETE
+
+### Summary
+
+Wired the FoldManager engine (built in a prior phase) end-to-end: data source adapter, editor API, layout manager fold-aware rendering, gutter view interaction, and menu actions.
+
+### Key Changes
+
+| File | Changes |
+|------|---------|
+| `Sources/TMDocumentWindow/TextBufferFoldDataSource.swift` | **New** — `FoldDataSource` adapter bridging `TextBuffer` to `FoldManager`; indent-based default fold info; custom `foldInfoProvider` callback |
+| `Sources/TMDocumentWindow/TMDocumentEditor.swift` | Added `foldDataSource`/`foldManager` properties + init wiring; public fold API extension: `toggleFold(atLine:recursive:)`, `toggleAllFolds(atLevel:)`, `foldableLineNumbers()`, `foldedLineNumbers()`, `foldedAsString`, `restoreFolds(from:)` |
+| `Sources/TMEditorUI/EditorLayoutManager.swift` | Added `foldManager` property with `didSet`; `_hiddenLines` lazy cache; dual-path `layoutLines(in:)` (fast path when no folds, fold-aware scan path otherwise); fold-aware `totalHeight`, `yPosition(forLine:)`, `lineIndex(atY:)`, `layoutLinesSoftWrap`; `isLineFolded(_:)`, `invalidateFolds()` |
+| `Sources/TMEditorUI/FoldManager.swift` | Added `public init() {}` to `LineInfo` (cross-module accessibility) |
+| `Sources/TMEditorUI/EditorView.swift` | Made `updateFrameSize()` public |
+| `Sources/TMAppKit/GutterView.swift` | Changed `foldedLines` to public var with `didSet { needsDisplay = true }` |
+| `Sources/TMDocumentWindow/DocumentWindowController.swift` | `GutterViewDelegate` conformance (`didToggleFoldAtLine`); `updateGutterFoldState()` helper; delegate wiring in `setupEditorContainer()`; call in `wireDocumentEditor()` |
+| `Sources/TMDocumentWindow/DocumentWindowController+MenuActions.swift` | Rewrote `toggleCurrentFolding` and `takeLevelToFoldFrom` to use FoldManager |
+
+### Test Coverage
+
+| Test Suite | Tests | Status |
+|-----------|-------|--------|
+| FoldWiringTests | 7 | ✅ |
+| TextBufferFoldDataSourceTests | 7 | ✅ |
+| EditorLayoutManager Folds | 4 | ✅ |
+
+### Cumulative Total: 2642 tests in 327 suites
+
+---
+
 ## Architecture Reminder
 
 All code follows the iteration strategy from

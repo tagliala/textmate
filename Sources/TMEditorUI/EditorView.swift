@@ -197,7 +197,7 @@ public class EditorView: NSView, @preconcurrency NSTextInputClient, NSMenuItemVa
 	}
 
 	/// Update the frame size to match content (for scroll view).
-	private func updateFrameSize() {
+	public func updateFrameSize() {
 		let newSize = NSSize(
 			width: max(layoutManager.totalWidth, enclosingScrollView?.contentSize.width ?? bounds.width),
 			height: max(layoutManager.totalHeight, enclosingScrollView?.contentSize.height ?? bounds.height),

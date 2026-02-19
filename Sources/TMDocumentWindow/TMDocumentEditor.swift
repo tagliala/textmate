@@ -77,6 +77,12 @@ public final class TMDocumentEditor {
 	/// The macro recorder for this editor.
 	public let macroRecorder = MacroRecorder()
 
+	/// The fold data source bridging TextBuffer to FoldManager.
+	private var foldDataSource: TextBufferFoldDataSource?
+
+	/// The code folding manager for this editor.
+	public private(set) var foldManager: FoldManager?
+
 	// MARK: - Init
 
 	/// Creates a document editor.
@@ -119,6 +125,13 @@ public final class TMDocumentEditor {
 		editorView.layoutManager.misspellingProvider = { [weak self] lineIndex in
 			self?.misspellingsForLine(lineIndex) ?? []
 		}
+
+		// Set up code folding.
+		let ds = TextBufferFoldDataSource(buffer: editor.buffer)
+		foldDataSource = ds
+		let fm = FoldManager(dataSource: ds)
+		foldManager = fm
+		editorView.layoutManager.foldManager = fm
 
 		// Restore selection from document metadata if available.
 		if let selectionString = document.selection {
@@ -915,5 +928,71 @@ public extension TMDocumentEditor {
 		}
 		endChangeGrouping()
 		syncAfterEdit()
+	}
+}
+
+// MARK: - Code Folding
+
+public extension TMDocumentEditor {
+	/// Toggle a fold at the given 0-based line index.
+	///
+	/// - Returns: The affected range, or `nil` if nothing changed.
+	@discardableResult
+	func toggleFold(atLine line: Int, recursive: Bool = false) -> (from: Int, to: Int)? {
+		guard let fm = foldManager else { return nil }
+		let result = fm.toggleAtLine(line, recursive: recursive)
+		guard result.from < result.to else { return nil }
+		editorView?.layoutManager.invalidateFolds()
+		editorView?.updateFrameSize()
+		editorView?.needsDisplay = true
+		return result
+	}
+
+	/// Toggle all folds at the given nesting level (0 = all).
+	func toggleAllFolds(atLevel level: Int) {
+		guard let fm = foldManager else { return }
+		_ = fm.toggleAllAtLevel(level)
+		editorView?.layoutManager.invalidateFolds()
+		editorView?.updateFrameSize()
+		editorView?.needsDisplay = true
+	}
+
+	/// Returns the set of 1-based line numbers that have fold markers.
+	func foldableLineNumbers() -> Set<Int> {
+		guard let fm = foldManager else { return [] }
+		var result = Set<Int>()
+		let lineCount = editor.buffer.lines
+		for n in 0 ..< lineCount {
+			if fm.hasStartMarker(line: n) {
+				result.insert(n + 1)
+			}
+		}
+		return result
+	}
+
+	/// Returns the set of 1-based line numbers that are currently folded.
+	func foldedLineNumbers() -> Set<Int> {
+		guard let fm = foldManager else { return [] }
+		var result = Set<Int>()
+		let lineCount = editor.buffer.lines
+		for n in 0 ..< lineCount {
+			if fm.hasFolded(line: n) {
+				result.insert(n + 1)
+			}
+		}
+		return result
+	}
+
+	/// Serialized fold state for session persistence.
+	var foldedAsString: String? {
+		foldManager?.foldedAsString()
+	}
+
+	/// Restore fold state from a serialized string.
+	func restoreFolds(from string: String) {
+		foldManager?.setFolded(fromString: string)
+		editorView?.layoutManager.invalidateFolds()
+		editorView?.updateFrameSize()
+		editorView?.needsDisplay = true
 	}
 }
