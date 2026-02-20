@@ -1,6 +1,6 @@
 # TextMate Swift Rewrite — Session Progress
 
-> Last updated: 2025-07-29
+> Last updated: 2025-07-30
 
 ---
 
@@ -1127,6 +1127,38 @@ Connected the syntax highlighter to the symbol chooser (⌘⇧T) and status bar 
 | PreferenceDefinition (symbol settings) | 2 | ✅ |
 
 ### Cumulative Total: 2680 tests in 331 suites
+
+---
+
+## Phase 51: Grammar-Based Fold Markers — ✅ COMPLETE
+
+### Summary
+
+Wired grammar fold markers (`foldingStartMarker` / `foldingStopMarker`) into the existing code folding infrastructure. Previously, `TextBufferFoldDataSource.foldInfoProvider` was never assigned — all folding was indent-based. Now, when a grammar (or bundle preference) defines fold markers, they are compiled to `NSRegularExpression` and used for per-line fold detection.
+
+### Key Changes
+
+| File | Changes |
+|------|---------|
+| `Sources/TMGrammar/GrammarRegistry.swift` | **New** — `definition(forScope:)` public accessor exposing the private `definitions` dictionary |
+| `Sources/TMDocumentWindow/GrammarFoldProvider.swift` | **New** — Compiles `foldingStartMarker`/`foldingStopMarker` to regex, performs per-line matching. Two-tier lookup: bundle preferences (scope-matched) then grammar definition fallback. Matches C++ `setup_patterns()` + `info_for()` algorithm from `folds.cc` |
+| `Sources/TMDocumentWindow/TMDocumentEditor.swift` | **Modified** — Added `grammarFoldProvider` property; `configureGrammar()` now calls `configureFoldMarkers()` to create and wire the provider into `foldDataSource.foldInfoProvider` |
+| `Tests/TMDocumentWindowTests/GrammarFoldProviderTests.swift` | **New** — 17 tests covering marker detection, indent suppression, empty lines, reconfiguration, bundle preference override, and end-to-end wiring |
+
+### Algorithm (mirrors C++ `folds.cc`)
+
+1. **Two-tier lookup**: Check bundle preferences via `BundleIndex.query(.settings)` with scope matching for `foldingStartMarker`/`foldingStopMarker`; fall back to `GrammarDefinition.foldingStartMarker/foldingStopMarker`
+2. **Per-line matching**: Compile patterns to `NSRegularExpression`, match each line
+3. **Indent suppression**: If `isStartMarker || isStopMarker`, force `isIndentStartMarker = false` (consistent with C++)
+4. **Fallback**: If no fold markers configured, `foldInfoProvider` stays nil → `TextBufferFoldDataSource` uses indent-based detection
+
+### Test Coverage
+
+| Test Suite | Tests | Status |
+|-----------|-------|--------|
+| GrammarFoldProvider | 17 | ✅ |
+
+### Cumulative Total: 2697 tests in 332 suites
 
 ---
 

@@ -83,6 +83,9 @@ public final class TMDocumentEditor {
 	/// The code folding manager for this editor.
 	public private(set) var foldManager: FoldManager?
 
+	/// Grammar-based fold info provider (compiled fold markers).
+	private var grammarFoldProvider: GrammarFoldProvider?
+
 	// MARK: - Init
 
 	/// Creates a document editor.
@@ -346,11 +349,38 @@ public final class TMDocumentEditor {
 		let resolvedScope = scope ?? detectScope()
 		syntaxHighlighter.setGrammar(scope: resolvedScope)
 
+		// Configure grammar-based fold markers.
+		configureFoldMarkers(registry: registry, scope: resolvedScope)
+
 		// Parse the current content.
 		if let text = document.content {
 			syntaxHighlighter.setText(text)
 			syntaxHighlighter.parseSync()
 			editorView?.needsDisplay = true
+		}
+	}
+
+	/// Configures fold markers from grammar definitions and/or bundle
+	/// preferences, mirroring the C++ `setup_patterns()` in folds.cc.
+	private func configureFoldMarkers(registry: GrammarRegistry, scope: String?) {
+		guard let scope, let foldDataSource else { return }
+
+		let provider = GrammarFoldProvider(buffer: editor.buffer)
+		provider.tabSize = editor.tabSize
+		provider.configure(
+			grammarDefinition: registry.definition(forScope: scope),
+			bundleIndex: bundleIndex,
+			scope: scope,
+		)
+
+		if provider.hasPatterns {
+			grammarFoldProvider = provider
+			foldDataSource.foldInfoProvider = { [weak provider] line in
+				provider?.foldInfo(forLine: line) ?? FoldManager.LineInfo()
+			}
+		} else {
+			grammarFoldProvider = nil
+			foldDataSource.foldInfoProvider = nil
 		}
 	}
 

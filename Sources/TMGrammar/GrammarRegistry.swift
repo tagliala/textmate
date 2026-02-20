@@ -200,4 +200,11 @@ public final class GrammarRegistry: @unchecked Sendable {
 		defer { lock.unlock() }
 		return grammars.count
 	}
+
+	/// Returns the registered grammar definition for the given scope, if any.
+	public func definition(forScope scope: String) -> GrammarDefinition? {
+		lock.lock()
+		defer { lock.unlock() }
+		return definitions[scope]
+	}
 }
