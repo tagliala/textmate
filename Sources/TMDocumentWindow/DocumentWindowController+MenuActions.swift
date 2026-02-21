@@ -34,6 +34,20 @@ public extension DocumentWindowController {
 		scrollView.reflectScrolledClipView(clipView)
 	}
 
+	// MARK: - Undo / Redo
+
+	@objc func undo(_: Any?) {
+		guard let de = documentEditor, de.editor.canUndo else { return }
+		de.undo()
+		updateWindowTitle()
+	}
+
+	@objc func redo(_: Any?) {
+		guard let de = documentEditor, de.editor.canRedo else { return }
+		de.redo()
+		updateWindowTitle()
+	}
+
 	// MARK: - Line Numbers
 
 	@objc func toggleLineNumbers(_: Any?) {

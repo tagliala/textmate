@@ -280,7 +280,7 @@ public extension EditorAction {
 		case "selectCurrentScope:":
 			self = .selectScope
 		case "selectBlock:":
-			self = .selectParagraph
+			self = .selectTypingPair
 		case "selectAll:":
 			self = .selectAll
 		// Delete

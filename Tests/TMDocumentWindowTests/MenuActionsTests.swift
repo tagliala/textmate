@@ -321,9 +321,9 @@ struct Phase40SelectorMappingTests {
 		#expect(EditorAction(selector: "selectCurrentScope:") == .selectScope)
 	}
 
-	@Test("selectBlock: maps to .selectParagraph")
+	@Test("selectBlock: maps to .selectTypingPair")
 	func selectBlock() {
-		#expect(EditorAction(selector: "selectBlock:") == .selectParagraph)
+		#expect(EditorAction(selector: "selectBlock:") == .selectTypingPair)
 	}
 
 	@Test("changeCaseOfWord: maps to .changeCaseOfWord")
@@ -441,5 +441,49 @@ struct DirtyDotTests {
 		controller.textDocument.markSaved()
 		controller.updateWindowTitle()
 		#expect(win.isDocumentEdited == false)
+	}
+}
+
+// MARK: - Undo / Redo Menu Wiring
+
+@Suite("Undo / Redo menu wiring")
+@MainActor
+struct UndoRedoMenuTests {
+	@Test("undo action does not crash with no editor")
+	func undoNoCrash() {
+		let controller = DocumentWindowController()
+		controller.undo(nil) // should be safe even with nil documentEditor
+	}
+
+	@Test("redo action does not crash with no editor")
+	func redoNoCrash() {
+		let controller = DocumentWindowController()
+		controller.redo(nil)
+	}
+
+	@Test("validateMenuItem disables undo when nothing to undo")
+	func undoDisabledWhenEmpty() {
+		let controller = DocumentWindowController()
+		let item = NSMenuItem(title: "Undo", action: NSSelectorFromString("undo:"), keyEquivalent: "")
+		#expect(controller.validateMenuItem(item) == false)
+	}
+
+	@Test("validateMenuItem disables redo when nothing to redo")
+	func redoDisabledWhenEmpty() {
+		let controller = DocumentWindowController()
+		let item = NSMenuItem(title: "Redo", action: NSSelectorFromString("redo:"), keyEquivalent: "")
+		#expect(controller.validateMenuItem(item) == false)
+	}
+}
+
+// MARK: - selectBlock Mapping
+
+@Suite("selectBlock: selector mapping")
+@MainActor
+struct SelectBlockMappingTests {
+	@Test("selectBlock maps to selectTypingPair not selectParagraph")
+	func selectBlockMapsToTypingPair() {
+		let action = EditorAction(selector: "selectBlock:")
+		#expect(action == .selectTypingPair)
 	}
 }

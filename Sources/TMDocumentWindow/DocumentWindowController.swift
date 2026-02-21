@@ -430,6 +430,10 @@ public class DocumentWindowController: NSWindowController {
 			return true
 		case NSSelectorFromString("replayMacro:"):
 			return documentEditor?.macroRecorder.lastMacro != nil
+		case NSSelectorFromString("undo:"):
+			return documentEditor?.editor.canUndo ?? false
+		case NSSelectorFromString("redo:"):
+			return documentEditor?.editor.canRedo ?? false
 		default:
 			break
 		}
