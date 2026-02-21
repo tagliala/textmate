@@ -53,6 +53,10 @@ public final class TMDocumentEditor {
 	/// Set by the window controller to route through the command pipeline.
 	public var onExecuteBundleCommand: ((BundleCommand) async -> Void)?
 
+	/// Callback fired after each text-modifying edit (insertions, deletions, etc.).
+	/// Used by the window controller to forward change events to the auto-refresh scheduler.
+	public var onContentChanged: (() -> Void)?
+
 	/// Whether auto-pairing (smart typing pairs) is enabled.
 	public var autoPairingEnabled: Bool = true
 
@@ -297,6 +301,8 @@ public final class TMDocumentEditor {
 		invalidateSpellCheckCache()
 
 		syncSelectionToView()
+
+		onContentChanged?()
 	}
 
 	/// Updates the view's carets and selection ranges to match the editor state.

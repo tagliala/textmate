@@ -95,6 +95,9 @@ public class DocumentWindowController: NSWindowController {
 	/// Command dispatcher for executing bundle commands (injected from app layer).
 	public var commandDispatcher: CommandDispatcher?
 
+	/// Scheduler for auto-refresh commands (re-executes on save, change, close).
+	public var autoRefreshScheduler: AutoRefreshScheduler?
+
 	/// Registry of all active window controllers, keyed by identifier.
 	public nonisolated(unsafe) static var allControllers: [UUID: DocumentWindowController] = [:]
 
@@ -257,6 +260,7 @@ public class DocumentWindowController: NSWindowController {
 			do {
 				try await textDocument.save()
 				updateWindowTitle()
+				autoRefreshScheduler?.documentDidSave()
 			} catch {
 				let alert = NSAlert(error: error)
 				alert.runModal()
@@ -284,6 +288,7 @@ public class DocumentWindowController: NSWindowController {
 				try await textDocument.save()
 				window?.title = textDocument.displayName
 				updateWindowTitle()
+				autoRefreshScheduler?.documentDidSave()
 			} catch {
 				let alert = NSAlert(error: error)
 				alert.runModal()
@@ -678,11 +683,19 @@ public class DocumentWindowController: NSWindowController {
 		documentEditor?.bundleIndex = bundleIndex
 
 		if let dispatcher = commandDispatcher {
+			let scheduler = AutoRefreshScheduler(dispatcher: dispatcher)
+			autoRefreshScheduler = scheduler
+
 			documentEditor?.onExecuteBundleCommand = { [weak self, weak dispatcher] command in
 				guard let self, let dispatcher else { return }
 				dispatcher.delegate = self
 				await dispatcher.execute(command: command)
+				autoRefreshScheduler?.register(command: command)
 			}
+		}
+
+		documentEditor?.onContentChanged = { [weak self] in
+			self?.autoRefreshScheduler?.documentDidChange()
 		}
 
 		// Configure syntax highlighting if a grammar registry is available.
@@ -815,6 +828,10 @@ extension DocumentWindowController: NSWindowDelegate {
 	public func windowWillClose(_: Notification) {
 		// Save session before the window disappears.
 		Self.scheduleSessionBackup()
+
+		// Fire auto-refresh close triggers before tearing down.
+		autoRefreshScheduler?.documentDidClose()
+		autoRefreshScheduler?.unregisterAll()
 
 		// Stop watching files.
 		fileWatcher?.unwatchAll()

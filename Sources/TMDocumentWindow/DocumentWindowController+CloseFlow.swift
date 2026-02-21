@@ -143,6 +143,7 @@ public extension DocumentWindowController {
 			do {
 				try await document.save()
 				self.updateWindowTitle()
+				self.autoRefreshScheduler?.documentDidSave()
 				self.saveDocumentsIteratively(documents, index: index + 1, completion: completion)
 			} catch {
 				let alert = NSAlert()

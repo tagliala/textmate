@@ -1,5 +1,6 @@
 import AppKit
 import Testing
+import TMBundleRuntime
 @testable import TMDocumentManager
 @testable import TMDocumentWindow
 @testable import TMEditorUI
@@ -140,5 +141,81 @@ struct DocumentEditorReloadTests {
 		editor.reloadFromDocument()
 
 		#expect(editor.editor.text == "updated externally")
+	}
+}
+
+// MARK: - Auto-Refresh Scheduler Wiring
+
+@Suite("DocumentWindowController – Auto-Refresh Wiring")
+@MainActor
+struct AutoRefreshWiringTests {
+	private func makeController() -> DocumentWindowController {
+		let doc = TMDocument()
+		doc.setContent("hello", preserveRevision: true)
+		let controller = DocumentWindowController(document: doc)
+		let index = BundleIndex()
+		let policy = SecurityPolicy()
+		controller.bundleIndex = index
+		controller.commandDispatcher = CommandDispatcher(bundleIndex: index, securityPolicy: policy)
+		controller.wireDocumentEditor()
+		return controller
+	}
+
+	@Test("wireDocumentEditor creates autoRefreshScheduler")
+	func schedulerCreated() {
+		let controller = makeController()
+		#expect(controller.autoRefreshScheduler != nil)
+	}
+
+	@Test("autoRefreshScheduler is nil without commandDispatcher")
+	func noSchedulerWithoutDispatcher() {
+		let doc = TMDocument()
+		doc.setContent("", preserveRevision: true)
+		let controller = DocumentWindowController(document: doc)
+		// No commandDispatcher set.
+		controller.wireDocumentEditor()
+		#expect(controller.autoRefreshScheduler == nil)
+	}
+
+	@Test("onContentChanged is wired to editor")
+	func contentChangedWired() {
+		let controller = makeController()
+		#expect(controller.documentEditor?.onContentChanged != nil)
+	}
+
+	@Test("windowWillClose calls unregisterAll")
+	func closeUnregisters() throws {
+		let controller = makeController()
+		let scheduler = try #require(controller.autoRefreshScheduler)
+		let cmd = BundleCommand(
+			name: "Test",
+			uuid: "auto-1",
+			command: "echo",
+			autoRefresh: .onDocumentSave,
+		)
+		scheduler.register(command: cmd)
+		#expect(scheduler.registeredCount == 1)
+
+		controller.windowWillClose(
+			Notification(name: NSWindow.willCloseNotification, object: controller.window),
+		)
+		#expect(scheduler.registeredCount == 0)
+	}
+
+	@Test("editor content change forwards to scheduler")
+	func contentChangeForwards() {
+		let controller = makeController()
+		// Register a command that triggers on document change.
+		let cmd = BundleCommand(
+			name: "OnChange",
+			uuid: "auto-change-1",
+			command: "echo changed",
+			autoRefresh: .onDocumentChange,
+		)
+		controller.autoRefreshScheduler?.register(command: cmd)
+		#expect(controller.autoRefreshScheduler?.registeredCount == 1)
+
+		// Trigger a content change — just verify it doesn't crash.
+		controller.documentEditor?.onContentChanged?()
 	}
 }
