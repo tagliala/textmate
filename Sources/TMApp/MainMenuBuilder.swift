@@ -410,6 +410,14 @@ enum MainMenuBuilder {
 		)
 		tabSizeItem.submenu = tabSizeMenu
 
+		// Theme submenu (populated dynamically by AppDelegate)
+		let themeMenu = NSMenu(title: String(localized: "Theme", comment: "View menu submenu"))
+		let themeItem = menu.addItem(
+			title: String(localized: "Theme", comment: "View menu item"),
+			action: nil,
+		)
+		themeItem.submenu = themeMenu
+
 		menu.addItem(.separator())
 
 		// Fold Current Block

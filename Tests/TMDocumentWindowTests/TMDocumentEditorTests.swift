@@ -6,6 +6,7 @@ import TMCore
 import TMDocumentManager
 import TMEditor
 import TMEditorUI
+import TMTheme
 @testable import TMDocumentWindow
 
 // MARK: - TMDocumentEditor Tests
@@ -797,5 +798,81 @@ struct SpellMacroValidationTests {
 		)
 		let enabled = controller.validateMenuItem(item)
 		#expect(enabled == false)
+	}
+}
+
+// MARK: - Theme Live Reload Tests
+
+@Suite("DocumentWindowController — Theme Live Reload")
+@MainActor
+struct ThemeLiveReloadTests {
+	private func makeTheme(
+		foreground: ThemeColor = ThemeColor(red: 0, green: 0, blue: 0),
+		background: ThemeColor = ThemeColor(red: 1, green: 1, blue: 1),
+		caret: ThemeColor? = nil,
+		selection: ThemeColor? = nil,
+	) -> Theme {
+		Theme(
+			name: "Test",
+			semanticClass: "theme.light.test",
+			uuid: "00000000-0000-0000-0000-000000000001",
+			globalSettings: ThemeGlobalSettings(
+				foreground: foreground,
+				background: background,
+				caret: caret ?? foreground,
+				selection: selection ?? ThemeColor(red: 0.8, green: 0.8, blue: 1),
+			),
+			gutterSettings: ThemeGutterSettings(),
+			rules: [],
+		)
+	}
+
+	@Test("applyTheme sets themeEngine")
+	func applyThemeSetsEngine() {
+		let wc = DocumentWindowController()
+		#expect(wc.themeEngine == nil)
+
+		let theme = makeTheme()
+		wc.applyTheme(theme)
+
+		#expect(wc.themeEngine != nil)
+	}
+
+	@Test("applyTheme updates editor background color")
+	func applyThemeUpdatesBackground() {
+		let wc = DocumentWindowController()
+		let theme = makeTheme(background: ThemeColor(red: 0.2, green: 0.3, blue: 0.4))
+		wc.applyTheme(theme)
+
+		let bg = wc.editorView.layoutManager.backgroundColor
+		#expect(abs(bg.redComponent - 0.2) < 0.01)
+		#expect(abs(bg.greenComponent - 0.3) < 0.01)
+		#expect(abs(bg.blueComponent - 0.4) < 0.01)
+	}
+
+	@Test("applyTheme replaces themeEngine on subsequent call")
+	func applyThemeReplacesEngine() {
+		let wc = DocumentWindowController()
+
+		let theme1 = makeTheme(foreground: ThemeColor(red: 1, green: 0, blue: 0))
+		wc.applyTheme(theme1)
+		let engine1 = wc.themeEngine
+
+		let theme2 = makeTheme(foreground: ThemeColor(red: 0, green: 1, blue: 0))
+		wc.applyTheme(theme2)
+		let engine2 = wc.themeEngine
+
+		#expect(engine1 !== engine2)
+	}
+
+	@Test("applyTheme updates caret color")
+	func applyThemeUpdatesCaretColor() {
+		let wc = DocumentWindowController()
+		let theme = makeTheme(caret: ThemeColor(red: 1, green: 0, blue: 0))
+		wc.applyTheme(theme)
+
+		let caret = wc.editorView.caretColor
+		#expect(caret.redComponent > 0.9)
+		#expect(caret.greenComponent < 0.1)
 	}
 }

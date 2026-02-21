@@ -37,6 +37,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency BundleMenuAc
 	/// The currently loaded theme, applied to every new window.
 	private var currentTheme: Theme?
 
+	/// UUID of the selected theme, persisted in UserDefaults.
+	private static let themeUUIDKey = "selectedThemeUUID"
+
 	/// Custom key bindings loaded from `KeyBindings.dict`.
 	private var keyBindings: [KeyBindingsLoader.KeyBinding] = []
 
@@ -87,6 +90,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency BundleMenuAc
 		if let mainMenu = NSApp.mainMenu {
 			bundleSystem.installBundlesMenu(in: mainMenu)
 		}
+		populateThemeMenu()
+		restorePersistedTheme()
 	}
 
 	// MARK: - Bundle Item Execution (Responder Chain)
@@ -129,6 +134,67 @@ class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency BundleMenuAc
 		if let theme = currentTheme {
 			controller.applyTheme(theme)
 		}
+	}
+
+	/// Apply the current theme to all open windows.
+	private func applyThemeToAllWindows() {
+		for controller in DocumentWindowController.allControllers.values {
+			applyTheme(to: controller)
+		}
+	}
+
+	/// Populate the View > Theme submenu from bundle index.
+	private func populateThemeMenu() {
+		guard let mainMenu = NSApp.mainMenu,
+		      let viewMenu = mainMenu.item(withTitle: "View")?.submenu,
+		      let themeItem = viewMenu.item(withTitle: "Theme"),
+		      let themeMenu = themeItem.submenu
+		else { return }
+
+		themeMenu.removeAllItems()
+
+		let themeItems = bundleSystem.bundleIndex
+			.query(BundleQuery(kinds: .theme))
+			.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+
+		for item in themeItems {
+			let menuItem = NSMenuItem(
+				title: item.name,
+				action: #selector(selectTheme(_:)),
+				keyEquivalent: "",
+			)
+			menuItem.target = self
+			menuItem.representedObject = item.uuid
+			themeMenu.addItem(menuItem)
+		}
+	}
+
+	/// Handle theme selection from the View > Theme menu.
+	@objc func selectTheme(_ sender: NSMenuItem) {
+		guard let uuid = sender.representedObject as? String else { return }
+		loadAndApplyTheme(uuid: uuid)
+	}
+
+	/// Load a theme by UUID from the bundle index and apply to all windows.
+	private func loadAndApplyTheme(uuid: String) {
+		guard let item = bundleSystem.bundleIndex.lookup(uuid: uuid),
+		      let path = item.paths.first
+		else { return }
+
+		do {
+			let theme = try ThemeLoader.load(from: URL(fileURLWithPath: path))
+			currentTheme = theme
+			UserDefaults.standard.set(uuid, forKey: Self.themeUUIDKey)
+			applyThemeToAllWindows()
+		} catch {
+			NSLog("Failed to load theme \(uuid): \(error)")
+		}
+	}
+
+	/// Try to restore the persisted theme selection from UserDefaults.
+	private func restorePersistedTheme() {
+		guard let uuid = UserDefaults.standard.string(forKey: Self.themeUUIDKey) else { return }
+		loadAndApplyTheme(uuid: uuid)
 	}
 
 	// MARK: - Key Bindings

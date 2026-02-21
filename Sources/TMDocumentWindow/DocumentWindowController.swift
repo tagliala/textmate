@@ -200,6 +200,12 @@ public class DocumentWindowController: NSWindowController {
 		gutterView.backgroundColor = gs.background.nsColor
 		gutterView.selectedForegroundColor = gs.selectionForeground.nsColor
 		gutterView.selectedBackgroundColor = gs.selectionBackground.nsColor
+
+		// Update syntax highlighting theme engine for live reload.
+		let engine = ThemeEngine(theme: theme)
+		themeEngine = engine
+		documentEditor?.syntaxHighlighter.setThemeEngine(engine)
+		editorView.layoutManager.invalidateAllLines()
 	}
 
 	/// Set the project root for the file browser.

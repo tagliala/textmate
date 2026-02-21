@@ -128,6 +128,18 @@ struct MainMenuBuilderTests {
 		#expect(tags == Array(0 ... 9))
 	}
 
+	@Test("View menu has Theme submenu placeholder")
+	func themeSubmenu() throws {
+		let menu = MainMenuBuilder.buildMainMenu()
+		let viewMenu = try #require(menu.items[3].submenu)
+		let themeItem = viewMenu.items.first {
+			$0.submenu?.title == String(localized: "Theme", comment: "View menu submenu")
+		}
+		#expect(themeItem != nil)
+		// Submenu is initially empty (populated dynamically by AppDelegate).
+		#expect(themeItem?.submenu?.items.isEmpty == true)
+	}
+
 	// MARK: - Window Menu
 
 	@Test("Window menu has ⌘1-⌘8 tab shortcuts and ⌘9 for last tab")
