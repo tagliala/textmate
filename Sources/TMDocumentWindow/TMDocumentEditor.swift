@@ -660,7 +660,16 @@ extension TMDocumentEditor: EditorViewDelegate {
 			return true
 		}
 
-		// For commands, the execution pipeline handles it. Signal that we matched.
+		// For commands, parse the plist and dispatch through the execution pipeline.
+		if let onExecuteBundleCommand {
+			let parser = BundleCommandParser()
+			if var cmd = parser.parse(item: item) {
+				cmd.fixShebang()
+				Task { @MainActor in
+					await onExecuteBundleCommand(cmd)
+				}
+			}
+		}
 		return true
 	}
 
@@ -937,19 +946,38 @@ extension TMDocumentEditor {
 		))
 		guard let item = matches.first else { return false }
 
-		// Extract snippet content from the bundle item's plist.
-		guard item.kind.contains(.snippet),
-		      let content = item.plist?["content"] as? String
-		else { return false }
+		// Handle snippets: extract content and expand inline.
+		if item.kind.contains(.snippet),
+		   let content = item.plist?["content"] as? String
+		{
+			// Select the trigger text so insertText will replace it.
+			let startPos = editor.buffer.convert(offset: startOffset)
+			let endPos = editor.buffer.convert(offset: caretOffset)
+			editor.selections = SelectionState([TMCore.TextRange(anchor: startPos, head: endPos)])
 
-		// Select the trigger text so insertText will replace it.
-		let startPos = editor.buffer.convert(offset: startOffset)
-		let endPos = editor.buffer.convert(offset: caretOffset)
-		editor.selections = SelectionState([TMCore.TextRange(anchor: startPos, head: endPos)])
+			// Insert the snippet with full expansion.
+			insertSnippetWithExpansion(content)
+			return true
+		}
 
-		// Insert the snippet with full expansion.
-		insertSnippetWithExpansion(content)
-		return true
+		// Handle commands: parse plist and dispatch.
+		if let onExecuteBundleCommand {
+			let parser = BundleCommandParser()
+			if var cmd = parser.parse(item: item) {
+				cmd.fixShebang()
+				// Select the trigger text so it can be used as input / replaced by output.
+				let startPos = editor.buffer.convert(offset: startOffset)
+				let endPos = editor.buffer.convert(offset: caretOffset)
+				editor.selections = SelectionState([TMCore.TextRange(anchor: startPos, head: endPos)])
+
+				Task { @MainActor in
+					await onExecuteBundleCommand(cmd)
+				}
+				return true
+			}
+		}
+
+		return false
 	}
 
 	/// Parses a snippet body and inserts it with full tab-stop support.

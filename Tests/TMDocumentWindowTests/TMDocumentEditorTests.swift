@@ -1189,3 +1189,216 @@ struct FileDropTests {
 		#expect(docEditor.editor.text == "hello")
 	}
 }
+
+// MARK: - Command Dispatch via Tab Trigger and Key Equivalent
+
+@Suite("TMDocumentEditor — Command Dispatch")
+@MainActor
+struct CommandDispatchTests {
+	private func makeEditor(text: String) -> TMDocumentEditor {
+		let doc = TMDocument()
+		doc.setContent(text, preserveRevision: true)
+		let view = EditorView(frame: NSRect(x: 0, y: 0, width: 400, height: 300))
+		return TMDocumentEditor(document: doc, editorView: view)
+	}
+
+	@Test("expandTabTrigger dispatches command item via callback")
+	func tabTriggerDispatchesCommand() async {
+		let editor = makeEditor(text: "greet")
+		let index = BundleIndex()
+		let item = BundleItem(
+			uuid: "cmd-1",
+			name: "Greet Command",
+			kind: .command,
+			bundleUUID: "b1",
+			tabTrigger: "greet",
+			plist: ["command": "echo hello", "input": "none", "output": "discard"],
+		)
+		index.setIndex(items: [item], bundles: [])
+		editor.bundleIndex = index
+		editor.editor.perform(.moveToEndOfDocument)
+
+		var receivedCommand: BundleCommand?
+		editor.onExecuteBundleCommand = { cmd in
+			receivedCommand = cmd
+		}
+
+		let result = editor.expandTabTrigger()
+		#expect(result == true)
+
+		// Allow the Task to execute.
+		try? await Task.sleep(for: .milliseconds(50))
+		#expect(receivedCommand != nil)
+		#expect(receivedCommand?.name == "Greet Command")
+		#expect(receivedCommand?.command.contains("echo hello") == true)
+	}
+
+	@Test("expandTabTrigger selects trigger text before dispatching command")
+	func tabTriggerSelectsTriggerForCommand() async {
+		let editor = makeEditor(text: "run")
+		let index = BundleIndex()
+		let item = BundleItem(
+			uuid: "cmd-2",
+			name: "Run",
+			kind: .command,
+			bundleUUID: "b1",
+			tabTrigger: "run",
+			plist: ["command": "echo run", "input": "selection", "output": "replaceInput"],
+		)
+		index.setIndex(items: [item], bundles: [])
+		editor.bundleIndex = index
+		editor.editor.perform(.moveToEndOfDocument)
+
+		var receivedCommand: BundleCommand?
+		editor.onExecuteBundleCommand = { cmd in
+			receivedCommand = cmd
+		}
+
+		_ = editor.expandTabTrigger()
+		try? await Task.sleep(for: .milliseconds(50))
+
+		#expect(receivedCommand != nil)
+		// The trigger text "run" should be selected (anchor..head covers it).
+		let sel = editor.editor.selections.primary
+		#expect(sel != nil)
+	}
+
+	@Test("expandTabTrigger still expands snippets correctly")
+	func tabTriggerSnippetStillWorks() {
+		let editor = makeEditor(text: "fun")
+		let index = BundleIndex()
+		let item = BundleItem(
+			uuid: "snip-1",
+			name: "Function Snippet",
+			kind: .snippet,
+			bundleUUID: "b1",
+			tabTrigger: "fun",
+			plist: ["content": "function $0() {}"],
+		)
+		index.setIndex(items: [item], bundles: [])
+		editor.bundleIndex = index
+		editor.editor.perform(.moveToEndOfDocument)
+
+		let result = editor.expandTabTrigger()
+		#expect(result == true)
+		#expect(editor.editor.text.hasPrefix("function "))
+	}
+
+	@Test("expandTabTrigger returns false when callback missing for command")
+	func tabTriggerReturnsFalseWithoutCallback() {
+		let editor = makeEditor(text: "greet")
+		let index = BundleIndex()
+		let item = BundleItem(
+			uuid: "cmd-3",
+			name: "Greet",
+			kind: .command,
+			bundleUUID: "b1",
+			tabTrigger: "greet",
+			plist: ["command": "echo hi", "input": "none", "output": "discard"],
+		)
+		index.setIndex(items: [item], bundles: [])
+		editor.bundleIndex = index
+		editor.editor.perform(.moveToEndOfDocument)
+
+		// No onExecuteBundleCommand set
+		let result = editor.expandTabTrigger()
+		#expect(result == false)
+	}
+
+	@Test("performKeyEquivalent dispatches command item")
+	func keyEquivDispatchesCommand() async throws {
+		let editor = makeEditor(text: "")
+		let index = BundleIndex()
+		let item = BundleItem(
+			uuid: "cmd-ke-1",
+			name: "Build Command",
+			kind: .command,
+			bundleUUID: "b1",
+			keyEquivalent: "@b",
+			plist: ["command": "make build", "input": "none", "output": "discard"],
+		)
+		index.setIndex(items: [item], bundles: [])
+		editor.bundleIndex = index
+
+		var receivedCommand: BundleCommand?
+		editor.onExecuteBundleCommand = { cmd in
+			receivedCommand = cmd
+		}
+
+		// Simulate the key equivalent match by calling performKeyEquivalent
+		// with an event matching "@b" (Cmd+B).
+		let event = try #require(NSEvent.keyEvent(
+			with: .keyDown,
+			location: .zero,
+			modifierFlags: [.command],
+			timestamp: 0,
+			windowNumber: 0,
+			context: nil,
+			characters: "b",
+			charactersIgnoringModifiers: "b",
+			isARepeat: false,
+			keyCode: 11,
+		))
+		let view = try #require(editor.editorView)
+		let result = editor.editorView(view, performKeyEquivalent: event)
+		#expect(result == true)
+
+		try? await Task.sleep(for: .milliseconds(50))
+		#expect(receivedCommand != nil)
+		#expect(receivedCommand?.name == "Build Command")
+		#expect(receivedCommand?.command.contains("make build") == true)
+	}
+
+	@Test("performKeyEquivalent handles snippet item via key equiv")
+	func keyEquivExpandsSnippet() throws {
+		let editor = makeEditor(text: "")
+		let index = BundleIndex()
+		let item = BundleItem(
+			uuid: "snip-ke-1",
+			name: "Snippet via KeyEquiv",
+			kind: .snippet,
+			bundleUUID: "b1",
+			keyEquivalent: "@s",
+			plist: ["content": "snippet_text"],
+		)
+		index.setIndex(items: [item], bundles: [])
+		editor.bundleIndex = index
+
+		let event = try #require(NSEvent.keyEvent(
+			with: .keyDown,
+			location: .zero,
+			modifierFlags: [.command],
+			timestamp: 0,
+			windowNumber: 0,
+			context: nil,
+			characters: "s",
+			charactersIgnoringModifiers: "s",
+			isARepeat: false,
+			keyCode: 1,
+		))
+		let view = try #require(editor.editorView)
+		let result = editor.editorView(view, performKeyEquivalent: event)
+		#expect(result == true)
+		#expect(editor.editor.text == "snippet_text")
+	}
+
+	@Test("performKeyEquivalent returns false without bundle index")
+	func keyEquivReturnsFalseWithoutIndex() throws {
+		let editor = makeEditor(text: "")
+		let event = try #require(NSEvent.keyEvent(
+			with: .keyDown,
+			location: .zero,
+			modifierFlags: [.command],
+			timestamp: 0,
+			windowNumber: 0,
+			context: nil,
+			characters: "b",
+			charactersIgnoringModifiers: "b",
+			isARepeat: false,
+			keyCode: 11,
+		))
+		let view = try #require(editor.editorView)
+		let result = editor.editorView(view, performKeyEquivalent: event)
+		#expect(result == false)
+	}
+}
