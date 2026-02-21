@@ -191,6 +191,7 @@ let package = Package(
 				"TMTheme",
 				"TMAppKit",
 				"TMCompatibility",
+				"TMDocumentManager",
 				"TMDocumentWindow",
 				"TMPreferences",
 				"TMBundleRuntime",

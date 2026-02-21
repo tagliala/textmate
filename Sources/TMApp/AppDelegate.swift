@@ -2,6 +2,7 @@ import AppKit
 import TMBundleRuntime
 import TMBundleUI
 import TMCompatibility
+import TMDocumentManager
 import TMDocumentWindow
 import TMFilterList
 import TMPreferences
@@ -54,6 +55,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency BundleMenuAc
 	/// The bundle system: loader, index, menu builder, command dispatch.
 	private let bundleSystem = BundleSystemController()
 
+	/// Auto-backup manager for crash recovery.
+	private var backupManager: DocumentBackupManager {
+		DocumentBackupManager.shared
+	}
+
 	// MARK: - Application Lifecycle
 
 	func applicationDidFinishLaunching(_: Notification) {
@@ -62,7 +68,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency BundleMenuAc
 		loadKeyBindings()
 		loadBundles()
 		startRMateServer()
+		recoverBackupsIfNeeded()
 		restoreWindowState() ?? newDocument(nil)
+		backupManager.start()
 	}
 
 	func applicationShouldTerminate(_: NSApplication) -> NSApplication.TerminateReply {
@@ -71,6 +79,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency BundleMenuAc
 
 	func applicationWillTerminate(_: Notification) {
 		rmateServer?.stop()
+		backupManager.stop()
+		backupManager.backupAllModifiedDocuments()
 		saveWindowState()
 		if let monitor = keyEventMonitor {
 			NSEvent.removeMonitor(monitor)
@@ -79,6 +89,42 @@ class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency BundleMenuAc
 
 	func applicationShouldTerminateAfterLastWindowClosed(_: NSApplication) -> Bool {
 		false
+	}
+
+	// MARK: - Crash Recovery
+
+	/// Check for backed-up documents from a previous crash and offer recovery.
+	private func recoverBackupsIfNeeded() {
+		guard backupManager.hasRecoverableDocuments else { return }
+
+		let records = backupManager.recoverableDocuments
+		let alert = NSAlert()
+		alert.messageText = String(
+			localized: "Recover unsaved documents?",
+			comment: "Crash recovery dialog",
+		)
+		alert.informativeText = String(
+			localized: "\(records.count) unsaved document(s) from a previous session were found.",
+			comment: "Crash recovery dialog",
+		)
+		alert.addButton(withTitle: String(localized: "Recover", comment: "Crash recovery button"))
+		alert.addButton(withTitle: String(localized: "Discard", comment: "Crash recovery button"))
+
+		let response = alert.runModal()
+		if response == .alertFirstButtonReturn {
+			if let recovered = try? backupManager.recoverAll() {
+				for doc in recovered {
+					let controller = DocumentWindowController(document: doc)
+					controller.bundleIndex = bundleSystem.bundleIndex
+					controller.commandDispatcher = bundleSystem.commandDispatcher
+					applyTheme(to: controller)
+					windowControllers.append(controller)
+					controller.showWindow(nil)
+				}
+			}
+		} else {
+			try? backupManager.discardAll()
+		}
 	}
 
 	func applicationDidBecomeActive(_: Notification) {

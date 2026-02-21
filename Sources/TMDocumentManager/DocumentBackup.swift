@@ -82,6 +82,9 @@ public struct BackupManifest: Codable, Sendable, Equatable {
 /// for recovery.
 @MainActor
 public final class DocumentBackupManager {
+	/// Shared singleton instance.
+	public static let shared = DocumentBackupManager()
+
 	/// Default backup directory.
 	public static let defaultBackupDirectory: URL = {
 		let appSupport = FileManager.default.urls(

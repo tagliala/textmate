@@ -261,6 +261,7 @@ public class DocumentWindowController: NSWindowController {
 				try await textDocument.save()
 				updateWindowTitle()
 				autoRefreshScheduler?.documentDidSave()
+				DocumentBackupManager.shared.removeBackup(for: textDocument)
 			} catch {
 				let alert = NSAlert(error: error)
 				alert.runModal()
@@ -290,6 +291,7 @@ public class DocumentWindowController: NSWindowController {
 				window?.title = textDocument.displayName
 				updateWindowTitle()
 				autoRefreshScheduler?.documentDidSave()
+				DocumentBackupManager.shared.removeBackup(for: textDocument)
 			} catch {
 				let alert = NSAlert(error: error)
 				alert.runModal()
