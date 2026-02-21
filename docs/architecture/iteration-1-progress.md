@@ -1,6 +1,6 @@
 # TextMate Swift Rewrite — Session Progress
 
-> Last updated: 2025-07-30
+> Last updated: 2025-07-31
 
 ---
 
@@ -1232,6 +1232,117 @@ Added a Theme submenu to the View menu, populated dynamically from BundleIndex t
 | ThemeLiveReloadTests | 4 | ✅ |
 
 ### Cumulative Total: 2722 tests in 336 suites
+
+---
+
+## Phase 55: Critical App Lifecycle Wiring — ✅ COMPLETE
+
+### Summary
+
+Wired essential application lifecycle features: `applicationShouldTerminate` with dirty-document save prompts, `txmt://` URL scheme handler for opening files at line/column, RMateServer auto-start on launch, and `:line` navigation in the file chooser.
+
+### Key Changes
+
+| File | Changes |
+|------|---------|
+| `Sources/TMApp/AppDelegate.swift` | `applicationShouldTerminate` iterates all windows, prompts save for dirty docs; `application(_:open:)` handles `txmt://open?url=&line=&column=` URLs; `applicationDidFinishLaunching` starts RMateServer |
+| `Sources/TMDocumentWindow/DocumentWindowController+Choosers.swift` | File chooser "Go" handler now parses `:line[:column]` suffix from selection string and navigates after opening |
+
+### Test Coverage
+
+| Test Suite | Tests | Status |
+|-----------|-------|--------|
+| TxmtURLHandler | 5 | ✅ |
+| FileChooserLineNavigation | 3 | ✅ |
+
+### Cumulative Total: 2725 tests in 338 suites
+
+---
+
+## Phase 56: Grammar Switching Popup — ✅ COMPLETE
+
+### Summary
+
+Wired the grammar popup in the status bar so users can switch the active grammar. Previously the popup existed but had no target/action — selecting a grammar did nothing.
+
+### Key Changes
+
+| File | Changes |
+|------|---------|
+| `Sources/TMAppKit/StatusBarView.swift` | Added `grammarPopUp.target = self` + `grammarPopUp.action`; new `grammarSelected(_:)` handler reads scope from `representedObject` |
+| `Sources/TMDocumentWindow/DocumentWindowController.swift` | Implemented `statusBarViewWillShowGrammarMenu` (queries BundleIndex .grammar items, builds alphabetical menu with "Plain Text" + separator), `statusBarView(_:didSelectGrammar:)` (applies grammar), updated `wireDocumentEditor()` to show grammar name |
+
+### Test Coverage
+
+| Test Suite | Tests | Status |
+|-----------|-------|--------|
+| GrammarSelectionTests | 2 | ✅ |
+| GrammarSwitchingTests | 5 | ✅ |
+
+### Cumulative Total: 2732 tests in 340 suites
+
+---
+
+## Phase 57: Escape Key → Completion Popup — ✅ COMPLETE
+
+### Summary
+
+Mapped the Escape key (`cancelOperation:`) to trigger the completion popup (`complete:`), mirroring the C++ OakTextView behavior.
+
+### Key Changes
+
+| File | Changes |
+|------|---------|
+| `Sources/TMDocumentWindow/TMDocumentEditor.swift` | In `editorView(_:doCommandBySelector:)`, remap `cancelOperation:` → `complete:` before EditorAction conversion |
+
+### Test Coverage
+
+| Test Suite | Tests | Status |
+|-----------|-------|--------|
+| EscapeCompletionTests | 2 | ✅ |
+
+### Cumulative Total: 2734 tests in 340 suites
+
+---
+
+## Phase 58: mate CLI Executable — ✅ COMPLETE
+
+### Summary
+
+Created a standalone `mate` command-line tool that connects to TextMate's RMateServer via TCP to open files, supporting line/column navigation, file type hints, stdin reading, and wait mode.
+
+### Key Changes
+
+| File | Changes |
+|------|---------|
+| `Sources/mate/main.swift` | **New** — Full CLI: arg parsing, TCP socket connection on localhost:52698, rmate protocol client, stdin/file handling, -l/-t/-n/-w flags, MATEFLAGS/RMATE_PORT env |
+| `Package.swift` | Added `mate` executable product and target |
+
+### Cumulative Total: 2737 tests in 340 suites
+
+---
+
+## Phase 59: Find in Project Wiring — ✅ COMPLETE
+
+### Summary
+
+Wired ⇧⌘F (Find in Project) with a dedicated action that auto-switches the search scope to `.project` and passes the project folder. Connected the `FindNavigationDelegate` so clicking search results navigates to the matching file/line/column.
+
+### Key Changes
+
+| File | Changes |
+|------|---------|
+| `Sources/TMApp/MainMenuBuilder.swift` | Changed "Find in Project…" menu item to use `orderFrontFindInProjectPanel:` action |
+| `Sources/TMSearchReplace/FindPanelController.swift` | Added optional `scope` parameter to `showPanel(withSelection:scope:)` |
+| `Sources/TMDocumentWindow/DocumentWindowController+MenuActions.swift` | Added `orderFrontFindInProjectPanel:` (sets project folder + scope + delegate); wired `navigationDelegate` in `orderFrontFindPanel:` too; `FindNavigationDelegate` conformance with `selectRange(_:inDocumentWithID:)` + `bringToFront()` |
+
+### Test Coverage
+
+| Test Suite | Tests | Status |
+|-----------|-------|--------|
+| FindInProjectWiring | 6 | ✅ |
+
+### Cumulative Total: 2743 tests in 341 suites
 
 ---
 
