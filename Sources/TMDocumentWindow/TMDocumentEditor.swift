@@ -556,7 +556,12 @@ extension TMDocumentEditor: EditorViewDelegate {
 
 	public func editorView(_: EditorView, doCommandBySelector selector: Selector) {
 		let selectorName = NSStringFromSelector(selector)
-		if let action = EditorAction(selector: selectorName) {
+
+		// Map Escape (cancelOperation:) to completion, mirroring the C++
+		// OakTextView::cancelOperation: → complete: mapping.
+		let effectiveName = selectorName == "cancelOperation:" ? "complete:" : selectorName
+
+		if let action = EditorAction(selector: effectiveName) {
 			let isCompletion = action == .complete || action == .nextCompletion || action == .previousCompletion
 			let needsGroup = action.isDeletion || action.isClipboard || action.isTextTransform || isCompletion
 			if needsGroup { beginChangeGrouping() }

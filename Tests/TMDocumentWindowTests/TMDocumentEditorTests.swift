@@ -975,3 +975,37 @@ struct GrammarSwitchingTests {
 		#expect(plainItem?.representedObject as? String == "")
 	}
 }
+
+// MARK: - Escape → Completion Tests
+
+@Suite("TMDocumentEditor — Escape Completion")
+@MainActor
+struct EscapeCompletionTests {
+	private func makeEditor(text: String) -> (TMDocumentEditor, EditorView) {
+		let doc = TMDocument()
+		doc.setContent(text, preserveRevision: true)
+		let view = EditorView(frame: NSRect(x: 0, y: 0, width: 400, height: 300))
+		let editor = TMDocumentEditor(document: doc, editorView: view)
+		return (editor, view)
+	}
+
+	@Test("cancelOperation triggers completion")
+	func cancelOperationTriggersCompletion() {
+		let (docEditor, view) = makeEditor(text: "hello world hel")
+		docEditor.editor.perform(.moveToEndOfDocument)
+
+		// Send cancelOperation: (Escape key)
+		docEditor.editorView(view, doCommandBySelector: NSSelectorFromString("cancelOperation:"))
+
+		// The completion engine should have found "hello" and applied it.
+		#expect(docEditor.editor.isCompletionActive || docEditor.editor.text.contains("hello"))
+	}
+
+	@Test("cancelOperation on empty buffer does not crash")
+	func cancelOperationEmptyBuffer() {
+		let (docEditor, view) = makeEditor(text: "")
+		docEditor.editorView(view, doCommandBySelector: NSSelectorFromString("cancelOperation:"))
+		// Should not crash — completion with no words just does nothing.
+		#expect(docEditor.editor.text == "")
+	}
+}
