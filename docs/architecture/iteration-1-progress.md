@@ -1487,6 +1487,40 @@ Wired ⇧⌘F (Find in Project) with a dedicated action that auto-switches the s
 
 ---
 
+### Phase 68 — Drag-and-Drop Copy + Move Support (commit `d0750b3b`)
+
+**Summary**: Implemented proper drag-and-drop copy and move semantics in EditorView and TMDocumentEditor. Within-app drags default to move; cross-app drags use copy. The source operation mask, drop operation, and move cleanup (deleting original selection after drop) mirror the C++ implementation.
+
+**Key Changes**:
+- `Sources/TMEditorUI/EditorView.swift` — `isDragSource` flag; `sourceOperationMaskFor` returns `[.copy, .move]` within app; `draggingSession(_:endedAt:operation:)` handles move cleanup; drop methods return `.move` for same-view; `performDragOperation` distinguishes text/file drops, passes `isMove`; new delegate methods `didReceiveTextDrop` and `editorViewDidCompleteDragMove`
+- `Sources/TMDocumentWindow/TMDocumentEditor.swift` — `preDragSelections` property; `didReceiveTextDrop` saves pre-drag selections for moves; `editorViewDidCompleteDragMove` deletes original selections in reverse order
+- `Tests/TMDocumentWindowTests/TMDocumentEditorTests.swift` — 7 new tests
+
+| Test Suite | Tests | Status |
+|-----------|-------|--------|
+| Drag Copy+Move Tests | 7 | ✅ |
+
+### Cumulative Total: 2799 tests in 350 suites
+
+---
+
+### Phase 69 — Scope-Based Command Input (commit `ba134df0`)
+
+**Summary**: Replaced the `.scope` input stub in `DocumentCommandDelegate.resolveInput()` with a proper scope-aware text selection that walks left/right from the caret while the parser scope matches the command's scope selector. Also fixed `CommandDispatcher` to pass `command.scopeSelector` (not `delegate.currentScope`) matching the C++ `_command.scope_selector` pattern.
+
+**Key Changes**:
+- `Sources/TMBundleRuntime/CommandDispatcher.swift` — Pass `command.scopeSelector` as the scope parameter to `inputData()`, matching C++ `runner.mm` which uses `_command.scope_selector`
+- `Sources/TMDocumentWindow/DocumentCommandDelegate.swift` — Import TMGrammar; accept scope parameter (was `_`); implement `.scope` case using `ScopeSelector` + `parser.scope(atLine:byteOffset:)` to walk left/right, mirroring C++ `extend_scope_left`/`extend_scope_right`
+- `Tests/TMDocumentWindowTests/DocumentCommandDelegateTests.swift` — 7 new tests in new `ScopeBasedInputTests` suite
+
+| Test Suite | Tests | Status |
+|-----------|-------|--------|
+| ScopeBasedInputTests | 7 | ✅ |
+
+### Cumulative Total: 2806 tests in 351 suites
+
+---
+
 ## Architecture Reminder
 
 All code follows the iteration strategy from
