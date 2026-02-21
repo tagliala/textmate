@@ -1009,3 +1009,45 @@ struct EscapeCompletionTests {
 		#expect(docEditor.editor.text == "")
 	}
 }
+
+// MARK: - File Drop Handler Tests
+
+@Suite("TMDocumentEditor — File Drop")
+@MainActor
+struct FileDropTests {
+	private func makeEditor(text: String = "") -> (TMDocumentEditor, EditorView) {
+		let doc = TMDocument()
+		doc.setContent(text, preserveRevision: true)
+		let view = EditorView(frame: NSRect(x: 0, y: 0, width: 400, height: 300))
+		let editor = TMDocumentEditor(document: doc, editorView: view)
+		return (editor, view)
+	}
+
+	@Test("file drop inserts single path")
+	func singleFileDrop() {
+		let (docEditor, view) = makeEditor()
+		let url = URL(fileURLWithPath: "/tmp/test.txt")
+		docEditor.editorView(view, didReceiveFileDrop: [url], atLine: 0, index: 0)
+		#expect(docEditor.editor.text == "/tmp/test.txt")
+	}
+
+	@Test("file drop inserts multiple paths joined by newlines")
+	func multipleFileDrop() {
+		let (docEditor, view) = makeEditor()
+		let urls = [
+			URL(fileURLWithPath: "/tmp/a.txt"),
+			URL(fileURLWithPath: "/tmp/b.png"),
+		]
+		docEditor.editorView(view, didReceiveFileDrop: urls, atLine: 0, index: 0)
+		#expect(docEditor.editor.text == "/tmp/a.txt\n/tmp/b.png")
+	}
+
+	@Test("file drop appends to existing text")
+	func dropAppendsToExisting() {
+		let (docEditor, view) = makeEditor(text: "prefix ")
+		docEditor.editor.perform(.moveToEndOfDocument)
+		let url = URL(fileURLWithPath: "/tmp/file.md")
+		docEditor.editorView(view, didReceiveFileDrop: [url], atLine: 0, index: 0)
+		#expect(docEditor.editor.text == "prefix /tmp/file.md")
+	}
+}

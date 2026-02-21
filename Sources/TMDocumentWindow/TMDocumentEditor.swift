@@ -616,6 +616,19 @@ extension TMDocumentEditor: EditorViewDelegate {
 		view.needsDisplay = true
 	}
 
+	public func editorView(_: EditorView, didReceiveFileDrop urls: [URL], atLine _: Int, index _: Int) {
+		let paths = urls.map(\.path)
+
+		// TODO: When the command execution pipeline is wired, query
+		// DragCommandHandler for matching drag commands and run them.
+
+		let text = paths.joined(separator: "\n")
+		beginChangeGrouping()
+		editor.insertText(text)
+		endChangeGrouping()
+		syncAfterEdit()
+	}
+
 	public func editorViewNeedsContextMenu(_: EditorView, for _: NSEvent) -> NSMenu? {
 		let menu = NSMenu()
 		menu.addItem(withTitle: "Cut", action: #selector(NSText.cut(_:)), keyEquivalent: "")
