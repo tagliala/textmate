@@ -547,6 +547,9 @@ public class EditorView: NSView, @preconcurrency NSTextInputClient, NSMenuItemVa
 
 	override public func keyDown(with event: NSEvent) {
 		resetCaretBlink()
+		if delegate?.editorView(self, handleKeyDown: event) == true {
+			return
+		}
 		interpretKeyEvents([event])
 	}
 
@@ -1240,6 +1243,11 @@ public protocol EditorViewDelegate: AnyObject {
 	/// Called to build the right-click context menu.
 	func editorViewNeedsContextMenu(_ view: EditorView, for event: NSEvent) -> NSMenu?
 
+	/// Called before a key event is passed to the key binding system.
+	/// Return `true` if the delegate consumed the event (e.g. for a
+	/// floating completion menu), preventing normal key dispatch.
+	func editorView(_ view: EditorView, handleKeyDown event: NSEvent) -> Bool
+
 	/// Called to validate a menu item's enabled state.
 	func editorView(_ view: EditorView, validateMenuItem menuItem: NSMenuItem) -> Bool
 
@@ -1264,6 +1272,10 @@ public extension EditorViewDelegate {
 	func editorView(_: EditorView, doCommandBySelector _: Selector) {}
 	func editorView(_: EditorView, didReceiveFileDrop _: [URL], atLine _: Int, index _: Int) {}
 	func editorView(_: EditorView, performKeyEquivalent _: NSEvent) -> Bool {
+		false
+	}
+
+	func editorView(_: EditorView, handleKeyDown _: NSEvent) -> Bool {
 		false
 	}
 

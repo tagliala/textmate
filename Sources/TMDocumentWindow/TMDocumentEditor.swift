@@ -34,7 +34,7 @@ public final class TMDocumentEditor {
 	public let syntaxHighlighter = SyntaxHighlighter()
 
 	/// The completion choice menu (floating panel).
-	private var choiceMenu: ChoiceMenuPanel?
+	var choiceMenu: ChoiceMenuPanel?
 
 	/// Nesting level for undo change groups.
 	private var changeGroupLevel: Int = 0
@@ -513,6 +513,27 @@ extension TMDocumentEditor {
 // MARK: - EditorViewDelegate
 
 extension TMDocumentEditor: EditorViewDelegate {
+	public func editorView(_: EditorView, handleKeyDown event: NSEvent) -> Bool {
+		guard let menu = choiceMenu, menu.isMenuVisible else { return false }
+		let action = menu.handleKeyEvent(event)
+		switch action {
+		case .unused:
+			return false
+		case .accept, .tab:
+			if let choice = menu.selectedChoice {
+				acceptChoiceMenuSelection(choice)
+			} else {
+				dismissChoiceMenu()
+			}
+			return true
+		case .cancel:
+			dismissChoiceMenu()
+			return true
+		case .movement:
+			return true
+		}
+	}
+
 	public func editorView(_: EditorView, insertText text: String, replacementRange _: NSRange) {
 		dismissChoiceMenu()
 		beginChangeGrouping()
@@ -531,6 +552,7 @@ extension TMDocumentEditor: EditorViewDelegate {
 		if action == .insertTab, editor.snippetController.isEmpty {
 			if expandTabTrigger() {
 				syncAfterEdit()
+				showSnippetChoicesIfNeeded()
 				return
 			}
 		}
@@ -547,6 +569,7 @@ extension TMDocumentEditor: EditorViewDelegate {
 		} else {
 			// Movement / selection only — just update the view's carets.
 			syncSelectionToView()
+			showSnippetChoicesIfNeeded()
 		}
 	}
 
@@ -731,6 +754,58 @@ extension TMDocumentEditor {
 		choiceMenu?.dismiss()
 	}
 
+	/// Accepts a choice from the floating menu, inserting it into the
+	/// editor (for both completions and snippet choices).
+	func acceptChoiceMenuSelection(_ choice: String) {
+		choiceMenu?.dismiss()
+
+		if editor.isCompletionActive {
+			// For completions the text is already cycled in; accept by
+			// cancelling the session (keeps the current text).
+			editor.cancelCompletion()
+		} else if !editor.snippetController.isEmpty,
+		          let session = editor.snippetController.current,
+		          let range = session.currentTabStop?.range
+		{
+			// For snippet choices, replace the current tab stop content.
+			beginChangeGrouping()
+			editor.buffer.replace(
+				from: range.start.offset,
+				to: range.end.offset,
+				with: choice,
+			)
+			let endPos = editor.buffer.convert(
+				offset: range.start.offset + choice.utf8.count,
+			)
+			editor.snippetController.updateTabStopRange(
+				at: session.currentTabStopIndex,
+				to: TMCore.TextRange(anchor: range.start, head: endPos),
+			)
+			editor.selections = SelectionState(caret: endPos)
+			endChangeGrouping()
+		}
+		syncAfterEdit()
+	}
+
+	/// Shows the choice menu for the current snippet tab stop's choices,
+	/// or dismisses it if there are none.
+	func showSnippetChoicesIfNeeded() {
+		let snippetChoices = editor.snippetController.choices
+		guard !snippetChoices.isEmpty else {
+			// No snippet choices at this tab stop.
+			return
+		}
+
+		let menu = choiceMenu ?? createChoiceMenu()
+		menu.choices = snippetChoices
+		menu.choiceIndex = 0
+
+		if let view = editorView {
+			let screenPoint = caretScreenPoint(in: view)
+			menu.show(at: screenPoint, in: view)
+		}
+	}
+
 	/// Creates and configures the choice menu panel.
 	private func createChoiceMenu() -> ChoiceMenuPanel {
 		let menu = ChoiceMenuPanel(
@@ -739,6 +814,12 @@ extension TMDocumentEditor {
 				weight: .regular,
 			),
 		)
+		menu.onAccept = { [weak self] choice in
+			self?.acceptChoiceMenuSelection(choice)
+		}
+		menu.onCancel = { [weak self] in
+			self?.dismissChoiceMenu()
+		}
 		choiceMenu = menu
 		return menu
 	}
@@ -913,6 +994,7 @@ extension TMDocumentEditor {
 
 		endChangeGrouping()
 		syncAfterEdit()
+		showSnippetChoicesIfNeeded()
 	}
 }
 
