@@ -150,6 +150,8 @@ struct DelegateTests {
 	final class MockDelegate: StatusBarViewDelegate, @unchecked Sendable {
 		var selectedTabSize: Int?
 		var selectedSoftTabs: Bool?
+		var selectedEncoding: String?
+		var selectedLineEnding: String?
 		var macroToggled = false
 		var grammarMenuShown = false
 		var symbolMenuShown = false
@@ -161,6 +163,14 @@ struct DelegateTests {
 
 		func statusBarView(_: StatusBarView, didSelectUseSoftTabs useSoftTabs: Bool) {
 			selectedSoftTabs = useSoftTabs
+		}
+
+		func statusBarView(_: StatusBarView, didSelectEncoding encoding: String) {
+			selectedEncoding = encoding
+		}
+
+		func statusBarView(_: StatusBarView, didSelectLineEnding lineEnding: String) {
+			selectedLineEnding = lineEnding
 		}
 
 		func statusBarViewDidToggleMacroRecording(_: StatusBarView) {
@@ -194,6 +204,74 @@ struct DelegateTests {
 		mock.statusBarView(bar, didSelectGrammar: "Swift")
 		mock.statusBarView(bar, didSelectTabSettings: true, tabSize: 4)
 		mock.statusBarView(bar, didSelectEncoding: "UTF-8")
+		mock.statusBarView(bar, didSelectLineEnding: "LF")
+	}
+}
+
+// MARK: - Encoding Display
+
+@Suite("StatusBarView — Encoding Display")
+@MainActor
+struct EncodingDisplayTests {
+	@Test func defaultEncoding() {
+		let bar = StatusBarView()
+		#expect(bar.encodingTitle == "UTF-8")
+	}
+
+	@Test func setKnownEncoding() {
+		let bar = StatusBarView()
+		bar.setEncoding("ISO-8859-1")
+		#expect(bar.encodingTitle == "ISO 8859-1")
+	}
+
+	@Test func setUTF16BEEncoding() {
+		let bar = StatusBarView()
+		bar.setEncoding("UTF-16BE")
+		#expect(bar.encodingTitle == "UTF-16 BE")
+	}
+
+	@Test func setUnknownEncodingAddsCustomItem() {
+		let bar = StatusBarView()
+		bar.setEncoding("EUC-JP")
+		#expect(bar.encodingTitle == "EUC-JP")
+	}
+
+	@Test func setEncodingBackToUTF8() {
+		let bar = StatusBarView()
+		bar.setEncoding("Shift_JIS")
+		#expect(bar.encodingTitle == "Shift JIS")
+		bar.setEncoding("UTF-8")
+		#expect(bar.encodingTitle == "UTF-8")
+	}
+}
+
+// MARK: - Line Ending Display
+
+@Suite("StatusBarView — Line Ending Display")
+@MainActor
+struct LineEndingDisplayTests {
+	@Test func defaultLineEnding() {
+		let bar = StatusBarView()
+		#expect(bar.lineEndingTitle == "LF")
+	}
+
+	@Test func setCR() {
+		let bar = StatusBarView()
+		bar.setLineEnding("CR")
+		#expect(bar.lineEndingTitle == "CR")
+	}
+
+	@Test func setCRLF() {
+		let bar = StatusBarView()
+		bar.setLineEnding("CR/LF")
+		#expect(bar.lineEndingTitle == "CR/LF")
+	}
+
+	@Test func setBackToLF() {
+		let bar = StatusBarView()
+		bar.setLineEnding("CR/LF")
+		bar.setLineEnding("LF")
+		#expect(bar.lineEndingTitle == "LF")
 	}
 }
 

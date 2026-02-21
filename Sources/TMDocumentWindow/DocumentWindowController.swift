@@ -227,6 +227,7 @@ public class DocumentWindowController: NSWindowController {
 				self.wireDocumentEditor()
 				window?.title = doc.displayName
 				statusBarView.setEncoding(doc.encoding.charset)
+				statusBarView.setLineEnding(doc.encoding.lineEnding.displayName)
 				updateWindowTitle()
 			} catch {
 				let alert = NSAlert(error: error)
@@ -499,9 +500,10 @@ public class DocumentWindowController: NSWindowController {
 
 		// Encoding
 		if let enc = settings["encoding"] {
-			doc.encoding = DocumentEncoding(charset: enc)
+			doc.encoding = DocumentEncoding(charset: enc, lineEnding: doc.encoding.lineEnding)
 			statusBarView.setEncoding(enc)
 		}
+		statusBarView.setLineEnding(doc.encoding.lineEnding.displayName)
 
 		// Spell checking
 		if let spellStr = settings["spellChecking"] {
@@ -670,6 +672,8 @@ public class DocumentWindowController: NSWindowController {
 		}
 
 		updateWindowTitle()
+		statusBarView.setEncoding(doc.encoding.charset)
+		statusBarView.setLineEnding(doc.encoding.lineEnding.displayName)
 		watchDocumentFile(doc)
 		updateGutterFoldState()
 	}
@@ -800,6 +804,20 @@ extension DocumentWindowController: StatusBarViewDelegate {
 
 	public func statusBarViewWillShowSymbolMenu(_: StatusBarView, popup: NSPopUpButton) {
 		populateSymbolMenu(popup)
+	}
+
+	public func statusBarView(_: StatusBarView, didSelectEncoding encoding: String) {
+		textDocument.encoding = DocumentEncoding(charset: encoding, lineEnding: textDocument.encoding.lineEnding)
+		textDocument.markModified()
+		updateWindowTitle()
+	}
+
+	public func statusBarView(_: StatusBarView, didSelectLineEnding lineEnding: String) {
+		let mapping: [String: LineEnding] = ["LF": .lf, "CR": .cr, "CR/LF": .crlf]
+		guard let ending = mapping[lineEnding] else { return }
+		textDocument.encoding.lineEnding = ending
+		textDocument.markModified()
+		updateWindowTitle()
 	}
 }
 

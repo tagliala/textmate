@@ -17,6 +17,8 @@ public class StatusBarView: NSView {
 	private let tabSizePopUp = NSPopUpButton(frame: .zero, pullsDown: true)
 	private let symbolPopUp = NSPopUpButton(frame: .zero, pullsDown: false)
 	private let bundleItemsPopUp = NSPopUpButton(frame: .zero, pullsDown: true)
+	private let encodingPopUp = NSPopUpButton(frame: .zero, pullsDown: false)
+	private let lineEndingPopUp = NSPopUpButton(frame: .zero, pullsDown: false)
 	private let macroRecordingButton: NSButton = {
 		let button = NSButton()
 		button.setButtonType(.toggle)
@@ -117,6 +119,16 @@ public class StatusBarView: NSView {
 		symbolPopUp.title
 	}
 
+	/// The current encoding title displayed in the encoding popup.
+	public var encodingTitle: String {
+		encodingPopUp.title
+	}
+
+	/// The current line ending title displayed in the line ending popup.
+	public var lineEndingTitle: String {
+		lineEndingPopUp.title
+	}
+
 	/// Update the selection display string.
 	///
 	/// Formats multi-cursor selections: `&` → `, `, `x` → `×`.
@@ -153,11 +165,29 @@ public class StatusBarView: NSView {
 		)
 	}
 
-	/// Set the encoding display.
+	/// Set the encoding display by selecting the matching charset in the popup.
 	public func setEncoding(_ encoding: String) {
-		// Encoding is shown via the delegate if needed.
-		// This is a compatibility shim for DocumentWindowController.
-		_ = encoding
+		for (index, item) in (encodingPopUp.menu?.items ?? []).enumerated() {
+			if (item.representedObject as? String) == encoding {
+				encodingPopUp.selectItem(at: index)
+				return
+			}
+		}
+		// Unknown encoding — add it as a custom item and select.
+		let item = NSMenuItem(title: encoding, action: nil, keyEquivalent: "")
+		item.representedObject = encoding
+		encodingPopUp.menu?.addItem(item)
+		encodingPopUp.select(item)
+	}
+
+	/// Set the line ending display by selecting the matching title.
+	public func setLineEnding(_ lineEnding: String) {
+		for (index, item) in (lineEndingPopUp.menu?.items ?? []).enumerated() {
+			if item.title == lineEnding {
+				lineEndingPopUp.selectItem(at: index)
+				return
+			}
+		}
 	}
 
 	// MARK: - Private Setup
@@ -186,6 +216,22 @@ public class StatusBarView: NSView {
 		addSubview(tabSizePopUp)
 		rebuildTabSizeMenu()
 
+		// Encoding popup
+		configurePopUp(encodingPopUp, font: statusFont, title: "UTF-8", label: "Encoding")
+		encodingPopUp.translatesAutoresizingMaskIntoConstraints = false
+		encodingPopUp.target = self
+		encodingPopUp.action = #selector(encodingSelected(_:))
+		addSubview(encodingPopUp)
+		rebuildEncodingMenu()
+
+		// Line ending popup
+		configurePopUp(lineEndingPopUp, font: statusFont, title: "LF", label: "Line Ending")
+		lineEndingPopUp.translatesAutoresizingMaskIntoConstraints = false
+		lineEndingPopUp.target = self
+		lineEndingPopUp.action = #selector(lineEndingSelected(_:))
+		addSubview(lineEndingPopUp)
+		rebuildLineEndingMenu()
+
 		// Symbol popup
 		configurePopUp(symbolPopUp, font: statusFont, title: "Symbols", label: "Symbol")
 		symbolPopUp.translatesAutoresizingMaskIntoConstraints = false
@@ -210,7 +256,7 @@ public class StatusBarView: NSView {
 		addSubview(macroRecordingButton)
 
 		// Create dividers
-		for _ in 0 ..< 5 {
+		for _ in 0 ..< 7 {
 			let divider = NSBox()
 			divider.boxType = .separator
 			divider.translatesAutoresizingMaskIntoConstraints = false
@@ -280,30 +326,50 @@ public class StatusBarView: NSView {
 			d[2].widthAnchor.constraint(equalToConstant: 1),
 			d[2].heightAnchor.constraint(equalToConstant: 15),
 
-			// Bundle items popup (action gear)
-			bundleItemsPopUp.leadingAnchor.constraint(equalTo: d[2].trailingAnchor, constant: 5),
-			bundleItemsPopUp.centerYAnchor.constraint(equalTo: centerYAnchor),
-			bundleItemsPopUp.widthAnchor.constraint(equalToConstant: 31),
+			// Encoding popup
+			encodingPopUp.leadingAnchor.constraint(equalTo: d[2].trailingAnchor, constant: 2),
+			encodingPopUp.centerYAnchor.constraint(equalTo: centerYAnchor),
 
 			// Divider 4
-			d[3].leadingAnchor.constraint(equalTo: bundleItemsPopUp.trailingAnchor, constant: 4),
+			d[3].leadingAnchor.constraint(equalTo: encodingPopUp.trailingAnchor, constant: 4),
 			d[3].centerYAnchor.constraint(equalTo: centerYAnchor),
 			d[3].widthAnchor.constraint(equalToConstant: 1),
 			d[3].heightAnchor.constraint(equalToConstant: 15),
 
-			// Symbol popup
-			symbolPopUp.leadingAnchor.constraint(equalTo: d[3].trailingAnchor, constant: 2),
-			symbolPopUp.centerYAnchor.constraint(equalTo: centerYAnchor),
-			symbolPopUp.widthAnchor.constraint(greaterThanOrEqualToConstant: 50),
+			// Line ending popup
+			lineEndingPopUp.leadingAnchor.constraint(equalTo: d[3].trailingAnchor, constant: 2),
+			lineEndingPopUp.centerYAnchor.constraint(equalTo: centerYAnchor),
 
 			// Divider 5
-			d[4].leadingAnchor.constraint(equalTo: symbolPopUp.trailingAnchor, constant: 5),
+			d[4].leadingAnchor.constraint(equalTo: lineEndingPopUp.trailingAnchor, constant: 4),
 			d[4].centerYAnchor.constraint(equalTo: centerYAnchor),
 			d[4].widthAnchor.constraint(equalToConstant: 1),
 			d[4].heightAnchor.constraint(equalToConstant: 15),
 
+			// Bundle items popup (action gear)
+			bundleItemsPopUp.leadingAnchor.constraint(equalTo: d[4].trailingAnchor, constant: 5),
+			bundleItemsPopUp.centerYAnchor.constraint(equalTo: centerYAnchor),
+			bundleItemsPopUp.widthAnchor.constraint(equalToConstant: 31),
+
+			// Divider 6
+			d[5].leadingAnchor.constraint(equalTo: bundleItemsPopUp.trailingAnchor, constant: 4),
+			d[5].centerYAnchor.constraint(equalTo: centerYAnchor),
+			d[5].widthAnchor.constraint(equalToConstant: 1),
+			d[5].heightAnchor.constraint(equalToConstant: 15),
+
+			// Symbol popup
+			symbolPopUp.leadingAnchor.constraint(equalTo: d[5].trailingAnchor, constant: 2),
+			symbolPopUp.centerYAnchor.constraint(equalTo: centerYAnchor),
+			symbolPopUp.widthAnchor.constraint(greaterThanOrEqualToConstant: 50),
+
+			// Divider 7
+			d[6].leadingAnchor.constraint(equalTo: symbolPopUp.trailingAnchor, constant: 5),
+			d[6].centerYAnchor.constraint(equalTo: centerYAnchor),
+			d[6].widthAnchor.constraint(equalToConstant: 1),
+			d[6].heightAnchor.constraint(equalToConstant: 15),
+
 			// Macro recording button
-			macroRecordingButton.leadingAnchor.constraint(equalTo: d[4].trailingAnchor, constant: 6),
+			macroRecordingButton.leadingAnchor.constraint(equalTo: d[6].trailingAnchor, constant: 6),
 			macroRecordingButton.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -7),
 			macroRecordingButton.centerYAnchor.constraint(equalTo: centerYAnchor),
 			macroRecordingButton.widthAnchor.constraint(equalToConstant: 16),
@@ -439,6 +505,49 @@ public class StatusBarView: NSView {
 		delegate?.statusBarViewWillShowBundleItemsMenu(self, popup: bundleItemsPopUp)
 	}
 
+	@objc private func encodingSelected(_: NSPopUpButton) {
+		guard let charset = encodingPopUp.selectedItem?.representedObject as? String else { return }
+		delegate?.statusBarView(self, didSelectEncoding: charset)
+	}
+
+	@objc private func lineEndingSelected(_: NSPopUpButton) {
+		guard let ending = lineEndingPopUp.selectedItem?.title else { return }
+		delegate?.statusBarView(self, didSelectLineEnding: ending)
+	}
+
+	// MARK: - Encoding & Line Ending Menus
+
+	/// Common IANA charset names for the encoding popup.
+	private static let commonCharsets: [(display: String, charset: String)] = [
+		("UTF-8", "UTF-8"),
+		("UTF-16 BE", "UTF-16BE"),
+		("UTF-16 LE", "UTF-16LE"),
+		("ISO 8859-1", "ISO-8859-1"),
+		("Mac Roman", "macintosh"),
+		("Shift JIS", "Shift_JIS"),
+		("Windows 1252", "windows-1252"),
+	]
+
+	private func rebuildEncodingMenu() {
+		let menu = NSMenu()
+		for (display, charset) in Self.commonCharsets {
+			let item = NSMenuItem(title: display, action: nil, keyEquivalent: "")
+			item.representedObject = charset
+			menu.addItem(item)
+		}
+		encodingPopUp.menu = menu
+		encodingPopUp.selectItem(at: 0)
+	}
+
+	private func rebuildLineEndingMenu() {
+		let menu = NSMenu()
+		for title in ["LF", "CR", "CR/LF"] {
+			menu.addItem(NSMenuItem(title: title, action: nil, keyEquivalent: ""))
+		}
+		lineEndingPopUp.menu = menu
+		lineEndingPopUp.selectItem(at: 0)
+	}
+
 	// MARK: - Recording Animation
 
 	/// Updates the macro recording button pulse.
@@ -500,6 +609,9 @@ public protocol StatusBarViewDelegate: AnyObject {
 	/// Called when the user selects an encoding.
 	func statusBarView(_ view: StatusBarView, didSelectEncoding encoding: String)
 
+	/// Called when the user selects a line ending.
+	func statusBarView(_ view: StatusBarView, didSelectLineEnding lineEnding: String)
+
 	/// Called when the grammar popup is about to open.
 	/// The delegate should populate the popup's menu with grammar items.
 	func statusBarViewWillShowGrammarMenu(_ view: StatusBarView, popup: NSPopUpButton)
@@ -523,6 +635,7 @@ public extension StatusBarViewDelegate {
 	func statusBarView(_: StatusBarView, didSelectUseSoftTabs _: Bool) {}
 	func statusBarView(_: StatusBarView, didSelectTabSettings _: Bool, tabSize _: Int) {}
 	func statusBarView(_: StatusBarView, didSelectEncoding _: String) {}
+	func statusBarView(_: StatusBarView, didSelectLineEnding _: String) {}
 	func statusBarViewWillShowGrammarMenu(_: StatusBarView, popup _: NSPopUpButton) {}
 	func statusBarViewWillShowSymbolMenu(_: StatusBarView, popup _: NSPopUpButton) {}
 	func statusBarViewWillShowBundleItemsMenu(_: StatusBarView, popup _: NSPopUpButton) {}
