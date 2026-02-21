@@ -1572,6 +1572,24 @@ Wired ⇧⌘F (Find in Project) with a dedicated action that auto-switches the s
 
 ---
 
+### Phase 73 — DialogShim Wiring (commit `69a0ecfe`)
+
+**Summary**: Wired the `DialogShim` singleton into `DocumentWindowController`, making it available to bundle commands that need to show menus, tooltips, alerts, and file panels. Created built-in command handlers for the 5 most common tm_dialog2 commands.
+
+**Key Changes**:
+- `Sources/TMCompatibility/BuiltInDialogHandlers.swift` — **New** — 5 `DialogCommandHandler` implementations: `AlertDialogHandler` (NSAlert with --title/--body/--button args + plist input), `MenuDialogHandler` (popup menu from plist menuItems), `TooltipDialogHandler` (HTML/text tooltip via DialogShim delegate), `FilePanelDialogHandler` (open/save panel with --save/--directory/--title), `HelpDialogHandler` (lists registered commands); `DialogShim.registerBuiltInHandlers()` extension; `String.escapedForHTML` helper
+- `Sources/TMDocumentWindow/DocumentCommandDelegate.swift` — `DialogShimDelegate` conformance on `DocumentWindowController`; `dialogShim(_:showToolTipHTML:at:transparent:)` forwards to `showHUD(text:)`
+- `Sources/TMDocumentWindow/DocumentWindowController.swift` — `import TMCompatibility`; `wireDocumentEditor()` sets `DialogShim.shared.delegate = self` and calls `registerBuiltInHandlers()`; `windowWillClose` clears delegate if still owned
+- `Tests/TMDocumentWindowTests/WindowLifecycleTests.swift` — 6 new tests in `DialogShimWiringTests` suite (delegate set, handlers registered, delegate cleared on close, unknown command error, help handler, tooltip delegate forwarding)
+
+| Test Suite | Tests | Status |
+|-----------|-------|--------|
+| DialogShimWiringTests | 6 | ✅ |
+
+### Cumulative Total: 2826 tests in 355 suites
+
+---
+
 ## Architecture Reminder
 
 All code follows the iteration strategy from
