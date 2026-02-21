@@ -33,6 +33,11 @@ final class BundleSystemController {
 			bundleIndex: bundleIndex,
 			securityPolicy: SecurityPolicy(),
 		)
+
+		let permissionDialog = PermissionDialogController()
+		commandDispatcher.permissionHandler = { request in
+			await permissionDialog.showPermissionDialog(for: request)
+		}
 	}
 
 	// MARK: - Loading
