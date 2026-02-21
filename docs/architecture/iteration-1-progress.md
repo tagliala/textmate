@@ -1,6 +1,6 @@
 # TextMate Swift Rewrite — Session Progress
 
-> Last updated: 2025-07-31
+> Last updated: 2025-08-01
 
 ---
 
@@ -1587,6 +1587,68 @@ Wired ⇧⌘F (Find in Project) with a dedicated action that auto-switches the s
 | DialogShimWiringTests | 6 | ✅ |
 
 ### Cumulative Total: 2826 tests in 355 suites
+
+---
+
+### Phase 74 — Run Command Window (commit `4bc87b68`)
+
+**Summary**: Implemented the "Filter Through Command…" panel — a singleton NSPanel that lets users type an arbitrary shell command, choose an output destination, and execute it against the current selection.
+
+**Key Changes**:
+- `Sources/TMDocumentWindow/RunCommandWindowController.swift` — **New** — Singleton NSPanel with editable combo box (history from UserDefaults, max 10), output popup (Replace Input / Insert After Input / New Document / Tool Tip), Execute (Return) and Cancel (Escape) buttons
+- `Sources/TMDocumentWindow/DocumentWindowController+MenuActions.swift` — `orderFrontRunCommandWindow` creates BundleCommand and dispatches via CommandDispatcher
+
+| Test Suite | Tests | Status |
+|-----------|-------|--------|
+| RunCommandWindowTests | 6 | ✅ |
+
+### Cumulative Total: 2832 tests in 356 suites
+
+---
+
+### Phase 75 — scmBadgeProvider Cleanup (commit `348519d7`)
+
+**Summary**: Removed orphaned `scmBadgeProvider: FileStatusBadgeProvider?` property from DocumentWindowController — declared but never assigned or read. SCM status works via closure-based `scmStatusProvider`.
+
+### Cumulative Total: 2832 tests in 356 suites
+
+---
+
+### Phase 76 — Async Bundle Loading (commit `1713e14f`)
+
+**Summary**: Moved bundle loading off the main thread. `BundleSystemController.loadBundlesAsync()` uses `Task.detached(priority: .userInitiated)` for background I/O, then updates `BundleIndex` on MainActor. Windows can open before bundles finish loading.
+
+**Key Changes**:
+- `Sources/TMApp/BundleSystemController.swift` — Added `loadBundlesAsync()` async method
+- `Sources/TMApp/AppDelegate.swift` — Menu delegate installed immediately; bundles loaded asynchronously; theme menu/persisted theme restored after async load
+
+| Test Suite | Tests | Status |
+|-----------|-------|--------|
+| BundleSystemAsyncTests | 3 | ✅ |
+
+### Cumulative Total: 2835 tests in 357 suites
+
+---
+
+### Phase 77 — Remove Dead DocumentModel (commit `da325a6f`)
+
+**Summary**: Deleted `DocumentModel.swift` and its test file — a legacy ~140-line document model class never referenced from production code. `TMDocument` in TMDocumentManager is the real document model.
+
+### Cumulative Total: 2826 tests in 356 suites
+
+---
+
+### Phase 78 — Dead Code Cleanup (commit `cffd035c`)
+
+**Summary**: Removed 881 lines of confirmed dead code: unused imports in 3 files, and 2 dead files (PlistCache.swift ~460 lines with zero references, FileBrowserView.swift ~420 lines with class never instantiated).
+
+**Key Changes**:
+- Removed `import TMDocumentWindow` from KeyBindingsLoader.swift, MainMenuBuilder.swift
+- Removed `import TMBundle` from SyntaxHighlighter+Symbols.swift
+- Deleted `Sources/TMCore/PlistCache.swift` (zero references anywhere)
+- Deleted `Sources/TMAppKit/FileBrowserView.swift` (class never instantiated outside its own file)
+
+### Cumulative Total: 2826 tests in 356 suites
 
 ---
 
