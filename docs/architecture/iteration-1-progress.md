@@ -1416,6 +1416,43 @@ Wired ⇧⌘F (Find in Project) with a dedicated action that auto-switches the s
 
 ---
 
+### Phase 64 — Dead Code Cleanup & Drag Command Wiring (commit `6bdf80a7`)
+
+**Summary**: Removed dead `executeItem`/`parser` from BundleSystemController. Added `commandDispatcher` to DocumentWindowController and `onExecuteBundleCommand` callback to TMDocumentEditor. File drops now dispatch drag commands through the CommandDispatcher pipeline.
+
+**Key Changes**:
+- `Sources/TMApp/BundleSystemController.swift` — Removed dead `executeItem(uuid:delegate:)` and `private let parser`
+- `Sources/TMDocumentWindow/DocumentWindowController.swift` — Added `commandDispatcher: CommandDispatcher?` property, wired `onExecuteBundleCommand` in `wireDocumentEditor()`
+- `Sources/TMDocumentWindow/TMDocumentEditor.swift` — Added `onExecuteBundleCommand` callback; drag commands dispatched via `Task { await onExecuteBundleCommand(bundleCmd) }`
+- `Sources/TMApp/AppDelegate.swift` — Passes `commandDispatcher` to DocumentWindowController at 3 creation sites
+- `Tests/TMDocumentWindowTests/TMDocumentEditorTests.swift` — 2 new DragCommand tests
+
+| Test Suite | Tests | Status |
+|-----------|-------|--------|
+| DragCommandTests | 2 | ✅ |
+
+### Cumulative Total: 2758 tests in 346 suites
+
+---
+
+### Phase 65 — Snippet Mirror & Transform Wiring (commit `ad104cec`)
+
+**Summary**: Wired snippet mirror propagation so typing in a tab stop updates all mirror occurrences in real time. SnippetController now delegates to SnippetState for mirror cascade, keeping currentField in sync on navigation.
+
+**Key Changes**:
+- `Sources/TMEditor/SnippetController.swift` — `replaceCurrentField(with:)` delegates to SnippetState, returns buffer-adjusted MirrorUpdate list; `hasActiveMirrors`, `refreshTabStops()`, `updateTabStopRange(at:to:)`; sync `SnippetState.currentField` on push/next/previous
+- `Sources/TMEditor/Editor.swift` — `propagateSnippetMirrors()` reads tab stop content, cascades to mirrors, applies to buffer; called from `insertText`, `insertWithPairing`, `performDelete`
+- `Sources/TMDocumentWindow/TMDocumentEditor.swift` — `insertSnippetWithExpansion` passes `baseOffset` and `SnippetState` (when mirrors exist) to `SnippetController.Session`
+- `Tests/TMEditorTests/SnippetMirrorTests.swift` — 9 new tests
+
+| Test Suite | Tests | Status |
+|-----------|-------|--------|
+| SnippetMirrorTests | 9 | ✅ |
+
+### Cumulative Total: 2767 tests in 347 suites
+
+---
+
 ## Architecture Reminder
 
 All code follows the iteration strategy from
