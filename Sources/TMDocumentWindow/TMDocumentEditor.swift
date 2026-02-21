@@ -93,6 +93,9 @@ public final class TMDocumentEditor {
 	/// Grammar-aware indent pattern provider.
 	private var indentPatternProvider: IndentPatternProvider?
 
+	/// Tracks buffer edits between sync points for incremental reparsing.
+	private let editTracker = EditRegionTracker()
+
 	// MARK: - Init
 
 	/// Creates a document editor.
@@ -117,6 +120,10 @@ public final class TMDocumentEditor {
 		// Create an editor backed by the document's content.
 		let text = document.content ?? ""
 		editor = Editor(text: text, clipboards: clipboards)
+
+		// Wire the edit tracker for incremental reparsing.
+		editTracker.buffer = editor.buffer
+		editor.buffer.addCallback(editTracker)
 
 		// Apply document settings to the editor.
 		editor.tabSize = document.tabSize
@@ -162,6 +169,8 @@ public final class TMDocumentEditor {
 			if let id = documentObservationID {
 				document.removeChangeCallback(id: id)
 			}
+
+			editor.buffer.removeCallback(editTracker)
 
 			// Balance any open change groups.
 			while changeGroupLevel > 0 {
@@ -258,10 +267,26 @@ public final class TMDocumentEditor {
 		document.setContent(text)
 		editorView?.setText(text)
 
-		// Re-sync the parser with the full text.
-		// In a future phase, this can be optimized to only replace
-		// the changed lines using IncrementalParser.replaceLines.
-		syntaxHighlighter.setText(text)
+		// Use incremental reparsing when a single edit region is available.
+		if let region = editTracker.consume() {
+			let buf = editor.buffer
+			let startLine = region.startLine
+			let newLineCount = region.newLineCount
+			let oldLineRange = startLine ..< (startLine + region.oldLineCount)
+			var newLines: [String] = []
+			for i in 0 ..< newLineCount {
+				let line = startLine + i
+				guard line < buf.lines else { break }
+				let from = buf.lineStart(line)
+				let to = (line + 1 < buf.lines) ? buf.lineStart(line + 1) : buf.size
+				newLines.append(buf.substring(from: from, to: to))
+			}
+			syntaxHighlighter.replaceLines(in: oldLineRange, with: newLines)
+		} else {
+			// Multiple edits or no tracker info — fall back to full reparse.
+			editTracker.reset()
+			syntaxHighlighter.setText(text)
+		}
 		syntaxHighlighter.parseSync()
 
 		// Invalidate spell check cache so misspellings re-compute on draw.
@@ -304,6 +329,7 @@ public final class TMDocumentEditor {
 			// Re-initialize editor content.
 			// In a future phase this could do a proper delta/merge.
 			editor.buffer.replace(from: 0, to: editor.buffer.size, with: docContent)
+			editTracker.reset() // Discard edit triggered by the wholesale replace.
 			editorView?.setText(docContent)
 
 			// Re-parse the new content.
@@ -1087,5 +1113,87 @@ public extension TMDocumentEditor {
 		editorView?.layoutManager.invalidateFolds()
 		editorView?.updateFrameSize()
 		editorView?.needsDisplay = true
+	}
+}
+
+// MARK: - Edit Region Tracker
+
+/// Tracks buffer edits between sync points so `syncAfterEdit` can
+/// perform incremental reparsing instead of a full-text reparse.
+///
+/// For a single edit between syncs (the common typing case), records the
+/// affected line range. For multiple edits, the caller falls back to
+/// `setText` (full reparse).
+final class EditRegionTracker: BufferCallback, @unchecked Sendable {
+	/// Weak reference to the buffer (for line conversion in `willReplace`).
+	weak var buffer: TextBuffer?
+
+	/// Number of edits since the last `consume()`.
+	private var editCount = 0
+
+	/// The start line of the single edit (in pre-mutation buffer coords).
+	private var startLine = 0
+
+	/// Number of old lines spanned by the edit.
+	private var oldLineCount = 0
+
+	/// Number of new lines produced by the edit.
+	private var newLineCount = 0
+
+	/// Called before each buffer mutation.
+	func willReplace(from: Int, to: Int, bytes: [UInt8]) {
+		guard let buffer else { return }
+
+		editCount += 1
+		guard editCount == 1 else { return }
+
+		startLine = buffer.convert(offset: from).line
+
+		// Count newlines being deleted.
+		var deletedNewlines = 0
+		if to > from {
+			let old = buffer.substring(from: from, to: to)
+			for c in old.utf8 where c == UInt8(ascii: "\n") {
+				deletedNewlines += 1
+			}
+		}
+
+		// Count newlines being inserted.
+		var insertedNewlines = 0
+		for b in bytes where b == UInt8(ascii: "\n") {
+			insertedNewlines += 1
+		}
+
+		oldLineCount = deletedNewlines + 1
+		newLineCount = insertedNewlines + 1
+	}
+
+	/// Holds the result of a single-edit region.
+	struct EditRegion {
+		let startLine: Int
+		let oldLineCount: Int
+		let newLineCount: Int
+	}
+
+	/// Returns the edit region if exactly one edit occurred, or `nil` if
+	/// multiple edits happened (caller should fall back to full reparse).
+	/// Resets internal state.
+	@discardableResult
+	func consume() -> EditRegion? {
+		defer { reset() }
+		guard editCount == 1 else { return nil }
+		return EditRegion(
+			startLine: startLine,
+			oldLineCount: oldLineCount,
+			newLineCount: newLineCount,
+		)
+	}
+
+	/// Resets the tracker without returning a result.
+	func reset() {
+		editCount = 0
+		startLine = 0
+		oldLineCount = 0
+		newLineCount = 0
 	}
 }
