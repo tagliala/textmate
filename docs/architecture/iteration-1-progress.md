@@ -1365,6 +1365,57 @@ Wired ⇧⌘F (Find in Project) with a dedicated action that auto-switches the s
 
 ---
 
+### Phase 61 — Find Pboard Trampolines, Center Selection, Macro & Spell Menus
+
+**Summary**: Added find/replace pasteboard trampolines, center-selection-in-visible-area override, macro recording menu items (Start/Stop ⌥⌘M, Replay ⇧⌥⌘M), and "Check Spelling as You Type" Spelling submenu item.
+
+**Key Changes**:
+- `Sources/TMEditorUI/EditorView.swift` — `copySelectionToFindPboard:` and `copySelectionToReplacePboard:` trampolines; `override centerSelectionInVisibleArea(_:)` → `scrollToCaret()`
+- `Sources/TMApp/MainMenuBuilder.swift` — Macro recording items in Bundles menu; "Check Spelling as You Type" in Spelling submenu
+
+| Test Suite | Tests | Status |
+|-----------|-------|--------|
+| EditorView Trampoline Selectors (updated) | +2 selectors | ✅ |
+| Center Selection test | 1 | ✅ |
+
+### Cumulative Total: 2748 tests in 343 suites
+
+---
+
+### Phase 62 — Undo/Redo Wiring & selectBlock Fix
+
+**Summary**: Wired Edit → Undo/Redo menu actions to `TextUndoManager` with proper `canUndo`/`canRedo` guards, added `validateMenuItem` cases for greying out, and fixed `selectBlock:` mapping from `.selectParagraph` to `.selectTypingPair`.
+
+**Key Changes**:
+- `Sources/TMDocumentWindow/DocumentWindowController+MenuActions.swift` — `undo(_:)` and `redo(_:)` with guards
+- `Sources/TMDocumentWindow/DocumentWindowController.swift` — `validateMenuItem` cases for `undo:` and `redo:`
+- `Sources/TMEditor/EditorAction.swift` — `selectBlock:` → `.selectTypingPair`
+
+| Test Suite | Tests | Status |
+|-----------|-------|--------|
+| UndoRedoMenuTests | 4 | ✅ |
+| SelectBlockMappingTests | 1 | ✅ |
+
+### Cumulative Total: 2753 tests in 345 suites
+
+---
+
+### Phase 63 — File Drop Handler Wiring
+
+**Summary**: Implemented `editorView(_:didReceiveFileDrop:atLine:index:)` on TMDocumentEditor. Drops insert file paths joined by newlines at the caret. Full DragCommandHandler integration deferred until the command execution pipeline is wired.
+
+**Key Changes**:
+- `Sources/TMDocumentWindow/TMDocumentEditor.swift` — File drop delegate method inserting paths at caret
+- `Tests/TMDocumentWindowTests/TMDocumentEditorTests.swift` — FileDropTests suite (3 tests)
+
+| Test Suite | Tests | Status |
+|-----------|-------|--------|
+| FileDropTests | 3 | ✅ |
+
+### Cumulative Total: 2756 tests in 346 suites
+
+---
+
 ## Architecture Reminder
 
 All code follows the iteration strategy from
