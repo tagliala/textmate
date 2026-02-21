@@ -4,6 +4,7 @@ import TMCompatibility
 import TMCore
 import TMEditor
 import TMFileBrowser
+import TMGrammar
 import TMHTMLOutput
 
 // MARK: - CommandDispatcherDelegate Conformance
@@ -39,7 +40,7 @@ extension DocumentWindowController: CommandDispatcherDelegate {
 	private func resolveInput(
 		source: TMBundleRuntime.CommandInput,
 		editor: Editor,
-		scope _: String,
+		scope: String,
 	) -> String? {
 		switch source {
 		case .selection:
@@ -88,9 +89,43 @@ extension DocumentWindowController: CommandDispatcherDelegate {
 			return editor.buffer.substring(from: start, to: end)
 
 		case .scope:
-			// Scope-based input: return the text matching the scope at the caret.
-			// Simplified implementation — return the current selection or word.
-			return editor.selectedText ?? resolveInput(source: .word, editor: editor, scope: "")
+			// Scope-based input: extend from the caret while the scope at
+			// each position matches the command's scope selector.
+			// Mirrors C++ `select_scope` in Frameworks/selection/src/selection.cc.
+			guard let primary = editor.selections.primary,
+			      let parser = documentEditor?.syntaxHighlighter.parser
+			else {
+				return editor.selectedText ?? resolveInput(source: .word, editor: editor, scope: "")
+			}
+
+			let selector = ScopeSelector(scope)
+			let caret = primary.head.offset
+
+			// Walk left while the scope matches the selector.
+			var left = caret
+			while left > 0 {
+				let prevOffset = left - 1
+				let pos = editor.buffer.convert(offset: prevOffset)
+				let lineStart = editor.buffer.lineStart(pos.line)
+				let byteInLine = prevOffset - lineStart
+				let scopeAtPos = parser.scope(atLine: pos.line, byteOffset: byteInLine)
+				guard selector.doesMatch(scopeAtPos) != nil else { break }
+				left = prevOffset
+			}
+
+			// Walk right while the scope matches the selector.
+			var right = caret
+			while right < editor.buffer.size {
+				let pos = editor.buffer.convert(offset: right)
+				let lineStart = editor.buffer.lineStart(pos.line)
+				let byteInLine = right - lineStart
+				let scopeAtPos = parser.scope(atLine: pos.line, byteOffset: byteInLine)
+				guard selector.doesMatch(scopeAtPos) != nil else { break }
+				right += 1
+			}
+
+			guard right > left else { return nil }
+			return editor.buffer.substring(from: left, to: right)
 
 		case .character:
 			guard let primary = editor.selections.primary else { return nil }

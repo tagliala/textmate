@@ -1,11 +1,15 @@
+import AppKit
 import Foundation
 import Testing
+import TMBundle
+import TMTheme
 @testable import TMBundleRuntime
 @testable import TMCompatibility
 @testable import TMCore
 @testable import TMDocumentManager
 @testable import TMDocumentWindow
 @testable import TMEditor
+@testable import TMGrammar
 
 // MARK: - DocumentCommandDelegate Tests
 
@@ -529,5 +533,220 @@ struct EnvironmentBuilderIntegrationTests {
 			extra: ["TM_TAB_SIZE": "999"],
 		)
 		#expect(env["TM_TAB_SIZE"] == "4")
+	}
+}
+
+// MARK: - Scope-Based Input Tests
+
+/// Creates a keyword grammar: `\bkeyword\b` → `keyword.test`.
+private func makeScopeInputGrammar() -> GrammarDefinition {
+	GrammarDefinition(
+		scopeName: "source.test",
+		name: "Test",
+		fileTypes: ["test"],
+		uuid: nil,
+		firstLineMatch: nil,
+		patterns: [
+			GrammarDefinition.Pattern(
+				match: "\\bkeyword\\b",
+				name: "keyword.test",
+			),
+		],
+		repository: [:],
+		foldingStartMarker: nil,
+		foldingStopMarker: nil,
+	)
+}
+
+/// Sets up a DocumentWindowController with a grammar/parser ready for
+/// scope-based input tests.
+@MainActor
+private func makeWindowControllerWithGrammar(
+	text: String,
+) -> DocumentWindowController {
+	let doc = TMDocument()
+	doc.setContent(text, preserveRevision: true)
+	let wc = DocumentWindowController(document: doc)
+
+	let registry = GrammarRegistry()
+	let gramDef = makeScopeInputGrammar()
+	registry.register(gramDef)
+
+	let theme = Theme(
+		name: "Test",
+		semanticClass: "theme.light.test",
+		uuid: "00000000-0000-0000-0000-000000000099",
+		globalSettings: ThemeGlobalSettings(
+			foreground: ThemeColor(red: 0, green: 0, blue: 0),
+			background: ThemeColor(red: 1, green: 1, blue: 1),
+		),
+		gutterSettings: ThemeGutterSettings(),
+		rules: [
+			ThemeStyleRule(
+				scopeSelector: "keyword",
+				name: "Keywords",
+				foreground: ThemeColor(red: 1, green: 0, blue: 0),
+			),
+		],
+	)
+	let engine = ThemeEngine(theme: theme, fontSize: 12)
+
+	guard let docEditor = wc.documentEditor else { return wc }
+	docEditor.syntaxHighlighter.setGrammarRegistry(registry)
+	docEditor.syntaxHighlighter.setThemeEngine(engine)
+	docEditor.syntaxHighlighter.setGrammar(scope: gramDef.scopeName)
+	docEditor.syntaxHighlighter.setText(text)
+	docEditor.syntaxHighlighter.parseSync()
+
+	return wc
+}
+
+@Suite("Scope-Based Command Input")
+struct ScopeBasedInputTests {
+	@Test("Scope input returns text matching scope selector at caret")
+	@MainActor func scopeInputReturnsKeyword() throws {
+		// "hello keyword world" — with caret inside "keyword"
+		let wc = makeWindowControllerWithGrammar(text: "hello keyword world")
+		let editor = try #require(wc.documentEditor?.editor)
+
+		// Place caret in the middle of "keyword" (offset 9 = 'y' of keyword)
+		let pos = editor.buffer.convert(offset: 9)
+		editor.selections = SelectionState(caret: pos)
+
+		// Request scope input with "keyword" as the scope selector
+		let data = wc.inputData(
+			for: .scope,
+			fallback: .word,
+			format: .text,
+			scope: "keyword",
+		)
+		let text = String(data: data, encoding: .utf8)
+		#expect(text == "keyword")
+	}
+
+	@Test("Scope input falls back to word when no parser")
+	@MainActor func scopeInputFallsBackWithoutParser() throws {
+		// No grammar setup — just a plain document
+		let doc = TMDocument()
+		doc.setContent("hello world")
+		let wc = DocumentWindowController(document: doc)
+		let editor = try #require(wc.documentEditor?.editor)
+
+		// Place caret in "hello"
+		let pos = editor.buffer.convert(offset: 2)
+		editor.selections = SelectionState(caret: pos)
+
+		let data = wc.inputData(
+			for: .scope,
+			fallback: .word,
+			format: .text,
+			scope: "keyword",
+		)
+		let text = String(data: data, encoding: .utf8)
+		// Falls back to word since there's no parser
+		#expect(text == "hello")
+	}
+
+	@Test("Scope input with non-matching selector returns fallback")
+	@MainActor func scopeInputNonMatchingSelector() throws {
+		// "hello keyword world" — caret in "hello" (not a keyword scope)
+		let wc = makeWindowControllerWithGrammar(text: "hello keyword world")
+		let editor = try #require(wc.documentEditor?.editor)
+
+		// Place caret in "hello" at offset 2
+		let pos = editor.buffer.convert(offset: 2)
+		editor.selections = SelectionState(caret: pos)
+
+		// Request scope input with "keyword" selector — should not match
+		// since "hello" is in plain `source.test`, not `keyword.test`
+		let data = wc.inputData(
+			for: .scope,
+			fallback: .word,
+			format: .text,
+			scope: "keyword",
+		)
+		let text = String(data: data, encoding: .utf8)
+		// Falls back to word since scope doesn't match selector at caret
+		#expect(text == "hello")
+	}
+
+	@Test("Scope input with empty selector matches any scope")
+	@MainActor func scopeInputEmptySelector() throws {
+		// An empty ScopeSelector matches everything with rank 0,
+		// so it should extend across the entire document.
+		let wc = makeWindowControllerWithGrammar(text: "hello keyword world")
+		let editor = try #require(wc.documentEditor?.editor)
+
+		let pos = editor.buffer.convert(offset: 9)
+		editor.selections = SelectionState(caret: pos)
+
+		let data = wc.inputData(
+			for: .scope,
+			fallback: .word,
+			format: .text,
+			scope: "",
+		)
+		let text = String(data: data, encoding: .utf8)
+		// Empty selector matches everything — extends to full document
+		#expect(text == "hello keyword world")
+	}
+
+	@Test("Scope input on multi-line document")
+	@MainActor func scopeInputMultiLine() throws {
+		let wc = makeWindowControllerWithGrammar(text: "hello\nkeyword\nworld")
+		let editor = try #require(wc.documentEditor?.editor)
+
+		// Place caret at start of line 1 ("keyword")
+		let offset = editor.buffer.lineStart(1)
+		let pos = editor.buffer.convert(offset: offset)
+		editor.selections = SelectionState(caret: pos)
+
+		let data = wc.inputData(
+			for: .scope,
+			fallback: .word,
+			format: .text,
+			scope: "keyword",
+		)
+		let text = String(data: data, encoding: .utf8)
+		#expect(text == "keyword")
+	}
+
+	@Test("Scope input at document boundary does not crash")
+	@MainActor func scopeInputAtBoundary() throws {
+		let wc = makeWindowControllerWithGrammar(text: "keyword")
+		let editor = try #require(wc.documentEditor?.editor)
+
+		// Place caret at offset 0
+		editor.selections = SelectionState(caret: TextPosition.zero)
+
+		let data = wc.inputData(
+			for: .scope,
+			fallback: .word,
+			format: .text,
+			scope: "keyword",
+		)
+		let text = String(data: data, encoding: .utf8)
+		#expect(text == "keyword")
+	}
+
+	@Test("Scope input at end of document does not crash")
+	@MainActor func scopeInputAtEnd() throws {
+		let wc = makeWindowControllerWithGrammar(text: "hello keyword")
+		let editor = try #require(wc.documentEditor?.editor)
+
+		// Place caret at end of "keyword"
+		let pos = editor.buffer.convert(offset: editor.buffer.size)
+		editor.selections = SelectionState(caret: pos)
+
+		let data = wc.inputData(
+			for: .scope,
+			fallback: .word,
+			format: .text,
+			scope: "keyword",
+		)
+		let text = String(data: data, encoding: .utf8)
+		// Caret is at end of buffer — might be at the edge of the keyword scope
+		// Result depends on parser; at minimum it should not crash
+		#expect(text != nil)
 	}
 }

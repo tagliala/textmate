@@ -179,14 +179,16 @@ public final class CommandDispatcher {
 
 		let environment = delegate.environment
 		let workingDirectory = delegate.workingDirectory
-		let scope = delegate.currentScope
 
 		// 4. Gather input.
+		// Pass the command's scope selector (not currentScope) so that
+		// `.scope` input can walk left/right matching the selector.
+		// This mirrors C++ runner.mm which passes `_command.scope_selector`.
 		let inputData = delegate.inputData(
 			for: command.input,
 			fallback: command.inputFallback,
 			format: command.inputFormat,
-			scope: scope,
+			scope: command.scopeSelector,
 		)
 
 		// 5. Create script file.
