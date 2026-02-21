@@ -1162,6 +1162,79 @@ Wired grammar fold markers (`foldingStartMarker` / `foldingStopMarker`) into the
 
 ---
 
+## Phase 52: Grammar-Aware Auto-Indent — ✅ COMPLETE
+
+### Summary
+
+Connected the `IndentFSM` engine (Phase 16) to the editor's newline action. Previously, auto-indent only copied the leading whitespace from the current line. Now, when a grammar defines `increaseIndentPattern` / `decreaseIndentPattern` (via bundle preferences), the FSM scans preceding lines and computes the correct indent level.
+
+### Key Changes
+
+| File | Changes |
+|------|---------|
+| `Sources/TMDocumentWindow/IndentPatternProvider.swift` | **New** — Queries BundleIndex for `.settings` items with scope-matched indent patterns; populates `IndentFSM` `PatternType` set per line; feeds `IndentFSM.scanLine()` for context lines |
+| `Sources/TMEditor/Editor.swift` | Added `indentProvider: ((Int) -> String)?` callback; `performInsertNewline()` uses provider if available, falls back to leading-whitespace copy |
+| `Sources/TMDocumentWindow/TMDocumentEditor.swift` | Wires `IndentPatternProvider` to `editor.indentProvider` in `configureGrammar()` |
+
+### Test Coverage
+
+| Test Suite | Tests | Status |
+|-----------|-------|--------|
+| IndentPatternProvider | 11 | ✅ |
+
+### Cumulative Total: 2708 tests in 333 suites
+
+---
+
+## Phase 53: Encoding & Line-Ending Status Bar UI — ✅ COMPLETE
+
+### Summary
+
+Added encoding and line-ending popup buttons to the status bar, wired to the document model. Users can now see and change the document's charset encoding and line ending from the status bar.
+
+### Key Changes
+
+| File | Changes |
+|------|---------|
+| `Sources/TMAppKit/StatusBarView.swift` | Added `encodingPopUp`/`lineEndingPopUp` (NSPopUpButton); `setEncoding`/`setLineEnding` methods; `rebuildEncodingMenu()` (7 common charsets) and `rebuildLineEndingMenu()` (LF/CR/CR-LF); action handlers; delegate method `statusBarView(_:didSelectLineEnding:)` |
+| `Sources/TMDocumentWindow/DocumentWindowController.swift` | `StatusBarViewDelegate` methods `didSelectEncoding`/`didSelectLineEnding` update document model; `wireDocumentEditor()`/`openFile`/`applySettings` push encoding+lineEnding to status bar |
+
+### Test Coverage
+
+| Test Suite | Tests | Status |
+|-----------|-------|--------|
+| EncodingDisplayTests | 5 | ✅ |
+| LineEndingDisplayTests | 4 | ✅ |
+
+### Cumulative Total: 2717 tests in 335 suites
+
+---
+
+## Phase 54: Theme Live Reload — ✅ COMPLETE
+
+### Summary
+
+Added a Theme submenu to the View menu, populated dynamically from BundleIndex theme items. Theme selection is persisted to UserDefaults and applied live to all open windows — rebuilding the ThemeEngine and invalidating the layout for instant visual refresh.
+
+### Key Changes
+
+| File | Changes |
+|------|---------|
+| `Sources/TMApp/MainMenuBuilder.swift` | Added "Theme" submenu placeholder to View menu |
+| `Sources/TMApp/AppDelegate.swift` | `populateThemeMenu()` queries BundleIndex `.theme` items; `selectTheme(_:)` action handler; `loadAndApplyTheme(uuid:)` loads .tmTheme, persists UUID; `restorePersistedTheme()` on launch; `applyThemeToAllWindows()` |
+| `Sources/TMDocumentWindow/DocumentWindowController.swift` | `applyTheme(_:)` now creates `ThemeEngine(theme:)`, sets `themeEngine`, pushes to `SyntaxHighlighter.setThemeEngine()`, calls `invalidateAllLines()` |
+
+### Test Coverage
+
+| Test Suite | Tests | Status |
+|-----------|-------|--------|
+| MainMenuBuilder (themeSubmenu) | 1 | ✅ |
+| ThemeLiveReloadTests | 4 | ✅ |
+
+### Cumulative Total: 2722 tests in 336 suites
+
+---
+
 ## Architecture Reminder
 
 All code follows the iteration strategy from
