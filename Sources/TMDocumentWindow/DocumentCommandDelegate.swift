@@ -425,3 +425,19 @@ extension DocumentWindowController: CommandDispatcherDelegate {
 	}
 	#endif
 }
+
+// MARK: - DialogShimDelegate Conformance
+
+extension DocumentWindowController: DialogShimDelegate {
+	public func dialogShim(
+		_: DialogShim,
+		showToolTipHTML html: String,
+		at _: NSPoint,
+		transparent _: Bool,
+	) {
+		// Show the HTML tooltip near the editor caret rather than at the
+		// screen point, matching the C++ behaviour where tooltips float
+		// next to the active view.
+		showHUD(text: html)
+	}
+}

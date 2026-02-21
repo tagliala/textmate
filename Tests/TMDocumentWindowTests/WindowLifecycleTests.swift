@@ -1,6 +1,7 @@
 import AppKit
 import Testing
 import TMBundleRuntime
+import TMCompatibility
 @testable import TMDocumentManager
 @testable import TMDocumentWindow
 @testable import TMEditorUI
@@ -191,7 +192,7 @@ struct AutoRefreshWiringTests {
 			name: "Test",
 			uuid: "auto-1",
 			command: "echo",
-			autoRefresh: .onDocumentSave,
+			autoRefresh: TMBundleRuntime.AutoRefresh.onDocumentSave,
 		)
 		scheduler.register(command: cmd)
 		#expect(scheduler.registeredCount == 1)
@@ -210,7 +211,7 @@ struct AutoRefreshWiringTests {
 			name: "OnChange",
 			uuid: "auto-change-1",
 			command: "echo changed",
-			autoRefresh: .onDocumentChange,
+			autoRefresh: TMBundleRuntime.AutoRefresh.onDocumentChange,
 		)
 		controller.autoRefreshScheduler?.register(command: cmd)
 		#expect(controller.autoRefreshScheduler?.registeredCount == 1)
@@ -267,5 +268,83 @@ struct MarkTrackerWiringTests {
 
 		// Cleanup
 		MarkTracker.shared.removeAllMarks(forPath: canonicalPath)
+	}
+}
+
+// MARK: - DialogShim Wiring
+
+@Suite("DocumentWindowController – DialogShim Wiring")
+@MainActor
+struct DialogShimWiringTests {
+	private func makeController() -> DocumentWindowController {
+		let doc = TMDocument()
+		doc.setContent("hello", preserveRevision: true)
+		let controller = DocumentWindowController(document: doc)
+		let index = BundleIndex()
+		let policy = SecurityPolicy()
+		controller.bundleIndex = index
+		controller.commandDispatcher = CommandDispatcher(bundleIndex: index, securityPolicy: policy)
+		controller.wireDocumentEditor()
+		return controller
+	}
+
+	@Test("wireDocumentEditor sets DialogShim delegate")
+	func delegateIsSet() {
+		let controller = makeController()
+		#expect(DialogShim.shared.delegate === controller)
+	}
+
+	@Test("wireDocumentEditor registers built-in handlers")
+	func builtInHandlersRegistered() {
+		_ = makeController()
+		let commands = DialogShim.shared.registeredCommands
+		#expect(commands.contains("alert"))
+		#expect(commands.contains("menu"))
+		#expect(commands.contains("tooltip"))
+		#expect(commands.contains("filepanel"))
+		#expect(commands.contains("help"))
+	}
+
+	@Test("windowWillClose clears DialogShim delegate")
+	func delegateClearedOnClose() {
+		let controller = makeController()
+		#expect(DialogShim.shared.delegate === controller)
+
+		controller.windowWillClose(
+			Notification(name: NSWindow.willCloseNotification, object: controller.window),
+		)
+
+		#expect(DialogShim.shared.delegate == nil)
+	}
+
+	@Test("DialogShim dispatch returns error for unknown command")
+	func dispatchUnknownCommand() {
+		_ = makeController()
+		let result = DialogShim.shared.dispatch(arguments: ["tm_dialog2", "nonexistent"])
+		#expect(result.exitCode == 1)
+		#expect(result.errorMessage?.contains("Unknown command") == true)
+	}
+
+	@Test("help handler lists registered commands")
+	func helpHandler() {
+		_ = makeController()
+		let result = DialogShim.shared.dispatch(arguments: ["tm_dialog2", "help"])
+		#expect(result.exitCode == 0)
+		if let output = result.output as? String {
+			#expect(output.contains("alert"))
+			#expect(output.contains("menu"))
+		}
+	}
+
+	@Test("DialogShimDelegate conformance forwards tooltip HTML")
+	func tooltipDelegateForwardsHTML() {
+		let controller = makeController()
+		// Calling the delegate method should not crash.
+		controller.dialogShim(
+			DialogShim.shared,
+			showToolTipHTML: "<b>Hello</b>",
+			at: .zero,
+			transparent: false,
+		)
 	}
 }

@@ -1,6 +1,7 @@
 import AppKit
 import TMAppKit
 import TMBundleRuntime
+import TMCompatibility
 import TMCore
 import TMDocumentManager
 import TMEditor
@@ -704,6 +705,11 @@ public class DocumentWindowController: NSWindowController {
 			self?.autoRefreshScheduler?.documentDidChange()
 		}
 
+		// Wire the dialog shim so bundle commands can show menus, tooltips,
+		// alerts, and file panels through DialogShim.shared.
+		DialogShim.shared.delegate = self
+		DialogShim.shared.registerBuiltInHandlers()
+
 		// Configure syntax highlighting if a grammar registry is available.
 		if let registry = grammarRegistry, let engine = themeEngine {
 			documentEditor?.configureGrammar(
@@ -843,6 +849,11 @@ extension DocumentWindowController: NSWindowDelegate {
 		// Fire auto-refresh close triggers before tearing down.
 		autoRefreshScheduler?.documentDidClose()
 		autoRefreshScheduler?.unregisterAll()
+
+		// Detach the dialog shim delegate if we own it.
+		if DialogShim.shared.delegate === self {
+			DialogShim.shared.delegate = nil
+		}
 
 		// Stop watching files.
 		fileWatcher?.unwatchAll()
