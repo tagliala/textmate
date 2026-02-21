@@ -452,6 +452,22 @@ class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency BundleMenuAc
 		AppPreferencesWindowController.shared.showPreferences()
 	}
 
+	// MARK: - Bundle Manager
+
+	private var bundleManagerController: BundleManagerController?
+
+	@objc func showBundleManager(_: Any?) {
+		if bundleManagerController == nil {
+			bundleManagerController = BundleManagerController(
+				installer: bundleSystem.bundleInstaller,
+			)
+		}
+		bundleManagerController?.showWindow(nil)
+		Task { @MainActor in
+			await bundleManagerController?.loadCatalog()
+		}
+	}
+
 	/// Manual "Check for Updates…" action — delegates to SoftwareUpdateEngine.
 	@objc func checkForUpdates(_: Any?) {
 		Task { @MainActor in

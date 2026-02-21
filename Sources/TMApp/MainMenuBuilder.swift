@@ -777,6 +777,11 @@ enum MainMenuBuilder {
 			key: "b",
 			modifiers: [.command, .option, .control],
 		)
+		menu.addItem(
+			title: String(localized: "Manage Bundles…", comment: "Bundles menu item"),
+			action: NSSelectorFromString("showBundleManager:"),
+			key: "",
+		)
 		menu.addItem(.separator())
 		// Bundle submenus will be dynamically populated later
 

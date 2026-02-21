@@ -21,6 +21,9 @@ final class BundleSystemController {
 	/// Dispatches bundle commands for execution.
 	let commandDispatcher: CommandDispatcher
 
+	/// Installer for managing bundle install/update/uninstall.
+	lazy var bundleInstaller = BundleInstaller()
+
 	/// Whether bundles have been loaded at least once.
 	private(set) var hasLoadedBundles = false
 
