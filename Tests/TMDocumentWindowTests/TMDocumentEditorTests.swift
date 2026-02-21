@@ -1050,4 +1050,46 @@ struct FileDropTests {
 		docEditor.editorView(view, didReceiveFileDrop: [url], atLine: 0, index: 0)
 		#expect(docEditor.editor.text == "prefix /tmp/file.md")
 	}
+
+	@Test("file drop invokes drag command callback when matching")
+	func dropInvokesDragCommand() async {
+		let (docEditor, view) = makeEditor()
+		let index = BundleIndex()
+		let dragItem = BundleItem(
+			uuid: "drag-1",
+			name: "Insert Image",
+			kind: .dragCommand,
+			bundleUUID: "b1",
+			plist: [
+				"command": "#!/bin/bash\necho '<img>'",
+				"draggedFileExtensions": ["png", "jpg"],
+			],
+		)
+		index.setIndex(items: [dragItem], bundles: [])
+		docEditor.bundleIndex = index
+
+		var receivedCommand: BundleCommand?
+		docEditor.onExecuteBundleCommand = { cmd in
+			receivedCommand = cmd
+		}
+
+		let url = URL(fileURLWithPath: "/tmp/photo.png")
+		docEditor.editorView(view, didReceiveFileDrop: [url], atLine: 0, index: 0)
+
+		// Allow the Task to run.
+		try? await Task.sleep(for: .milliseconds(50))
+		#expect(receivedCommand != nil)
+		#expect(receivedCommand?.name == "Insert Image")
+		// Text should NOT have been inserted (command was dispatched instead).
+		#expect(docEditor.editor.text == "")
+	}
+
+	@Test("file drop falls back to path insertion without bundleIndex")
+	func dropFallsBackWithoutIndex() {
+		let (docEditor, view) = makeEditor()
+		// No bundleIndex set — should fall through to path insertion.
+		let url = URL(fileURLWithPath: "/tmp/photo.png")
+		docEditor.editorView(view, didReceiveFileDrop: [url], atLine: 0, index: 0)
+		#expect(docEditor.editor.text == "/tmp/photo.png")
+	}
 }

@@ -92,6 +92,9 @@ public class DocumentWindowController: NSWindowController {
 	/// Bundle index for tab trigger lookup (optional, injected from app layer).
 	public var bundleIndex: BundleIndex?
 
+	/// Command dispatcher for executing bundle commands (injected from app layer).
+	public var commandDispatcher: CommandDispatcher?
+
 	/// Registry of all active window controllers, keyed by identifier.
 	public nonisolated(unsafe) static var allControllers: [UUID: DocumentWindowController] = [:]
 
@@ -673,6 +676,14 @@ public class DocumentWindowController: NSWindowController {
 			clipboards: clipboards,
 		)
 		documentEditor?.bundleIndex = bundleIndex
+
+		if let dispatcher = commandDispatcher {
+			documentEditor?.onExecuteBundleCommand = { [weak self, weak dispatcher] command in
+				guard let self, let dispatcher else { return }
+				dispatcher.delegate = self
+				await dispatcher.execute(command: command)
+			}
+		}
 
 		// Configure syntax highlighting if a grammar registry is available.
 		if let registry = grammarRegistry, let engine = themeEngine {

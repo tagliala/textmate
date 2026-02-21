@@ -45,6 +45,10 @@ public final class TMDocumentEditor {
 	/// Bundle index for tab trigger lookup (injected from the app layer).
 	public var bundleIndex: BundleIndex?
 
+	/// Callback to execute a bundle command (e.g., drag commands).
+	/// Set by the window controller to route through the command pipeline.
+	public var onExecuteBundleCommand: ((BundleCommand) async -> Void)?
+
 	/// Whether auto-pairing (smart typing pairs) is enabled.
 	public var autoPairingEnabled: Bool = true
 
@@ -618,10 +622,22 @@ extension TMDocumentEditor: EditorViewDelegate {
 
 	public func editorView(_: EditorView, didReceiveFileDrop urls: [URL], atLine _: Int, index _: Int) {
 		let paths = urls.map(\.path)
+		let extensions = urls.compactMap { $0.pathExtension.isEmpty ? nil : $0.pathExtension.lowercased() }
 
-		// TODO: When the command execution pipeline is wired, query
-		// DragCommandHandler for matching drag commands and run them.
+		if let bundleIndex, let onExecuteBundleCommand {
+			let handler = DragCommandHandler(bundleIndex: bundleIndex)
+			let scope = syntaxHighlighter.activeScope ?? ""
+			let commands = handler.findCommands(forFileExtensions: extensions, scope: scope)
+			if let cmd = commands.first {
+				let bundleCmd = handler.buildBundleCommand(from: cmd, droppedFiles: paths)
+				Task { @MainActor in
+					await onExecuteBundleCommand(bundleCmd)
+				}
+				return
+			}
+		}
 
+		// Fallback: insert file paths at caret.
 		let text = paths.joined(separator: "\n")
 		beginChangeGrouping()
 		editor.insertText(text)

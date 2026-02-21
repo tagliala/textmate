@@ -251,6 +251,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency BundleMenuAc
 	@objc func newDocument(_: Any?) {
 		let controller = DocumentWindowController()
 		controller.bundleIndex = bundleSystem.bundleIndex
+		controller.commandDispatcher = bundleSystem.commandDispatcher
 		applyTheme(to: controller)
 		windowControllers.append(controller)
 		controller.showWindow(nil)
@@ -443,6 +444,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency BundleMenuAc
 		// Apply theme and bundle index to all restored windows.
 		for controller in windowControllers {
 			controller.bundleIndex = bundleSystem.bundleIndex
+			controller.commandDispatcher = bundleSystem.commandDispatcher
 			applyTheme(to: controller)
 		}
 		return ()
@@ -502,6 +504,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency BundleMenuAc
 
 		let controller = DocumentWindowController()
 		controller.bundleIndex = bundleSystem.bundleIndex
+		controller.commandDispatcher = bundleSystem.commandDispatcher
 		applyTheme(to: controller)
 
 		if isDir.boolValue {

@@ -21,9 +21,6 @@ final class BundleSystemController {
 	/// Dispatches bundle commands for execution.
 	let commandDispatcher: CommandDispatcher
 
-	/// The parser used to convert bundle item plists into commands.
-	private let parser = BundleCommandParser()
-
 	/// Whether bundles have been loaded at least once.
 	private(set) var hasLoadedBundles = false
 
@@ -76,23 +73,5 @@ final class BundleSystemController {
 		}
 
 		bundlesMenu.delegate = menuBuilder
-	}
-
-	// MARK: - Command Execution
-
-	/// Executes a bundle item identified by UUID.
-	///
-	/// Called from the responder chain when a bundle menu item is
-	/// selected. Returns `true` if the item was found and execution
-	/// started, `false` otherwise.
-	@discardableResult
-	func executeItem(uuid: String, delegate: BundleCommandControllerDelegate? = nil) -> Bool {
-		guard let item = bundleIndex.lookup(uuid: uuid) else { return false }
-		guard let command = parser.parse(item: item) else { return false }
-
-		let controller = BundleCommandController(command: command)
-		controller.delegate = delegate
-		controller.execute(inputData: nil)
-		return true
 	}
 }
