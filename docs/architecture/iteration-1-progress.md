@@ -1453,6 +1453,40 @@ Wired ⇧⌘F (Find in Project) with a dedicated action that auto-switches the s
 
 ---
 
+### Phase 66 — Incremental Reparse Optimization (commit `6f776401`)
+
+**Summary**: Added EditRegionTracker to track line-level impact of buffer edits, enabling incremental reparse via `SyntaxHighlighter.replaceLines()` for single edits instead of full `setText()` on every keystroke.
+
+**Key Changes**:
+- `Sources/TMDocumentWindow/TMDocumentEditor.swift` — `EditRegionTracker` (BufferCallback) tracks single-edit line regions; `editTracker` property wired in init/deinit; `syncAfterEdit()` uses `editTracker.consume()` for incremental path, falls back to `setText` for multiple edits; `documentDidChange()` resets tracker
+- `Tests/TMDocumentWindowTests/IncrementalReparseTests.swift` — 8 unit tests for EditRegionTracker + 5 integration tests for syncAfterEdit incremental/full reparse
+
+| Test Suite | Tests | Status |
+|-----------|-------|--------|
+| EditRegionTracker | 8 | ✅ |
+| IncrementalReparseIntegration | 5 | ✅ |
+
+### Cumulative Total: 2780 tests in 349 suites
+
+---
+
+### Phase 67 — ChoiceMenuPanel Wiring (commit `17a5b104`)
+
+**Summary**: Wired the ChoiceMenuPanel into TMDocumentEditor for both completion suggestions and snippet tab stop choices. Key events are intercepted before `interpretKeyEvents` when the menu is visible, and choice acceptance handles both completion cancellation and snippet tab stop replacement.
+
+**Key Changes**:
+- `Sources/TMEditorUI/EditorView.swift` — Added `editorView(_:handleKeyDown:) -> Bool` to EditorViewDelegate; EditorView.keyDown calls delegate first, skips interpretKeyEvents when true returned
+- `Sources/TMDocumentWindow/TMDocumentEditor.swift` — `handleKeyDown` routes through `choiceMenu.handleKeyEvent()`; `createChoiceMenu()` wires onAccept/onCancel; `acceptChoiceMenuSelection(_:)` for completions and snippet choices; `showSnippetChoicesIfNeeded()` checks snippet choices and shows/populates menu
+- `Tests/TMDocumentWindowTests/ChoiceMenuWiringTests.swift` — 12 new tests
+
+| Test Suite | Tests | Status |
+|-----------|-------|--------|
+| ChoiceMenuWiringTests | 12 | ✅ |
+
+### Cumulative Total: 2792 tests in 350 suites
+
+---
+
 ## Architecture Reminder
 
 All code follows the iteration strategy from
