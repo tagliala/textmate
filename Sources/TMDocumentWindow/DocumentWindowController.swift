@@ -677,6 +677,16 @@ public class DocumentWindowController: NSWindowController {
 			)
 		}
 
+		// Update status bar grammar display.
+		if let scope = documentEditor?.syntaxHighlighter.activeScope {
+			let name = bundleIndex?
+				.query(BundleQuery(field: .grammarScope, value: scope, kinds: .grammar))
+				.first?.name ?? scope
+			statusBarView.setGrammar(name)
+		} else {
+			statusBarView.setGrammar("Plain Text")
+		}
+
 		updateWindowTitle()
 		statusBarView.setEncoding(doc.encoding.charset)
 		statusBarView.setLineEnding(doc.encoding.lineEnding.displayName)
@@ -824,6 +834,52 @@ extension DocumentWindowController: StatusBarViewDelegate {
 		textDocument.encoding.lineEnding = ending
 		textDocument.markModified()
 		updateWindowTitle()
+	}
+
+	public func statusBarViewWillShowGrammarMenu(_: StatusBarView, popup: NSPopUpButton) {
+		popup.removeAllItems()
+		guard let bundleIndex else { return }
+
+		let grammars = bundleIndex.query(BundleQuery(kinds: .grammar))
+			.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+
+		let activeScope = documentEditor?.syntaxHighlighter.activeScope
+
+		// "Plain Text" option at the top.
+		let plainItem = NSMenuItem(title: "Plain Text", action: nil, keyEquivalent: "")
+		plainItem.representedObject = "" as String
+		popup.menu?.addItem(plainItem)
+		popup.menu?.addItem(.separator())
+
+		for grammar in grammars {
+			let item = NSMenuItem(title: grammar.name, action: nil, keyEquivalent: "")
+			item.representedObject = grammar.scopeSelector
+			popup.menu?.addItem(item)
+			if grammar.scopeSelector == activeScope {
+				popup.select(item)
+			}
+		}
+
+		// If no grammar is active, select "Plain Text".
+		if activeScope == nil || activeScope?.isEmpty == true {
+			popup.selectItem(at: 0)
+		}
+	}
+
+	public func statusBarView(_: StatusBarView, didSelectGrammar scope: String) {
+		guard let registry = grammarRegistry, let engine = themeEngine else { return }
+		if scope.isEmpty {
+			// "Plain Text" selected — clear syntax highlighting.
+			documentEditor?.syntaxHighlighter.setGrammar(scope: nil)
+			statusBarView.setGrammar("Plain Text")
+		} else {
+			documentEditor?.configureGrammar(registry: registry, themeEngine: engine, scope: scope)
+			// Find the display name from the bundle index.
+			let name = bundleIndex?
+				.query(BundleQuery(field: .grammarScope, value: scope, kinds: .grammar))
+				.first?.name ?? scope
+			statusBarView.setGrammar(name)
+		}
 	}
 }
 

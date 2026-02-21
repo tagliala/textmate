@@ -876,3 +876,102 @@ struct ThemeLiveReloadTests {
 		#expect(caret.greenComponent < 0.1)
 	}
 }
+
+// MARK: - Grammar Switching Tests
+
+@Suite("DocumentWindowController — Grammar Switching")
+@MainActor
+struct GrammarSwitchingTests {
+	@Test("willShowGrammarMenu populates popup with grammars")
+	func populatesGrammarMenu() {
+		let wc = DocumentWindowController()
+		let index = BundleIndex()
+		let grammar1 = BundleItem(
+			uuid: "g1", name: "Swift", kind: .grammar,
+			scopeSelector: "source.swift", bundleUUID: "b1",
+		)
+		let grammar2 = BundleItem(
+			uuid: "g2", name: "Ruby", kind: .grammar,
+			scopeSelector: "source.ruby", bundleUUID: "b1",
+		)
+		index.setIndex(items: [grammar1, grammar2], bundles: [])
+		wc.bundleIndex = index
+
+		let popup = NSPopUpButton(frame: .zero, pullsDown: false)
+		wc.statusBarViewWillShowGrammarMenu(wc.statusBarView, popup: popup)
+
+		// "Plain Text" + separator + "Ruby" + "Swift" (sorted alphabetically).
+		let titles = popup.itemTitles
+		#expect(titles.first == "Plain Text")
+		#expect(titles.contains("Ruby"))
+		#expect(titles.contains("Swift"))
+	}
+
+	@Test("willShowGrammarMenu sorts grammars alphabetically")
+	func sortedAlphabetically() {
+		let wc = DocumentWindowController()
+		let index = BundleIndex()
+		let items = [
+			BundleItem(uuid: "g1", name: "Zig", kind: .grammar, scopeSelector: "source.zig", bundleUUID: "b1"),
+			BundleItem(uuid: "g2", name: "Ada", kind: .grammar, scopeSelector: "source.ada", bundleUUID: "b1"),
+			BundleItem(uuid: "g3", name: "Lua", kind: .grammar, scopeSelector: "source.lua", bundleUUID: "b1"),
+		]
+		index.setIndex(items: items, bundles: [])
+		wc.bundleIndex = index
+
+		let popup = NSPopUpButton(frame: .zero, pullsDown: false)
+		wc.statusBarViewWillShowGrammarMenu(wc.statusBarView, popup: popup)
+
+		// Skip "Plain Text" and separator.
+		let grammarTitles = popup.itemTitles.filter { $0 != "Plain Text" && !$0.isEmpty }
+		#expect(grammarTitles == ["Ada", "Lua", "Zig"])
+	}
+
+	@Test("willShowGrammarMenu empty without bundleIndex")
+	func emptyWithoutIndex() {
+		let wc = DocumentWindowController()
+		let popup = NSPopUpButton(frame: .zero, pullsDown: false)
+		popup.addItem(withTitle: "existing")
+		wc.statusBarViewWillShowGrammarMenu(wc.statusBarView, popup: popup)
+
+		// Should be cleared without grammars.
+		#expect(popup.numberOfItems == 0)
+	}
+
+	@Test("didSelectGrammar updates status bar")
+	func selectGrammarUpdatesStatusBar() {
+		let wc = DocumentWindowController()
+		let index = BundleIndex()
+		let grammar = BundleItem(
+			uuid: "g1", name: "Python", kind: .grammar,
+			scopeSelector: "source.python", bundleUUID: "b1",
+		)
+		index.setIndex(items: [grammar], bundles: [])
+		wc.bundleIndex = index
+
+		// didSelectGrammar with empty scope → Plain Text.
+		wc.statusBarView(wc.statusBarView, didSelectGrammar: "")
+		#expect(wc.statusBarView.grammarTitle == "Plain Text")
+	}
+
+	@Test("grammar menu items carry scope as representedObject")
+	func menuItemsHaveScope() {
+		let wc = DocumentWindowController()
+		let index = BundleIndex()
+		let grammar = BundleItem(
+			uuid: "g1", name: "Go", kind: .grammar,
+			scopeSelector: "source.go", bundleUUID: "b1",
+		)
+		index.setIndex(items: [grammar], bundles: [])
+		wc.bundleIndex = index
+
+		let popup = NSPopUpButton(frame: .zero, pullsDown: false)
+		wc.statusBarViewWillShowGrammarMenu(wc.statusBarView, popup: popup)
+
+		let goItem = popup.menu?.items.first { $0.title == "Go" }
+		#expect(goItem?.representedObject as? String == "source.go")
+
+		let plainItem = popup.menu?.items.first { $0.title == "Plain Text" }
+		#expect(plainItem?.representedObject as? String == "")
+	}
+}

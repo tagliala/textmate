@@ -207,6 +207,8 @@ public class StatusBarView: NSView {
 		// Grammar popup
 		configurePopUp(grammarPopUp, font: statusFont, title: "Plain Text", label: "Grammar")
 		grammarPopUp.translatesAutoresizingMaskIntoConstraints = false
+		grammarPopUp.target = self
+		grammarPopUp.action = #selector(grammarSelected(_:))
 		addSubview(grammarPopUp)
 
 		// Tab size popup (pulls down)
@@ -503,6 +505,11 @@ public class StatusBarView: NSView {
 
 	@objc private func bundleItemsPopUpWillOpen(_: Notification) {
 		delegate?.statusBarViewWillShowBundleItemsMenu(self, popup: bundleItemsPopUp)
+	}
+
+	@objc private func grammarSelected(_: NSPopUpButton) {
+		guard let scope = grammarPopUp.selectedItem?.representedObject as? String else { return }
+		delegate?.statusBarView(self, didSelectGrammar: scope)
 	}
 
 	@objc private func encodingSelected(_: NSPopUpButton) {
