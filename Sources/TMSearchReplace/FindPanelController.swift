@@ -154,9 +154,12 @@ public final class FindPanelController: NSWindowController, FindServer, Sendable
 	// MARK: - Public API
 
 	/// Show the find panel (Use & Find or just Find).
-	public func showPanel(withSelection selection: String? = nil) {
+	public func showPanel(withSelection selection: String? = nil, scope: SearchScope? = nil) {
 		if let selection, !selection.isEmpty {
 			findString = selection
+		}
+		if let scope {
+			searchTarget = scope
 		}
 		pasteboard.syncFromSystem()
 		findTextField.stringValue = state.findString

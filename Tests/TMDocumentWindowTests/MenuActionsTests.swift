@@ -5,6 +5,7 @@ import TMCore
 @testable import TMDocumentWindow
 @testable import TMEditor
 @testable import TMEditorUI
+@testable import TMSearchReplace
 
 // MARK: - Menu Actions Tests
 
@@ -343,5 +344,67 @@ struct Phase40SelectorMappingTests {
 	@Test("copySelectionToReplacePboard: maps to .copySelectionToReplaceClipboard")
 	func copySelectionToReplacePboard() {
 		#expect(EditorAction(selector: "copySelectionToReplacePboard:") == .copySelectionToReplaceClipboard)
+	}
+}
+
+// MARK: - Find in Project Wiring Tests
+
+@Suite("FindInProjectWiring")
+@MainActor
+struct FindInProjectWiringTests {
+	@Test("orderFrontFindInProjectPanel sets scope to project")
+	func findInProjectSetsScope() {
+		let controller = DocumentWindowController()
+		controller.projectPath = "/tmp/myproject"
+
+		controller.orderFrontFindInProjectPanel(nil)
+
+		let findPanel = FindPanelController.shared
+		#expect(findPanel.searchTarget == .project)
+		#expect(findPanel.projectFolder == "/tmp/myproject")
+	}
+
+	@Test("orderFrontFindInProjectPanel wires navigationDelegate")
+	func findInProjectWiresDelegate() {
+		let controller = DocumentWindowController()
+		controller.projectPath = "/tmp/myproject"
+
+		controller.orderFrontFindInProjectPanel(nil)
+
+		#expect(FindPanelController.shared.navigationDelegate === controller)
+	}
+
+	@Test("orderFrontFindPanel also wires navigationDelegate")
+	func findPanelWiresDelegate() {
+		let controller = DocumentWindowController()
+
+		controller.orderFrontFindPanel(nil)
+
+		#expect(FindPanelController.shared.navigationDelegate === controller)
+	}
+
+	@Test("showPanel with scope parameter sets search target")
+	func showPanelWithScope() {
+		let findPanel = FindPanelController.shared
+		findPanel.searchTarget = .document
+
+		findPanel.showPanel(withSelection: nil, scope: .project)
+		#expect(findPanel.searchTarget == .project)
+	}
+
+	@Test("showPanel without scope preserves current target")
+	func showPanelWithoutScope() {
+		let findPanel = FindPanelController.shared
+		findPanel.searchTarget = .selection
+
+		findPanel.showPanel(withSelection: "test")
+		#expect(findPanel.searchTarget == .selection)
+	}
+
+	@Test("bringToFront does not crash")
+	func bringToFrontNoCrash() {
+		let controller = DocumentWindowController()
+		// Should not crash even without a window on-screen
+		controller.bringToFront()
 	}
 }

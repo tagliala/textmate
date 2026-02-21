@@ -274,7 +274,7 @@ enum MainMenuBuilder {
 		)
 		findMenu.addItem(
 			title: String(localized: "Find in Project…", comment: "Find submenu item"),
-			action: NSSelectorFromString("orderFrontFindPanel:"),
+			action: NSSelectorFromString("orderFrontFindInProjectPanel:"),
 			key: "f",
 			modifiers: [.command, .shift],
 		)

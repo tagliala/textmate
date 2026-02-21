@@ -161,7 +161,20 @@ public extension DocumentWindowController {
 
 	@objc func orderFrontFindPanel(_: Any?) {
 		let selection = documentEditor?.editor.selectedText
-		FindPanelController.shared.showPanel(withSelection: selection)
+		let findPanel = FindPanelController.shared
+		findPanel.navigationDelegate = self
+		findPanel.documentIdentifier = selectedDocument?.id
+		findPanel.showPanel(withSelection: selection)
+	}
+
+	@objc func orderFrontFindInProjectPanel(_: Any?) {
+		let selection = documentEditor?.editor.selectedText
+		let findPanel = FindPanelController.shared
+		findPanel.projectFolder = projectPath
+			?? selectedDocument?.path.map { ($0 as NSString).deletingLastPathComponent }
+		findPanel.documentIdentifier = selectedDocument?.id
+		findPanel.navigationDelegate = self
+		findPanel.showPanel(withSelection: selection, scope: .project)
 	}
 
 	@objc func findNext(_: Any?) {
@@ -349,6 +362,32 @@ public extension DocumentWindowController {
 	/// Replays the last recorded macro.
 	@objc func replayMacro(_: Any?) {
 		documentEditor?.replayMacro()
+	}
+}
+
+// MARK: - FindNavigationDelegate
+
+extension DocumentWindowController: FindNavigationDelegate {
+	public func selectRange(_ range: LineColumnRange, inDocumentWithID documentID: UUID) {
+		// Check if the document is already open in this window.
+		if let idx = documents.firstIndex(where: { $0.id == documentID }) {
+			selectedTabIndex = idx
+			openAndSelectDocument(documents[idx], activate: false)
+		}
+
+		// Navigate to the line/column.
+		guard let editor = documentEditor?.editor else { return }
+		let targetLine = max(0, min(range.startLine, editor.buffer.lines - 1))
+		let offset = editor.buffer.lineStart(targetLine) + range.startColumn
+		let clampedOffset = min(offset, editor.buffer.size)
+		let pos = editor.buffer.convert(offset: clampedOffset)
+		editor.selections = SelectionState(caret: pos)
+		editorView.carets = [(pos.line, pos.column)]
+		editorView.scrollToCaret()
+	}
+
+	public func bringToFront() {
+		window?.makeKeyAndOrderFront(nil)
 	}
 }
 
