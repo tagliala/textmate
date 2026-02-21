@@ -940,8 +940,9 @@ extension DocumentWindowController: StatusBarViewDelegate {
 // MARK: - GutterViewDelegate
 
 extension DocumentWindowController: GutterViewDelegate {
-	public func gutterView(_: GutterView, didToggleBookmarkAtLine _: Int) {
-		// Bookmark state is managed locally by GutterView; nothing to propagate.
+	public func gutterView(_: GutterView, didToggleBookmarkAtLine line: Int) {
+		guard let path = textDocument.path else { return }
+		MarkTracker.shared.toggleBookmark(atLine: line, forPath: path)
 	}
 
 	public func gutterView(_: GutterView, didToggleFoldAtLine line: Int) {
