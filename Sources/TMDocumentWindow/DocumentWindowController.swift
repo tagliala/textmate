@@ -122,9 +122,6 @@ public class DocumentWindowController: NSWindowController {
 	/// Document-scoped spell check tag for tracking learned words.
 	public lazy var spellDocumentTag = SpellCheckService.DocumentTag()
 
-	/// SCM badge provider for file browser status indicators.
-	public var scmBadgeProvider: FileStatusBadgeProvider?
-
 	/// File watcher for detecting external changes to open documents.
 	private var fileWatcher: FileWatcher?
 
