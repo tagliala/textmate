@@ -68,6 +68,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency BundleMenuAc
 		loadKeyBindings()
 		loadBundles()
 		startRMateServer()
+		setupRecentDocumentsMenu()
 		recoverBackupsIfNeeded()
 		restoreWindowState() ?? newDocument(nil)
 		backupManager.start()
@@ -352,6 +353,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency BundleMenuAc
 			let target: DocumentWindowController
 			if controller.treatAsProjectWindow {
 				controller.openFile(at: url)
+				RecentDocumentsManager.shared.noteDocumentOpened(path: url.path)
 				target = controller
 			} else {
 				openURL(url)
@@ -563,6 +565,58 @@ class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency BundleMenuAc
 		}
 	}
 
+	// MARK: - Recent Documents
+
+	private func setupRecentDocumentsMenu() {
+		RecentDocumentsManager.shared.pruneStale()
+		RecentDocumentsManager.shared.onChanged = { [weak self] in
+			self?.rebuildRecentDocumentsMenu()
+		}
+		rebuildRecentDocumentsMenu()
+	}
+
+	private func rebuildRecentDocumentsMenu() {
+		guard let fileMenu = NSApp.mainMenu?.item(at: 1)?.submenu else { return }
+		guard let recentItem = fileMenu.items.first(where: {
+			$0.submenu?.title == String(localized: "Open Recent", comment: "File menu submenu")
+		}) else { return }
+		guard let recentMenu = recentItem.submenu else { return }
+
+		recentMenu.removeAllItems()
+
+		for entry in RecentDocumentsManager.shared.entries {
+			let item = NSMenuItem(
+				title: entry.displayName,
+				action: #selector(openRecentDocument(_:)),
+				keyEquivalent: "",
+			)
+			item.representedObject = entry.path
+			item.toolTip = entry.path
+			recentMenu.addItem(item)
+		}
+
+		if !RecentDocumentsManager.shared.entries.isEmpty {
+			recentMenu.addItem(.separator())
+		}
+		recentMenu.addItem(
+			NSMenuItem(
+				title: String(localized: "Clear Menu", comment: "Open Recent submenu item"),
+				action: #selector(clearRecentDocuments(_:)),
+				keyEquivalent: "",
+			),
+		)
+	}
+
+	@objc func openRecentDocument(_ sender: NSMenuItem) {
+		guard let path = sender.representedObject as? String else { return }
+		let url = URL(fileURLWithPath: path)
+		openURL(url)
+	}
+
+	@objc func clearRecentDocuments(_: Any?) {
+		RecentDocumentsManager.shared.clearAll()
+	}
+
 	// MARK: - Helpers
 
 	private func openURL(_ url: URL) {
@@ -578,6 +632,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency BundleMenuAc
 			controller.setProjectRoot(url)
 		} else {
 			controller.openFile(at: url)
+			RecentDocumentsManager.shared.noteDocumentOpened(path: url.path)
 		}
 		windowControllers.append(controller)
 		controller.showWindow(nil)

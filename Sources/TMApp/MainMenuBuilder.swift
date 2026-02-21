@@ -111,9 +111,9 @@ enum MainMenuBuilder {
 			key: "t",
 		)
 
-		// Open Recent submenu
+		// Open Recent submenu — populated dynamically by AppDelegate via
+		// RecentDocumentsManager.
 		let recentMenu = NSMenu(title: String(localized: "Open Recent", comment: "File menu submenu"))
-		recentMenu.performSelector(inBackground: NSSelectorFromString("_setMenuName:"), with: "NSRecentDocumentsMenu")
 		let recentItem = menu.addItem(
 			title: String(localized: "Open Recent", comment: "File menu item"),
 			action: nil,
@@ -121,7 +121,7 @@ enum MainMenuBuilder {
 		recentItem.submenu = recentMenu
 		recentMenu.addItem(
 			title: String(localized: "Clear Menu", comment: "Open Recent submenu item"),
-			action: #selector(NSDocumentController.clearRecentDocuments(_:)),
+			action: NSSelectorFromString("clearRecentDocuments:"),
 		)
 
 		menu.addItem(.separator())
