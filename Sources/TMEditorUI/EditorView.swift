@@ -983,10 +983,14 @@ public class EditorView: NSView, @preconcurrency NSTextInputClient, NSMenuItemVa
 
 	// MARK: - Drag Source
 
+	/// Whether this view is the source of a currently active drag session.
+	public var isDragSource = false
+
 	/// Begins a drag session when the user drags selected text.
 	public func beginDragSession(from event: NSEvent) {
 		guard let selectedText = accessibilitySelectedText(), !selectedText.isEmpty else { return }
 
+		isDragSource = true
 		let item = NSDraggingItem(pasteboardWriter: selectedText as NSString)
 		let point = convert(event.locationInWindow, from: nil)
 		item.setDraggingFrame(NSRect(origin: point, size: NSSize(width: 100, height: 20)), contents: nil)
@@ -1155,19 +1159,29 @@ public extension EditorView {
 // MARK: - Drag and Drop
 
 public extension EditorView {
-	override func draggingEntered(_ sender: any NSDraggingInfo) -> NSDragOperation {
+	/// Returns the appropriate drag operation for the dragged content.
+	/// Within the same view, prefer move; otherwise copy.
+	private func dragOperation(for sender: any NSDraggingInfo) -> NSDragOperation {
 		let pb = sender.draggingPasteboard
-		if pb.types?.contains(.string) == true || pb.types?.contains(.fileURL) == true {
-			return .copy
+		guard pb.types?.contains(.string) == true || pb.types?.contains(.fileURL) == true else {
+			return []
 		}
-		return []
+		// Move within the same view, copy from outside.
+		if let source = sender.draggingSource as? EditorView, source === self {
+			return .move
+		}
+		return .copy
+	}
+
+	override func draggingEntered(_ sender: any NSDraggingInfo) -> NSDragOperation {
+		dragOperation(for: sender)
 	}
 
 	override func draggingUpdated(_ sender: any NSDraggingInfo) -> NSDragOperation {
 		let point = convert(sender.draggingLocation, from: nil)
 		let hit = layoutManager.characterIndex(at: point)
 		carets = [(hit.line, hit.index)]
-		return .copy
+		return dragOperation(for: sender)
 	}
 
 	override func performDragOperation(_ sender: any NSDraggingInfo) -> Bool {
@@ -1183,7 +1197,14 @@ public extension EditorView {
 
 		// Handle text drops.
 		if let text = pb.string(forType: .string), !text.isEmpty {
-			delegate?.editorView(self, insertText: text, replacementRange: NSRange(location: NSNotFound, length: 0))
+			let isMove = (sender.draggingSource as? EditorView) === self
+			delegate?.editorView(
+				self,
+				didReceiveTextDrop: text,
+				atLine: hit.line,
+				index: hit.index,
+				isMove: isMove,
+			)
 			return true
 		}
 
@@ -1196,9 +1217,20 @@ public extension EditorView {
 extension EditorView: NSDraggingSource {
 	public func draggingSession(
 		_: NSDraggingSession,
-		sourceOperationMaskFor _: NSDraggingContext,
+		sourceOperationMaskFor context: NSDraggingContext,
 	) -> NSDragOperation {
-		.copy
+		context == .withinApplication ? [.copy, .move] : [.copy, .generic]
+	}
+
+	public func draggingSession(
+		_: NSDraggingSession,
+		endedAt _: NSPoint,
+		operation: NSDragOperation,
+	) {
+		isDragSource = false
+		if operation == .move {
+			delegate?.editorViewDidCompleteDragMove(self)
+		}
 	}
 }
 
@@ -1232,6 +1264,19 @@ public protocol EditorViewDelegate: AnyObject {
 
 	/// Called when files are dropped onto the editor.
 	func editorView(_ view: EditorView, didReceiveFileDrop urls: [URL], atLine line: Int, index: Int)
+
+	/// Called when text is dropped onto the editor (from within or outside).
+	func editorView(
+		_ view: EditorView,
+		didReceiveTextDrop text: String,
+		atLine line: Int,
+		index: Int,
+		isMove: Bool,
+	)
+
+	/// Called when a drag-move completes — the delegate should delete
+	/// the originally selected text.
+	func editorViewDidCompleteDragMove(_ view: EditorView)
 
 	/// Called for key equivalents (Cmd+key shortcuts for bundle dispatch).
 	/// Return `true` if handled, `false` to pass through.
@@ -1271,6 +1316,14 @@ public extension EditorViewDelegate {
 	func editorViewDidTripleClick(_: EditorView, event _: NSEvent) {}
 	func editorView(_: EditorView, doCommandBySelector _: Selector) {}
 	func editorView(_: EditorView, didReceiveFileDrop _: [URL], atLine _: Int, index _: Int) {}
+	func editorView(
+		_: EditorView,
+		didReceiveTextDrop _: String,
+		atLine _: Int,
+		index _: Int,
+		isMove _: Bool,
+	) {}
+	func editorViewDidCompleteDragMove(_: EditorView) {}
 	func editorView(_: EditorView, performKeyEquivalent _: NSEvent) -> Bool {
 		false
 	}

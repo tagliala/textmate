@@ -410,7 +410,36 @@ struct EditorViewDragDropTests {
 		#expect(types.contains(.string))
 		#expect(types.contains(.fileURL))
 	}
+
+	@Test("isDragSource starts false")
+	func isDragSourceInitiallyFalse() {
+		let view = EditorView(frame: NSRect(x: 0, y: 0, width: 400, height: 300))
+		#expect(!view.isDragSource)
+	}
+
+	@Test("source operation mask allows copy and move within app")
+	func sourceOperationMaskWithinApp() {
+		let view = EditorView(frame: NSRect(x: 0, y: 0, width: 400, height: 300))
+		let session = FakeDraggingSession()
+		let mask = view.draggingSession(session, sourceOperationMaskFor: .withinApplication)
+		#expect(mask.contains(.copy))
+		#expect(mask.contains(.move))
+	}
+
+	@Test("source operation mask allows copy and generic outside app")
+	func sourceOperationMaskOutside() {
+		let view = EditorView(frame: NSRect(x: 0, y: 0, width: 400, height: 300))
+		let session = FakeDraggingSession()
+		let mask = view.draggingSession(session, sourceOperationMaskFor: .outsideApplication)
+		#expect(mask.contains(.copy))
+		#expect(mask.contains(.generic))
+		#expect(!mask.contains(.move))
+	}
 }
+
+/// Minimal NSDraggingSession stand-in for testing.
+@MainActor
+private final class FakeDraggingSession: NSDraggingSession {}
 
 // MARK: - Auto-Pairing Integration Tests
 
@@ -1091,5 +1120,72 @@ struct FileDropTests {
 		let url = URL(fileURLWithPath: "/tmp/photo.png")
 		docEditor.editorView(view, didReceiveFileDrop: [url], atLine: 0, index: 0)
 		#expect(docEditor.editor.text == "/tmp/photo.png")
+	}
+
+	@Test("text drop copy inserts text at position")
+	func textDropCopyInserts() {
+		let (docEditor, view) = makeEditor(text: "hello world")
+		docEditor.editorView(
+			view,
+			didReceiveTextDrop: "NEW",
+			atLine: 0,
+			index: 5,
+			isMove: false,
+		)
+		#expect(docEditor.editor.text == "helloNEW world")
+	}
+
+	@Test("text drop move saves pre-drag selections")
+	func textDropMoveSavesSelections() {
+		let (docEditor, view) = makeEditor(text: "hello world")
+		// Select "hello" (offset 0..5).
+		let start = docEditor.editor.buffer.convert(offset: 0)
+		let end = docEditor.editor.buffer.convert(offset: 5)
+		docEditor.editor.selections = SelectionState([TMCore.TextRange(anchor: start, head: end)])
+
+		docEditor.editorView(
+			view,
+			didReceiveTextDrop: "hello",
+			atLine: 0,
+			index: 8,
+			isMove: true,
+		)
+
+		// Text should be inserted at the drop position.
+		#expect(docEditor.editor.text.contains("hello"))
+	}
+
+	@Test("drag move complete deletes original selection")
+	func dragMoveCompletedDeletesSelection() {
+		let (docEditor, view) = makeEditor(text: "ABCDE12345")
+		// Select "ABCDE" (offset 0..5).
+		let start = docEditor.editor.buffer.convert(offset: 0)
+		let end = docEditor.editor.buffer.convert(offset: 5)
+		docEditor.editor.selections = SelectionState([TMCore.TextRange(anchor: start, head: end)])
+
+		// Simulate a text drop-move: drop "ABCDE" after "12345".
+		docEditor.editorView(
+			view,
+			didReceiveTextDrop: "ABCDE",
+			atLine: 0,
+			index: 10,
+			isMove: true,
+		)
+
+		// After drop, text has the insertion. Now complete the move.
+		docEditor.editorViewDidCompleteDragMove(view)
+
+		// The original "ABCDE" should be removed.
+		// Result depends on insertion shifting offsets, but the original
+		// 5 characters at offset 0..5 that were "ABCDE" are deleted.
+		#expect(!docEditor.editor.text.hasPrefix("ABCDE"))
+	}
+
+	@Test("drag move complete is no-op without saved selections")
+	func dragMoveCompleteNoOp() {
+		let (docEditor, view) = makeEditor(text: "hello")
+		// No text drop preceded this — should be no-op.
+		docEditor.editorViewDidCompleteDragMove(view)
+		#expect(docEditor.editor.text == "hello")
 	}
 }

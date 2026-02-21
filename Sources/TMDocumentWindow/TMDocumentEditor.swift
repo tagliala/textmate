@@ -39,6 +39,10 @@ public final class TMDocumentEditor {
 	/// Nesting level for undo change groups.
 	private var changeGroupLevel: Int = 0
 
+	/// Selection ranges saved before a drag-move begins, so the
+	/// original text can be deleted when the move completes.
+	private var preDragSelections: [TMCore.TextRange]?
+
 	/// Observation token for document change callbacks.
 	private var documentObservationID: UUID?
 
@@ -690,6 +694,50 @@ extension TMDocumentEditor: EditorViewDelegate {
 		let text = paths.joined(separator: "\n")
 		beginChangeGrouping()
 		editor.insertText(text)
+		endChangeGrouping()
+		syncAfterEdit()
+	}
+
+	public func editorView(
+		_: EditorView,
+		didReceiveTextDrop text: String,
+		atLine line: Int,
+		index: Int,
+		isMove: Bool,
+	) {
+		if isMove {
+			// Save the current selection so we can delete it after
+			// the drag session ends.
+			preDragSelections = editor.selections.selections
+		}
+
+		// Place caret at drop position, then insert.
+		let offset = editor.buffer.lineStart(line) + index
+		let position = editor.buffer.convert(
+			offset: min(offset, editor.buffer.size),
+		)
+		editor.selections = SelectionState(caret: position)
+
+		beginChangeGrouping()
+		editor.insertText(text)
+		endChangeGrouping()
+		syncAfterEdit()
+	}
+
+	public func editorViewDidCompleteDragMove(_: EditorView) {
+		guard let ranges = preDragSelections else { return }
+		preDragSelections = nil
+
+		beginChangeGrouping()
+		// Delete in reverse order to preserve earlier offsets.
+		for range in ranges.reversed() {
+			guard !range.isEmpty else { continue }
+			editor.buffer.replace(
+				from: range.start.offset,
+				to: range.end.offset,
+				with: "",
+			)
+		}
 		endChangeGrouping()
 		syncAfterEdit()
 	}
