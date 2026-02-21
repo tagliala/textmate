@@ -219,3 +219,53 @@ struct AutoRefreshWiringTests {
 		controller.documentEditor?.onContentChanged?()
 	}
 }
+
+// MARK: - MarkTracker Wiring
+
+@Suite("DocumentWindowController – MarkTracker Wiring")
+@MainActor
+struct MarkTrackerWiringTests {
+	@Test("wireDocumentEditor loads marks from tracker")
+	func loadsMarksOnWire() {
+		// Arrange: place a bookmark in the tracker for a known path.
+		let path = "/tmp/mark-test-\(UUID()).txt"
+		MarkTracker.shared.addBookmark(atLine: 5, forPath: path)
+
+		let doc = TMDocument(path: path)
+		doc.setContent("line\nline\nline\nline\nline\nline\n", preserveRevision: true)
+		let controller = DocumentWindowController(document: doc)
+		controller.wireDocumentEditor()
+
+		#expect(doc.bookmarks.contains(5))
+
+		// Cleanup
+		MarkTracker.shared.removeAllMarks(forPath: path)
+	}
+
+	@Test("windowWillClose saves marks for all documents")
+	func savesMarksOnClose() {
+		let uniqueName = "mark-close-\(UUID()).txt"
+		let path = "/tmp/\(uniqueName)"
+		let doc = TMDocument(path: path)
+		doc.setContent("hello", preserveRevision: true)
+
+		let controller = DocumentWindowController(document: doc)
+		controller.wireDocumentEditor()
+
+		// Set bookmarks after wiring (which loads from tracker and finds nothing).
+		doc.bookmarks = [3, 7]
+
+		controller.windowWillClose(
+			Notification(name: NSWindow.willCloseNotification, object: controller.window),
+		)
+
+		// MarkTracker canonicalizes paths (resolves symlinks), so use canonical path.
+		let canonicalPath = URL(fileURLWithPath: path).resolvingSymlinksInPath().path
+		let stored = MarkTracker.shared.bookmarks(forPath: canonicalPath)
+		#expect(stored.contains(3))
+		#expect(stored.contains(7))
+
+		// Cleanup
+		MarkTracker.shared.removeAllMarks(forPath: canonicalPath)
+	}
+}

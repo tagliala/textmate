@@ -226,6 +226,7 @@ public class DocumentWindowController: NSWindowController {
 		Task { @MainActor in
 			do {
 				try await doc.load()
+				MarkTracker.shared.loadIntoDocument(doc)
 				self.applySettings(to: doc)
 				self.textDocument = doc
 				// Replace disposable document, or append as new tab.
@@ -255,6 +256,7 @@ public class DocumentWindowController: NSWindowController {
 			return saveDocumentAs()
 		}
 		documentEditor?.documentWillSave()
+		MarkTracker.shared.saveFromDocument(textDocument)
 		textDocument.setContent(documentEditor?.editor.text ?? "")
 		Task { @MainActor in
 			do {
@@ -281,6 +283,7 @@ public class DocumentWindowController: NSWindowController {
 		}
 
 		documentEditor?.documentWillSave()
+		MarkTracker.shared.saveFromDocument(textDocument)
 		textDocument.setContent(documentEditor?.editor.text ?? "")
 		textDocument.setPath(url.path)
 		Task { @MainActor in
@@ -670,6 +673,9 @@ public class DocumentWindowController: NSWindowController {
 		let doc = selectedDocument ?? textDocument
 		textDocument = doc
 
+		// Load marks from the global tracker when activating a document.
+		MarkTracker.shared.loadIntoDocument(doc)
+
 		// Ensure the document has content (treat nil as empty for untitled).
 		if doc.content == nil {
 			doc.setContent("", preserveRevision: true)
@@ -828,6 +834,11 @@ extension DocumentWindowController: NSWindowDelegate {
 	public func windowWillClose(_: Notification) {
 		// Save session before the window disappears.
 		Self.scheduleSessionBackup()
+
+		// Save marks for all open documents.
+		for doc in documents {
+			MarkTracker.shared.saveFromDocument(doc)
+		}
 
 		// Fire auto-refresh close triggers before tearing down.
 		autoRefreshScheduler?.documentDidClose()

@@ -137,6 +137,7 @@ public extension DocumentWindowController {
 		}
 
 		documentEditor?.documentWillSave()
+		MarkTracker.shared.saveFromDocument(document)
 		document.setContent(documentEditor?.editor.text ?? "")
 
 		Task { @MainActor in
