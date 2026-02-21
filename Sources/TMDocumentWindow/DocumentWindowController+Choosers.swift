@@ -37,17 +37,22 @@ public extension DocumentWindowController {
 		return de.syntaxHighlighter.extractSymbols(bundleIndex: idx, lines: lines)
 	}
 
-	/// Navigates to a symbol's selection string (line number).
-	private func navigateToSelectionString(_ selectionString: String) {
+	/// Navigates to a selection string (line number or line:column).
+	func navigateToSelectionString(_ selectionString: String) {
 		guard let editor = documentEditor?.editor else { return }
-		if let lineNumber = Int(selectionString), lineNumber > 0 {
-			let targetLine = min(lineNumber - 1, editor.buffer.lines - 1)
-			let offset = editor.buffer.lineStart(targetLine)
-			let pos = editor.buffer.convert(offset: offset)
-			editor.selections = SelectionState(caret: pos)
-			editorView.carets = [(pos.line, pos.column)]
-			editorView.scrollToCaret()
+		let parts = selectionString.split(separator: ":", maxSplits: 1)
+		guard let lineNumber = Int(parts[0]), lineNumber > 0 else { return }
+		let targetLine = min(lineNumber - 1, editor.buffer.lines - 1)
+		let lineStart = editor.buffer.lineStart(targetLine)
+		var offset = lineStart
+		if parts.count > 1, let col = Int(parts[1]), col > 0 {
+			let lineEnd = editor.buffer.lineEnd(targetLine)
+			offset = min(lineStart + col - 1, lineEnd)
 		}
+		let pos = editor.buffer.convert(offset: offset)
+		editor.selections = SelectionState(caret: pos)
+		editorView.carets = [(pos.line, pos.column)]
+		editorView.scrollToCaret()
 	}
 }
 

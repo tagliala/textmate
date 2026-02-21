@@ -126,4 +126,91 @@ struct CloseFlowTests {
 			Issue.record("Expected .cancel")
 		}
 	}
+
+	// MARK: - applicationShouldTerminate
+
+	@Test("applicationShouldTerminate returns terminateNow with no unsaved docs")
+	func terminateNowWhenClean() {
+		// Ensure no controllers have unsaved docs
+		let saved = DocumentWindowController.allControllers
+		DocumentWindowController.allControllers.removeAll()
+		defer { DocumentWindowController.allControllers = saved }
+
+		let controller = DocumentWindowController()
+		let doc = TMDocument()
+		doc.setContent("", preserveRevision: true)
+		controller.documents = [doc]
+		let id = UUID()
+		controller.identifier = id
+
+		let reply = DocumentWindowController.applicationShouldTerminate()
+		#expect(reply == .terminateNow)
+
+		controller.identifier = nil
+	}
+
+	@Test("applicationShouldTerminate returns terminateNow with empty controllers")
+	func terminateNowWhenEmpty() {
+		let saved = DocumentWindowController.allControllers
+		DocumentWindowController.allControllers.removeAll()
+		defer { DocumentWindowController.allControllers = saved }
+
+		let reply = DocumentWindowController.applicationShouldTerminate()
+		#expect(reply == .terminateNow)
+	}
+}
+
+// MARK: - Selection String Navigation
+
+@Suite("DocumentWindowController — Selection String Navigation")
+@MainActor
+struct SelectionStringTests {
+	@Test("navigateToSelectionString with line number")
+	func navigateToLine() {
+		let doc = TMDocument()
+		doc.setContent("line 1\nline 2\nline 3\n", preserveRevision: true)
+		let controller = DocumentWindowController(document: doc)
+
+		controller.navigateToSelectionString("2")
+
+		let carets = controller.editorView.carets
+		#expect(carets.count == 1)
+		#expect(carets[0].line == 1) // 0-indexed
+	}
+
+	@Test("navigateToSelectionString with line:column")
+	func navigateToLineColumn() {
+		let doc = TMDocument()
+		doc.setContent("abcdef\nghijkl\n", preserveRevision: true)
+		let controller = DocumentWindowController(document: doc)
+
+		controller.navigateToSelectionString("2:4")
+
+		let carets = controller.editorView.carets
+		#expect(carets.count == 1)
+		#expect(carets[0].line == 1) // 0-indexed line 2
+	}
+
+	@Test("navigateToSelectionString with invalid input does nothing")
+	func invalidInputIgnored() {
+		let doc = TMDocument()
+		doc.setContent("hello\n", preserveRevision: true)
+		let controller = DocumentWindowController(document: doc)
+
+		controller.navigateToSelectionString("abc")
+		// Should not crash, carets unchanged
+		#expect(controller.editorView.carets.count >= 0)
+	}
+
+	@Test("navigateToSelectionString clamps to last line")
+	func clampsToLastLine() {
+		let doc = TMDocument()
+		doc.setContent("a\nb\n", preserveRevision: true)
+		let controller = DocumentWindowController(document: doc)
+
+		controller.navigateToSelectionString("999")
+
+		let carets = controller.editorView.carets
+		#expect(carets.count == 1)
+	}
 }

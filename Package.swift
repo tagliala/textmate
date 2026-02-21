@@ -185,6 +185,7 @@ let package = Package(
 			dependencies: [
 				"TMTheme",
 				"TMAppKit",
+				"TMCompatibility",
 				"TMDocumentWindow",
 				"TMPreferences",
 				"TMBundleRuntime",

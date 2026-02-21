@@ -1,8 +1,10 @@
 import AppKit
 import TMBundleRuntime
 import TMBundleUI
+import TMCompatibility
 import TMDocumentWindow
 import TMFilterList
+import TMPreferences
 import TMServices
 import TMTheme
 
@@ -46,6 +48,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency BundleMenuAc
 	/// Event monitor for custom key bindings.
 	private var keyEventMonitor: Any?
 
+	/// Remote editing server for `rmate` connections.
+	private var rmateServer: RMateServer?
+
 	/// The bundle system: loader, index, menu builder, command dispatch.
 	private let bundleSystem = BundleSystemController()
 
@@ -56,10 +61,16 @@ class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency BundleMenuAc
 		loadDefaultTheme()
 		loadKeyBindings()
 		loadBundles()
+		startRMateServer()
 		restoreWindowState() ?? newDocument(nil)
 	}
 
+	func applicationShouldTerminate(_: NSApplication) -> NSApplication.TerminateReply {
+		DocumentWindowController.applicationShouldTerminate()
+	}
+
 	func applicationWillTerminate(_: Notification) {
+		rmateServer?.stop()
 		saveWindowState()
 		if let monitor = keyEventMonitor {
 			NSEvent.removeMonitor(monitor)
@@ -81,6 +92,16 @@ class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency BundleMenuAc
 			newDocument(nil)
 		}
 		return true
+	}
+
+	func application(_: NSApplication, open urls: [URL]) {
+		for url in urls {
+			if url.scheme == "txmt" {
+				handleTxmtURL(url)
+			} else {
+				openURL(url)
+			}
+		}
 	}
 
 	// MARK: - Bundles
@@ -276,13 +297,17 @@ class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency BundleMenuAc
 			let url = URL(fileURLWithPath: path)
 			// Re-use the current window if it's a project window,
 			// otherwise open a new one.
+			let target: DocumentWindowController
 			if controller.treatAsProjectWindow {
 				controller.openFile(at: url)
+				target = controller
 			} else {
 				openURL(url)
+				target = windowControllers.last ?? controller
 			}
-			// TODO: Navigate to selectionString / symbolString when editor supports it.
-			_ = selectionString
+			if let sel = selectionString {
+				target.navigateToSelectionString(sel)
+			}
 			_ = symbolString
 		}
 
@@ -423,6 +448,52 @@ class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency BundleMenuAc
 		return ()
 	}
 
+	// MARK: - txmt:// URL Scheme
+
+	/// Handle a `txmt://open?url=file:///path&line=N&column=M` URL.
+	private func handleTxmtURL(_ url: URL) {
+		guard url.host == "open",
+		      let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+		else { return }
+
+		let items = components.queryItems ?? []
+		guard let fileURLString = items.first(where: { $0.name == "url" })?.value,
+		      let fileURL = URL(string: fileURLString),
+		      fileURL.isFileURL
+		else { return }
+
+		let line = items.first(where: { $0.name == "line" })?.value
+		let column = items.first(where: { $0.name == "column" })?.value
+
+		openURL(fileURL)
+
+		if let lineStr = line {
+			let sel = column.map { "\(lineStr):\($0)" } ?? lineStr
+			windowControllers.last?.navigateToSelectionString(sel)
+		}
+	}
+
+	// MARK: - RMate Server
+
+	private func startRMateServer() {
+		let defaults = UserDefaults.standard
+		guard !defaults.bool(forKey: PreferencesKeys.disableRMateServer) else { return }
+
+		let listenMode = defaults.string(forKey: PreferencesKeys.rmateServerListen)
+		let port = defaults.integer(forKey: PreferencesKeys.rmateServerPort)
+		let effectivePort = port > 0 ? UInt16(port) : RMateServer.defaultPort
+		let remote = listenMode == PreferencesKeys.RMateListenMode.remote.rawValue
+
+		let server = RMateServer(port: effectivePort, listenForRemoteClients: remote)
+		server.delegate = self
+		do {
+			try server.start()
+			rmateServer = server
+		} catch {
+			NSLog("Failed to start rmate server: \(error)")
+		}
+	}
+
 	// MARK: - Helpers
 
 	private func openURL(_ url: URL) {
@@ -445,5 +516,19 @@ class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency BundleMenuAc
 	private func currentWindowController() -> DocumentWindowController? {
 		guard let window = NSApp.keyWindow else { return nil }
 		return windowControllers.first { $0.window === window }
+	}
+}
+
+// MARK: - RMateServerDelegate
+
+extension AppDelegate: RMateServerDelegate {
+	func rmateServer(_: RMateServer, didReceiveOpenRequest request: RMateOpenRequest) {
+		guard let path = request.path ?? request.realPath else { return }
+		let url = URL(fileURLWithPath: path)
+		openURL(url)
+		NSApp.activate()
+		if let sel = request.selection {
+			windowControllers.last?.navigateToSelectionString(sel)
+		}
 	}
 }
