@@ -37,8 +37,23 @@ final class BundleSystemController {
 	/// Loads all bundles from standard search paths into the index.
 	///
 	/// Call this once from `applicationDidFinishLaunching`. The load
-	/// happens synchronously on the main thread for Iteration 1;
-	/// background loading is deferred to a later phase.
+	/// happens on a background thread; the index is updated on `@MainActor`
+	/// when complete.
+	func loadBundlesAsync() async {
+		let loader = loader
+		let result = await Task.detached(priority: .userInitiated) {
+			loader.loadAll()
+		}.value
+		bundleIndex.setIndex(items: result.items, bundles: result.bundles)
+		hasLoadedBundles = true
+		NSLog(
+			"TMBundles: loaded %d items from %d bundles",
+			result.items.count,
+			result.bundles.count,
+		)
+	}
+
+	/// Loads all bundles synchronously (for testing or fallback).
 	func loadBundles() {
 		let result = loader.loadAll()
 		bundleIndex.setIndex(items: result.items, bundles: result.bundles)

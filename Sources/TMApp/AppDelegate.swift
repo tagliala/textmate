@@ -107,12 +107,17 @@ class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency BundleMenuAc
 	// MARK: - Bundles
 
 	private func loadBundles() {
-		bundleSystem.loadBundles()
+		// Install the menu delegate immediately so it's ready when menus populate.
 		if let mainMenu = NSApp.mainMenu {
 			bundleSystem.installBundlesMenu(in: mainMenu)
 		}
-		populateThemeMenu()
-		restorePersistedTheme()
+
+		// Load bundles on a background thread to avoid blocking the UI.
+		Task { @MainActor in
+			await bundleSystem.loadBundlesAsync()
+			populateThemeMenu()
+			restorePersistedTheme()
+		}
 	}
 
 	// MARK: - Bundle Item Execution (Responder Chain)
