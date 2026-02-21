@@ -1521,6 +1521,57 @@ Wired ⇧⌘F (Find in Project) with a dedicated action that auto-switches the s
 
 ---
 
+### Phase 70 — Key-Equiv & Tab-Trigger Command Dispatch (commit `c199046c`)
+
+**Summary**: Fixed two critical gaps where matched bundle command items were silently dropped. `performKeyEquivalent` now dispatches commands through `BundleCommandParser` + `onExecuteBundleCommand` callback instead of returning `true` without executing. `expandTabTrigger` now handles both snippet and command items, with commands parsed and dispatched through the callback.
+
+**Key Changes**:
+- `Sources/TMDocumentWindow/TMDocumentEditor.swift` — `performKeyEquivalent`: after snippet handling, parse command plists via `BundleCommandParser().parse(item:)`, call `fixShebang()`, dispatch through `onExecuteBundleCommand` in a Task; `expandTabTrigger`: restructured to handle `.snippet` (existing path) and `.command` (new path: select trigger text, parse, dispatch)
+- `Tests/TMDocumentWindowTests/TMDocumentEditorTests.swift` — 7 new tests in `CommandDispatchTests` suite
+
+| Test Suite | Tests | Status |
+|-----------|-------|--------|
+| CommandDispatchTests | 7 | ✅ |
+
+### Cumulative Total: 2813 tests in 352 suites
+
+---
+
+### Phase 71 — AutoRefreshScheduler Wiring (commit `08232748`)
+
+**Summary**: Wired the fully-implemented `AutoRefreshScheduler` into the document lifecycle. Commands are now re-executed automatically when their auto-refresh triggers fire (document change, save, close).
+
+**Key Changes**:
+- `Sources/TMDocumentWindow/DocumentWindowController.swift` — `autoRefreshScheduler` property; created alongside `CommandDispatcher` in `wireDocumentEditor()`; commands registered after execution; `documentDidSave()` called after successful saves; `documentDidClose()` + `unregisterAll()` called in `windowWillClose`
+- `Sources/TMDocumentWindow/DocumentWindowController+CloseFlow.swift` — `documentDidSave()` called after iterative save
+- `Sources/TMDocumentWindow/TMDocumentEditor.swift` — Added `onContentChanged` callback fired at end of `syncAfterEdit()`; window controller forwards to `scheduler.documentDidChange()`
+- `Tests/TMDocumentWindowTests/WindowLifecycleTests.swift` — 5 new tests in `AutoRefreshWiringTests` suite
+
+| Test Suite | Tests | Status |
+|-----------|-------|--------|
+| AutoRefreshWiringTests | 5 | ✅ |
+
+### Cumulative Total: 2818 tests in 353 suites
+
+---
+
+### Phase 72 — MarkTracker Wiring (commit `1c1954bc`)
+
+**Summary**: Wired the `MarkTracker` singleton into the document lifecycle so bookmarks survive document close/reopen. Marks are loaded when a document is activated and saved before saves and on window close.
+
+**Key Changes**:
+- `Sources/TMDocumentWindow/DocumentWindowController.swift` — `MarkTracker.shared.loadIntoDocument(doc)` in `wireDocumentEditor()` and after `document.load()` in `openFile(at:)`; `saveFromDocument()` before each save and for all documents in `windowWillClose`
+- `Sources/TMDocumentWindow/DocumentWindowController+CloseFlow.swift` — `saveFromDocument()` before iterative save
+- `Tests/TMDocumentWindowTests/WindowLifecycleTests.swift` — 2 new tests in `MarkTrackerWiringTests` suite
+
+| Test Suite | Tests | Status |
+|-----------|-------|--------|
+| MarkTrackerWiringTests | 2 | ✅ |
+
+### Cumulative Total: 2820 tests in 354 suites
+
+---
+
 ## Architecture Reminder
 
 All code follows the iteration strategy from
