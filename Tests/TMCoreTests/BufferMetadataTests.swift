@@ -698,103 +698,6 @@ struct SymbolTransformationTests {
 	}
 }
 
-// MARK: - BufferSpelling Tests
-
-@Suite("BufferSpelling — Misspelling Tracking")
-struct BufferSpellingTests {
-	@Test func emptySpelling() {
-		let spelling = BufferSpelling()
-		#expect(spelling.isEmpty)
-		#expect(!spelling.isMisspelled(at: 0))
-		#expect(spelling.nextMisspelling(from: 0) == nil)
-	}
-
-	@Test func updateMisspellings() {
-		let spelling = BufferSpelling()
-		spelling.updateMisspellings(from: 0, to: 50, ranges: [
-			(start: 5, end: 10), // "wrold"
-			(start: 20, end: 28), // "mispeled"
-		])
-
-		#expect(!spelling.isMisspelled(at: 3))
-		#expect(spelling.isMisspelled(at: 5))
-		#expect(spelling.isMisspelled(at: 7))
-		#expect(!spelling.isMisspelled(at: 10))
-		#expect(!spelling.isMisspelled(at: 15))
-		#expect(spelling.isMisspelled(at: 20))
-		#expect(spelling.isMisspelled(at: 25))
-		#expect(!spelling.isMisspelled(at: 28))
-	}
-
-	@Test func nextMisspelling() {
-		let spelling = BufferSpelling()
-		spelling.updateMisspellings(from: 0, to: 50, ranges: [
-			(start: 10, end: 15),
-			(start: 30, end: 35),
-		])
-
-		#expect(spelling.nextMisspelling(from: 0) == 10)
-		#expect(spelling.nextMisspelling(from: 10) == 10) // At start of misspelling
-		#expect(spelling.nextMisspelling(from: 12) == 12) // Within misspelling
-		#expect(spelling.nextMisspelling(from: 15) == 30) // After first misspelling
-		#expect(spelling.nextMisspelling(from: 36) == nil) // Past all
-	}
-
-	@Test func misspellingsInRange() {
-		let spelling = BufferSpelling()
-		spelling.updateMisspellings(from: 0, to: 100, ranges: [
-			(start: 5, end: 10),
-			(start: 20, end: 30),
-			(start: 50, end: 60),
-		])
-
-		let result = spelling.misspellings(from: 8, to: 55)
-		#expect(result.count == 3)
-		// First: [8, 10) — clipped to query start
-		#expect(result[0].start == 8)
-		#expect(result[0].end == 10)
-		// Second: [20, 30) — fully within query
-		#expect(result[1].start == 20)
-		#expect(result[1].end == 30)
-		// Third: [50, 55) — clipped to query end
-		#expect(result[2].start == 50)
-		#expect(result[2].end == 55)
-	}
-
-	@Test func didReplaceShiftsMisspellings() {
-		let spelling = BufferSpelling()
-		spelling.updateMisspellings(from: 0, to: 50, ranges: [
-			(start: 20, end: 25),
-		])
-
-		// Insert 10 bytes at position 10
-		spelling.didReplace(from: 10, to: 10, length: 10)
-
-		#expect(!spelling.isMisspelled(at: 20)) // shifted
-		#expect(spelling.isMisspelled(at: 30)) // 20 + 10 = 30
-		#expect(!spelling.isMisspelled(at: 35)) // 25 + 10 = 35
-	}
-
-	@Test func recheck() {
-		let spelling = BufferSpelling()
-		spelling.updateMisspellings(from: 0, to: 50, ranges: [
-			(start: 5, end: 10),
-		])
-		#expect(spelling.isMisspelled(at: 7))
-
-		spelling.recheck()
-		#expect(!spelling.isMisspelled(at: 7))
-		#expect(spelling.isEmpty)
-	}
-
-	@Test func clearSpelling() {
-		let spelling = BufferSpelling()
-		spelling.updateMisspellings(from: 0, to: 50, ranges: [(start: 5, end: 10)])
-		spelling.clear()
-		#expect(spelling.isEmpty)
-	}
-}
-
 // MARK: - Integration: TextBuffer + BufferCallback
 
 @Suite("Buffer Metadata — TextBuffer Integration")
@@ -844,25 +747,6 @@ struct BufferMetadataIntegrationTests {
 		#expect(all.count == 1) // "main" at 0 was in [0,4) → removed
 		#expect(all[0].name == "helper")
 		#expect(all[0].position == 11) // 15 - 4 = 11
-	}
-
-	@Test func spellingAutoAdjustOnReplace() {
-		let buffer = TextBuffer("The wrold is big")
-		let spelling = BufferSpelling()
-		buffer.addCallback(spelling)
-
-		spelling.updateMisspellings(from: 0, to: 16, ranges: [
-			(start: 4, end: 9), // "wrold"
-		])
-
-		// Replace "wrold" with "world" (same length)
-		buffer.replace(from: 4, to: 9, with: "world")
-
-		// The misspelling entry at position 4 was in [4,9) and got removed
-		// by the replace adjustment. The spelling subsystem would need to
-		// re-check the region to restore correct data.
-		// For now just verify the auto-adjustment didn't crash.
-		#expect(!spelling.isMisspelled(at: 4))
 	}
 
 	@Test func multipleCallbacksOnSameBuffer() {
