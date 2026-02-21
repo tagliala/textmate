@@ -1,5 +1,6 @@
 #if canImport(AppKit)
 import AppKit
+import TMBundleRuntime
 import TMBundleUI
 import TMCore
 import TMDocumentManager
@@ -297,10 +298,25 @@ public extension DocumentWindowController {
 		editor.showWindow(nil)
 	}
 
-	// MARK: - Run Command (stub)
+	// MARK: - Run Command
 
 	@objc func orderFrontRunCommandWindow(_: Any?) {
-		// Run command window deferred to a future phase.
+		let panel = RunCommandWindowController.shared
+		panel.onExecute = { [weak self] command, output in
+			guard let self, let dispatcher = commandDispatcher else { return }
+			var bundleCommand = TMBundleRuntime.BundleCommand(
+				name: "Filter Through Command",
+				uuid: "",
+				command: command,
+				input: .selection,
+				output: output,
+			)
+			bundleCommand.fixShebang()
+			Task { @MainActor in
+				await dispatcher.execute(command: bundleCommand)
+			}
+		}
+		panel.showPanel(near: window)
 	}
 
 	// MARK: - Spell Checking

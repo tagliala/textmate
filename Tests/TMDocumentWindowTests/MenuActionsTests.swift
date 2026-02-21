@@ -1,5 +1,6 @@
 import AppKit
 import Testing
+import TMBundleRuntime
 import TMCore
 @testable import TMDocumentManager
 @testable import TMDocumentWindow
@@ -485,5 +486,82 @@ struct SelectBlockMappingTests {
 	func selectBlockMapsToTypingPair() {
 		let action = EditorAction(selector: "selectBlock:")
 		#expect(action == .selectTypingPair)
+	}
+}
+
+// MARK: - Run Command Window Controller
+
+@Suite("RunCommandWindowController")
+@MainActor
+struct RunCommandWindowTests {
+	@Test("shared instance is singleton")
+	func sharedSingleton() {
+		let a = RunCommandWindowController.shared
+		let b = RunCommandWindowController.shared
+		#expect(a === b)
+	}
+
+	@Test("panel title is Filter Through Command")
+	func panelTitle() {
+		let controller = RunCommandWindowController.shared
+		#expect(controller.window?.title == "Filter Through Command")
+	}
+
+	@Test("execute callback fires with command and output")
+	func executeCallback() {
+		let controller = RunCommandWindowController.shared
+		var receivedCommand: String?
+		var receivedOutput: TMBundleRuntime.CommandOutput?
+
+		controller.onExecute = { cmd, out in
+			receivedCommand = cmd
+			receivedOutput = out
+		}
+		controller.commandString = "echo hello"
+		controller.perform(NSSelectorFromString("execute:"), with: nil)
+
+		#expect(receivedCommand == "echo hello")
+		#expect(receivedOutput == .replaceInput)
+	}
+
+	@Test("execute does nothing when command is blank")
+	func executeIgnoresBlank() {
+		let controller = RunCommandWindowController.shared
+		var called = false
+		controller.onExecute = { _, _ in called = true }
+		controller.commandString = "   "
+		controller.perform(NSSelectorFromString("execute:"), with: nil)
+		#expect(called == false)
+	}
+
+	@Test("command is pushed to history")
+	func historyTracking() {
+		let controller = RunCommandWindowController.shared
+		// Clear existing history
+		UserDefaults.standard.removeObject(forKey: "FilterThroughCommandHistory")
+
+		controller.onExecute = { _, _ in }
+		controller.commandString = "sort -u"
+		controller.perform(NSSelectorFromString("execute:"), with: nil)
+
+		let history = UserDefaults.standard.stringArray(forKey: "FilterThroughCommandHistory") ?? []
+		#expect(history.first == "sort -u")
+	}
+
+	@Test("orderFrontRunCommandWindow sets onExecute callback")
+	func menuActionSetsCallback() {
+		let wc = DocumentWindowController()
+		let bundleIndex = BundleIndex()
+		let securityPolicy = SecurityPolicy()
+		wc.commandDispatcher = CommandDispatcher(
+			bundleIndex: bundleIndex,
+			securityPolicy: securityPolicy,
+		)
+
+		wc.orderFrontRunCommandWindow(nil)
+		#expect(RunCommandWindowController.shared.onExecute != nil)
+
+		// Cleanup
+		RunCommandWindowController.shared.onExecute = nil
 	}
 }
