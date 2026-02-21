@@ -408,3 +408,38 @@ struct FindInProjectWiringTests {
 		controller.bringToFront()
 	}
 }
+
+// MARK: - Dirty Dot (window.isDocumentEdited)
+
+@Suite("Window dirty dot wiring")
+@MainActor
+struct DirtyDotTests {
+	@Test("updateWindowTitle sets isDocumentEdited when modified")
+	func dirtyDotOnModified() {
+		let controller = DocumentWindowController()
+		// Force a window to exist so we can observe isDocumentEdited.
+		let win = controller.window ?? NSWindow()
+		controller.window = win
+
+		controller.textDocument.markModified()
+		controller.updateWindowTitle()
+
+		#expect(win.isDocumentEdited == true)
+	}
+
+	@Test("updateWindowTitle clears isDocumentEdited after save revision matches")
+	func dirtyDotClearedOnSave() {
+		let controller = DocumentWindowController()
+		let win = controller.window ?? NSWindow()
+		controller.window = win
+
+		controller.textDocument.markModified()
+		controller.updateWindowTitle()
+		#expect(win.isDocumentEdited == true)
+
+		// Simulate marking saved (reset savedRevision to match revision).
+		controller.textDocument.markSaved()
+		controller.updateWindowTitle()
+		#expect(win.isDocumentEdited == false)
+	}
+}

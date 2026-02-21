@@ -329,3 +329,62 @@ struct EditorViewTests {
 		#expect(selExtensions.count == 10)
 	}
 }
+
+// MARK: - Trampoline Selectors
+
+@Suite("EditorView Trampoline Selectors")
+@MainActor
+struct EditorViewTrampolineTests {
+	/// All trampoline selectors that EditorView must respond to so that
+	/// AppKit can route the corresponding menu items through the responder chain.
+	nonisolated static let trampolineSelectors: [Selector] = [
+		#selector(EditorView.selectWord(_:)),
+		#selector(EditorView.selectParagraph(_:)),
+		#selector(EditorView.selectHardLine(_:)),
+		#selector(EditorView.selectCurrentScope(_:)),
+		#selector(EditorView.selectBlock(_:)),
+		#selector(EditorView.transpose(_:)),
+		#selector(EditorView.pasteNext(_:)),
+		#selector(EditorView.pastePrevious(_:)),
+		#selector(EditorView.uppercaseWord(_:)),
+		#selector(EditorView.lowercaseWord(_:)),
+		#selector(EditorView.capitalizeWord(_:)),
+		#selector(EditorView.changeCaseOfLetter(_:)),
+		#selector(EditorView.changeCaseOfWord(_:)),
+		#selector(EditorView.shiftLeft(_:)),
+		#selector(EditorView.shiftRight(_:)),
+		#selector(EditorView.indent(_:)),
+		#selector(EditorView.reformatText(_:)),
+		#selector(EditorView.reformatTextAndJustify(_:)),
+		#selector(EditorView.unwrapText(_:)),
+		#selector(EditorView.moveSelectionUp(_:)),
+		#selector(EditorView.moveSelectionDown(_:)),
+		#selector(EditorView.moveSelectionLeft(_:)),
+		#selector(EditorView.moveSelectionRight(_:)),
+	]
+
+	@Test("EditorView responds to all trampoline selectors", arguments: trampolineSelectors)
+	func respondsToTrampoline(selector: Selector) {
+		let view = EditorView()
+		#expect(view.responds(to: selector))
+	}
+
+	@Test("Trampoline forwards to delegate", arguments: trampolineSelectors)
+	func trampolineForwardsToDelegate(selector: Selector) {
+		let view = EditorView()
+		let spy = DelegateSpy()
+		view.delegate = spy
+		view.perform(selector, with: nil)
+		#expect(spy.lastCommandSelector != nil, "Expected delegate call for \(selector)")
+	}
+}
+
+/// Minimal spy that records the last ``doCommandBySelector`` call.
+@MainActor
+private final class DelegateSpy: EditorViewDelegate {
+	var lastCommandSelector: Selector?
+
+	func editorView(_: EditorView, doCommandBySelector selector: Selector) {
+		lastCommandSelector = selector
+	}
+}

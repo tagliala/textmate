@@ -749,6 +749,100 @@ public class EditorView: NSView, @preconcurrency NSTextInputClient, NSMenuItemVa
 		delegate?.editorView(self, performAction: .selectAll)
 	}
 
+	// MARK: - Text & Selection Trampolines (Menu Actions)
+
+	override public func selectWord(_: Any?) {
+		delegate?.editorView(self, doCommandBySelector: NSSelectorFromString("selectWord:"))
+	}
+
+	override public func selectParagraph(_: Any?) {
+		delegate?.editorView(self, doCommandBySelector: NSSelectorFromString("selectParagraph:"))
+	}
+
+	@objc public func selectHardLine(_: Any?) {
+		delegate?.editorView(self, doCommandBySelector: NSSelectorFromString("selectHardLine:"))
+	}
+
+	@objc public func selectCurrentScope(_: Any?) {
+		delegate?.editorView(self, doCommandBySelector: NSSelectorFromString("selectCurrentScope:"))
+	}
+
+	@objc public func selectBlock(_: Any?) {
+		delegate?.editorView(self, doCommandBySelector: NSSelectorFromString("selectBlock:"))
+	}
+
+	override public func transpose(_: Any?) {
+		delegate?.editorView(self, doCommandBySelector: NSSelectorFromString("transpose:"))
+	}
+
+	@objc public func pasteNext(_: Any?) {
+		delegate?.editorView(self, doCommandBySelector: NSSelectorFromString("pasteNext:"))
+	}
+
+	@objc public func pastePrevious(_: Any?) {
+		delegate?.editorView(self, doCommandBySelector: NSSelectorFromString("pastePrevious:"))
+	}
+
+	override public func uppercaseWord(_: Any?) {
+		delegate?.editorView(self, doCommandBySelector: NSSelectorFromString("uppercaseWord:"))
+	}
+
+	override public func lowercaseWord(_: Any?) {
+		delegate?.editorView(self, doCommandBySelector: NSSelectorFromString("lowercaseWord:"))
+	}
+
+	override public func capitalizeWord(_: Any?) {
+		delegate?.editorView(self, doCommandBySelector: NSSelectorFromString("capitalizeWord:"))
+	}
+
+	override public func changeCaseOfLetter(_: Any?) {
+		delegate?.editorView(self, doCommandBySelector: NSSelectorFromString("changeCaseOfLetter:"))
+	}
+
+	@objc public func changeCaseOfWord(_: Any?) {
+		delegate?.editorView(self, doCommandBySelector: NSSelectorFromString("changeCaseOfWord:"))
+	}
+
+	@objc public func shiftLeft(_: Any?) {
+		delegate?.editorView(self, doCommandBySelector: NSSelectorFromString("shiftLeft:"))
+	}
+
+	@objc public func shiftRight(_: Any?) {
+		delegate?.editorView(self, doCommandBySelector: NSSelectorFromString("shiftRight:"))
+	}
+
+	override public func indent(_: Any?) {
+		delegate?.editorView(self, doCommandBySelector: NSSelectorFromString("indent:"))
+	}
+
+	@objc public func reformatText(_: Any?) {
+		delegate?.editorView(self, doCommandBySelector: NSSelectorFromString("reformatText:"))
+	}
+
+	@objc public func reformatTextAndJustify(_: Any?) {
+		delegate?.editorView(self, doCommandBySelector: NSSelectorFromString("reformatTextAndJustify:"))
+	}
+
+	@objc public func unwrapText(_: Any?) {
+		delegate?.editorView(self, doCommandBySelector: NSSelectorFromString("unwrapText:"))
+	}
+
+	@objc public func moveSelectionUp(_: Any?) {
+		delegate?.editorView(self, doCommandBySelector: NSSelectorFromString("moveSelectionUp:"))
+	}
+
+	@objc public func moveSelectionDown(_: Any?) {
+		delegate?.editorView(self, doCommandBySelector: NSSelectorFromString("moveSelectionDown:"))
+	}
+
+	@objc public func moveSelectionLeft(_: Any?) {
+		delegate?.editorView(self, doCommandBySelector: NSSelectorFromString("moveSelectionLeft:"))
+	}
+
+	@objc public func moveSelectionRight(_: Any?) {
+		delegate?.editorView(self, doCommandBySelector: NSSelectorFromString("moveSelectionRight:"))
+	}
+
 	/// Selection extension variants
 	override public func moveUpAndModifySelection(_: Any?) {
 		delegate?.editorView(self, performAction: .moveUpAndModifySelection)

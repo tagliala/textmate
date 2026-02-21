@@ -630,6 +630,7 @@ public class DocumentWindowController: NSWindowController {
 	func updateWindowTitle() {
 		let title = textDocument.displayName
 		window?.title = textDocument.isModified ? "● \(title)" : title
+		window?.isDocumentEdited = textDocument.isModified
 		window?.representedURL = textDocument.path.map { URL(fileURLWithPath: $0) }
 	}
 

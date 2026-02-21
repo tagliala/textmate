@@ -170,6 +170,7 @@ let package = Package(
 				"TMDocumentManager",
 				"TMSearchReplace",
 				"TMBundleRuntime",
+				"TMBundleUI",
 				"TMCompatibility",
 				"TMHTMLOutput",
 				"TMFileBrowser",

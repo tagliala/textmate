@@ -1,5 +1,6 @@
 #if canImport(AppKit)
 import AppKit
+import TMBundleUI
 import TMCore
 import TMDocumentManager
 import TMEditor
@@ -274,10 +275,12 @@ public extension DocumentWindowController {
 		fileBrowserController.newFile(nil)
 	}
 
-	// MARK: - Bundle Editor (stub)
+	// MARK: - Bundle Editor
 
 	@objc func showBundleEditor(_: Any?) {
-		// Bundle editor UI deferred to a future phase.
+		guard let index = bundleIndex else { return }
+		let editor = BundleEditorController(bundleIndex: index)
+		editor.showWindow(nil)
 	}
 
 	// MARK: - Run Command (stub)
