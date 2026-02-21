@@ -1,5 +1,4 @@
 import AppKit
-import TMDocumentWindow
 import TMTheme
 
 /// KeyBindings.dict loader — parses the TextMate key-binding plist format

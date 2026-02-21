@@ -1,5 +1,4 @@
 import Foundation
-import TMBundle
 import TMBundleRuntime
 import TMCore
 import TMFilterList

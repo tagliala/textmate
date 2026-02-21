@@ -1,5 +1,4 @@
 import AppKit
-import TMDocumentWindow
 import TMTheme
 
 /// Builds the main menu bar, matching TextMate's menu structure exactly.
