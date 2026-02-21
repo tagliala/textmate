@@ -361,6 +361,8 @@ struct EditorViewTrampolineTests {
 		#selector(EditorView.moveSelectionDown(_:)),
 		#selector(EditorView.moveSelectionLeft(_:)),
 		#selector(EditorView.moveSelectionRight(_:)),
+		#selector(EditorView.copySelectionToFindPboard(_:)),
+		#selector(EditorView.copySelectionToReplacePboard(_:)),
 	]
 
 	@Test("EditorView responds to all trampoline selectors", arguments: trampolineSelectors)
@@ -376,6 +378,12 @@ struct EditorViewTrampolineTests {
 		view.delegate = spy
 		view.perform(selector, with: nil)
 		#expect(spy.lastCommandSelector != nil, "Expected delegate call for \(selector)")
+	}
+
+	@Test("centerSelectionInVisibleArea is recognized")
+	func centerSelectionInVisibleArea() {
+		let view = EditorView()
+		#expect(view.responds(to: #selector(NSResponder.centerSelectionInVisibleArea(_:))))
 	}
 }
 

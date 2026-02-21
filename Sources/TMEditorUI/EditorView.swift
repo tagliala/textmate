@@ -843,6 +843,18 @@ public class EditorView: NSView, @preconcurrency NSTextInputClient, NSMenuItemVa
 		delegate?.editorView(self, doCommandBySelector: NSSelectorFromString("moveSelectionRight:"))
 	}
 
+	@objc public func copySelectionToFindPboard(_: Any?) {
+		delegate?.editorView(self, doCommandBySelector: NSSelectorFromString("copySelectionToFindPboard:"))
+	}
+
+	@objc public func copySelectionToReplacePboard(_: Any?) {
+		delegate?.editorView(self, doCommandBySelector: NSSelectorFromString("copySelectionToReplacePboard:"))
+	}
+
+	override public func centerSelectionInVisibleArea(_: Any?) {
+		scrollToCaret()
+	}
+
 	/// Selection extension variants
 	override public func moveUpAndModifySelection(_: Any?) {
 		delegate?.editorView(self, performAction: .moveUpAndModifySelection)

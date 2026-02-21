@@ -1346,6 +1346,25 @@ Wired ⇧⌘F (Find in Project) with a dedicated action that auto-switches the s
 
 ---
 
+### Phase 60 — Menu Action Responder Wiring & Quick Wins (commit `05101cf0`)
+
+**Summary**: Combined four quick-win gaps into a single phase: (1) 22 `@objc` trampoline methods on EditorView for Text menu, Select submenu, Move Selection, and Paste actions; (2) BundleEditorController wiring for ⌃⌥⌘B; (3) macOS dirty-dot (`window.isDocumentEdited`) reflecting document modification state.
+
+**Key Changes**:
+- `Sources/TMEditorUI/EditorView.swift` — 22 trampoline methods (selectWord, selectParagraph, selectHardLine, selectCurrentScope, selectBlock, transpose, pasteNext, pastePrevious, uppercaseWord, lowercaseWord, capitalizeWord, changeCaseOfLetter, changeCaseOfWord, shiftLeft, shiftRight, indent, reformatText, reformatTextAndJustify, unwrapText, moveSelectionUp/Down/Left/Right) routing to `delegate?.editorView(_:doCommandBySelector:)` directly to avoid infinite recursion
+- `Sources/TMDocumentWindow/DocumentWindowController+MenuActions.swift` — `showBundleEditor` creates `BundleEditorController(bundleIndex:)` and opens window; added `import TMBundleUI`
+- `Sources/TMDocumentWindow/DocumentWindowController.swift` — `updateWindowTitle()` now sets `window?.isDocumentEdited = textDocument.isModified`
+- `Package.swift` — Added TMBundleUI dependency to TMDocumentWindow target
+
+| Test Suite | Tests | Status |
+|-----------|-------|--------|
+| EditorView Trampoline Selectors | 2 (parameterized, 23 selectors each) | ✅ |
+| Window dirty dot wiring | 2 | ✅ |
+
+### Cumulative Total: 2747 tests in 343 suites
+
+---
+
 ## Architecture Reminder
 
 All code follows the iteration strategy from

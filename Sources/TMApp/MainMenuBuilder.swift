@@ -320,6 +320,11 @@ enum MainMenuBuilder {
 			action: #selector(NSText.checkSpelling(_:)),
 			key: ";",
 		)
+		spellingMenu.addItem(.separator())
+		spellingMenu.addItem(
+			title: String(localized: "Check Spelling as You Type", comment: "Spelling submenu item"),
+			action: NSSelectorFromString("toggleContinuousSpellChecking:"),
+		)
 		let spellingItem = menu.addItem(
 			title: String(localized: "Spelling", comment: "Edit menu item"),
 			action: nil,
@@ -775,6 +780,20 @@ enum MainMenuBuilder {
 		)
 		menu.addItem(.separator())
 		// Bundle submenus will be dynamically populated later
+
+		menu.addItem(.separator())
+		menu.addItem(
+			title: String(localized: "Start/Stop Recording", comment: "Bundles menu item"),
+			action: NSSelectorFromString("toggleMacroRecording:"),
+			key: "m",
+			modifiers: [.command, .option],
+		)
+		menu.addItem(
+			title: String(localized: "Replay Macro", comment: "Bundles menu item"),
+			action: NSSelectorFromString("replayMacro:"),
+			key: "m",
+			modifiers: [.command, .option, .shift],
+		)
 
 		return item
 	}
