@@ -93,6 +93,10 @@ let package = Package(
 			name: "TextMateApp",
 			targets: ["TMApp"],
 		),
+		.executable(
+			name: "mate",
+			targets: ["mate"],
+		),
 	],
 	targets: [
 		// MARK: - Core Layer
@@ -199,6 +203,13 @@ let package = Package(
 				.copy("Resources/Mac Classic.tmTheme"),
 				.copy("Resources/KeyBindings.dict"),
 			],
+		),
+
+		// MARK: - mate CLI
+
+		.executableTarget(
+			name: "mate",
+			path: "Sources/mate",
 		),
 
 		// MARK: - Compatibility Layer
