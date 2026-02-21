@@ -49,10 +49,25 @@ public final class SnippetController: @unchecked Sendable {
 		/// The index into `tabStops` for the currently active tab stop.
 		public var currentTabStopIndex: Int
 
-		public init(snippetText: String, tabStops: [TabStop], currentTabStopIndex: Int = 0) {
+		/// The base offset in the buffer where this snippet was inserted.
+		public var baseOffset: Int
+
+		/// The underlying snippet state for mirror/transform updates.
+		/// May be `nil` for snippets without mirrors.
+		public nonisolated(unsafe) var snippetState: SnippetState?
+
+		public init(
+			snippetText: String,
+			tabStops: [TabStop],
+			currentTabStopIndex: Int = 0,
+			baseOffset: Int = 0,
+			snippetState: SnippetState? = nil,
+		) {
 			self.snippetText = snippetText
 			self.tabStops = tabStops
 			self.currentTabStopIndex = currentTabStopIndex
+			self.baseOffset = baseOffset
+			self.snippetState = snippetState
 		}
 
 		/// The currently active tab stop.
@@ -84,6 +99,11 @@ public final class SnippetController: @unchecked Sendable {
 		sessions.isEmpty
 	}
 
+	/// Whether the active session uses SnippetState for mirror tracking.
+	public var hasActiveMirrors: Bool {
+		sessions.last?.snippetState != nil
+	}
+
 	/// The currently active snippet session.
 	public var current: Session? {
 		sessions.last
@@ -106,6 +126,7 @@ public final class SnippetController: @unchecked Sendable {
 	/// - Parameter session: The snippet session to activate.
 	public func push(_ session: Session) {
 		sessions.append(session)
+		syncStateCurrentField()
 	}
 
 	/// Advances to the next tab stop. If at the last tab stop, pops the session.
@@ -121,6 +142,7 @@ public final class SnippetController: @unchecked Sendable {
 		// If we've gone past all tab stops, the session is done.
 		if sessions[sessions.count - 1].currentTabStopIndex >= sessions[sessions.count - 1].tabStops.count {
 			sessions.removeLast()
+			syncStateCurrentField()
 			return sessions.last?.currentTabStop?.range
 		}
 
@@ -128,9 +150,11 @@ public final class SnippetController: @unchecked Sendable {
 		if let stop = sessions.last?.currentTabStop, stop.index == 0 {
 			let range = stop.range
 			sessions.removeLast()
+			syncStateCurrentField()
 			return range
 		}
 
+		syncStateCurrentField()
 		return sessions.last?.currentTabStop?.range
 	}
 
@@ -145,15 +169,142 @@ public final class SnippetController: @unchecked Sendable {
 			sessions[sessions.count - 1].currentTabStopIndex -= 1
 		}
 
+		syncStateCurrentField()
 		return sessions.last?.currentTabStop?.range
 	}
 
-	/// Replaces the text at the current tab stop.
+	/// Keeps `SnippetState.currentField` in sync with the active tab stop index.
+	private func syncStateCurrentField() {
+		guard let session = sessions.last,
+		      let state = session.snippetState,
+		      let tabStop = session.currentTabStop
+		else { return }
+		state.currentField = tabStop.index
+	}
+
+	/// A mirror replacement to be applied to the buffer.
+	public struct MirrorUpdate: Sendable {
+		/// Byte offset range in the buffer.
+		public let from: Int
+		public let to: Int
+		/// Text to insert at the range.
+		public let text: String
+	}
+
+	/// Replaces the current field content in the snippet state and returns mirror updates.
 	///
-	/// - Parameter text: The replacement text.
-	public func replaceCurrentTabStop(with _: String) {
-		// In a full implementation this would update mirror tab stops, etc.
-		// For now this is a stub — the editor handles the actual buffer edit.
+	/// The caller should pass the full new content of the current tab stop as read
+	/// from the buffer. This replaces the entire current field range in `SnippetState`,
+	/// which cascades to mirrors. Returns mirror updates with buffer-adjusted ranges
+	/// and new text, sorted from end to start so the caller can apply them without
+	/// offset invalidation.
+	///
+	/// - Parameter newContent: The full text now at the current tab stop.
+	/// - Returns: Mirror updates to apply to the buffer, sorted end-to-start.
+	public func replaceCurrentField(with newContent: String) -> [MirrorUpdate] {
+		guard !sessions.isEmpty else { return [] }
+		let session = sessions[sessions.count - 1]
+		guard let state = session.snippetState else { return [] }
+		let base = session.baseOffset
+
+		// Sync SnippetState's currentField to match our tab stop index.
+		if let tabStop = session.currentTabStop {
+			state.currentField = tabStop.index
+		}
+
+		guard let fieldRange = state.currentRange else { return [] }
+
+		// Compute the delta between the buffer (already edited) and the state (not yet).
+		// The primary edit replaced fieldRange with newContent in the buffer,
+		// so positions after the field are shifted by this delta.
+		let primaryDelta = newContent.utf8.count - fieldRange.size
+		let fieldEnd = fieldRange.to.offset
+
+		// Capture pre-replacement mirror ranges (in snippet-local coords)
+		// and adjust them by the primary edit delta to match buffer positions.
+		// Skip mirrors inside the current field (they'll be removed by replace()).
+		var preMirrorRanges: [(index: Int, bufFrom: Int, bufTo: Int)] = []
+		for (mirrorIdx, mirror) in state.mirrors {
+			if fieldRange.contains(mirror.range.from) || fieldRange.contains(mirror.range.to) {
+				continue
+			}
+			var from = mirror.range.from.offset
+			var to = mirror.range.to.offset
+			// If the mirror is after the field edit, adjust for primary delta.
+			if from >= fieldEnd {
+				from += primaryDelta
+				to += primaryDelta
+			}
+			preMirrorRanges.append((
+				index: mirrorIdx,
+				bufFrom: base + from,
+				bufTo: base + to,
+			))
+		}
+
+		// Replace the entire current field with the new content.
+		// This updates state.text and cascades to mirrors.
+		_ = state.replace(range: fieldRange, with: newContent)
+
+		// Collect the new mirror text from the updated state.
+		var postMirrorText: [Int: [String]] = [:]
+		for (mirrorIdx, mirror) in state.mirrors {
+			postMirrorText[mirrorIdx, default: []].append(mirror.range.substring(of: state.text))
+		}
+
+		// Match pre-replacement buffer ranges with post-replacement text.
+		var result: [MirrorUpdate] = []
+		var textIndexByMirror: [Int: Int] = [:]
+		for pre in preMirrorRanges {
+			let idx = textIndexByMirror[pre.index, default: 0]
+			if let texts = postMirrorText[pre.index], idx < texts.count {
+				result.append(MirrorUpdate(from: pre.bufFrom, to: pre.bufTo, text: texts[idx]))
+				textIndexByMirror[pre.index] = idx + 1
+			}
+		}
+
+		// Sort from end to start so applying them doesn't invalidate offsets.
+		result.sort { $0.from > $1.from }
+
+		// Note: caller must call refreshTabStops() after applying mirror updates to the buffer.
+		return result
+	}
+
+	/// Refreshes all tab stop ranges from the underlying SnippetState.
+	///
+	/// Call this after applying mirror updates to the buffer so that
+	/// tab stop ranges match the final buffer state.
+	public func refreshTabStops() {
+		refreshTabStopsFromState()
+	}
+
+	/// Updates a single tab stop range in the current session.
+	public func updateTabStopRange(at index: Int, to range: TextRange) {
+		guard !sessions.isEmpty,
+		      index >= 0,
+		      index < sessions[sessions.count - 1].tabStops.count
+		else { return }
+		sessions[sessions.count - 1].tabStops[index].range = range
+	}
+
+	/// Refreshes tab stop ranges from the underlying SnippetState.
+	private func refreshTabStopsFromState() {
+		guard !sessions.isEmpty else { return }
+		let session = sessions[sessions.count - 1]
+		guard let state = session.snippetState else { return }
+		let base = session.baseOffset
+
+		for stopIdx in sessions[sessions.count - 1].tabStops.indices {
+			let tabStop = sessions[sessions.count - 1].tabStops[stopIdx]
+			if let field = state.fields[tabStop.index] {
+				let startOff = base + field.range.from.offset
+				let endOff = base + field.range.to.offset
+				sessions[sessions.count - 1].tabStops[stopIdx].range = TextRange(
+					anchor: TextPosition(line: 0, column: 0, offset: startOff),
+					head: TextPosition(line: 0, column: 0, offset: endOff),
+				)
+			}
+		}
 	}
 
 	/// Clears all active snippet sessions.

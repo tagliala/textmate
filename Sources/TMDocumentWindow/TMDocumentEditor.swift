@@ -870,9 +870,12 @@ extension TMDocumentEditor {
 
 		// Push the snippet session and select the first tab stop.
 		if !tabStops.isEmpty {
+			let hasMirrors = !state.mirrors.isEmpty
 			let session = SnippetController.Session(
 				snippetText: expandedText,
 				tabStops: tabStops,
+				baseOffset: baseOffset,
+				snippetState: hasMirrors ? state : nil,
 			)
 			editor.snippetController.push(session)
 

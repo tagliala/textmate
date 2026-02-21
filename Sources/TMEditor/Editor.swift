@@ -259,11 +259,61 @@ public final class Editor: @unchecked Sendable {
 		undoManager.endUndoGroup(selections: newRanges)
 
 		selections = newRanges
+
+		propagateSnippetMirrors()
 	}
 
 	/// Whether any selection is non-empty.
 	public var hasSelection: Bool {
 		selections.selections.contains { !$0.isEmpty }
+	}
+
+	// MARK: - Snippet Mirror Propagation
+
+	/// Propagates the current tab stop content to any mirrors in the snippet.
+	///
+	/// After a text edit is complete, this reads the current tab stop's text
+	/// from the buffer and asks `SnippetState` to cascade it to mirrors.
+	/// Resulting mirror updates are applied directly to the buffer.
+	public func propagateSnippetMirrors() {
+		guard snippetController.hasActiveMirrors,
+		      let session = snippetController.current,
+		      let tabStop = session.currentTabStop
+		else { return }
+
+		// Read the current tab stop's content from the buffer.
+		let from = tabStop.range.start.offset
+		let to = tabStop.range.end.offset
+		guard from >= 0, to >= from, to <= buffer.size else { return }
+		let content = buffer.substring(from: from, to: to)
+
+		// Get mirror updates from the snippet controller.
+		let mirrorUpdates = snippetController.replaceCurrentField(with: content)
+
+		// Apply mirror updates to the buffer (already sorted end-to-start).
+		for update in mirrorUpdates {
+			guard update.from >= 0, update.to >= update.from, update.to <= buffer.size else {
+				continue
+			}
+			_ = buffer.replace(from: update.from, to: update.to, with: update.text)
+			snippetController.adjustForEdit(
+				at: update.from,
+				oldLength: update.to - update.from,
+				newLength: update.text.utf8.count,
+			)
+		}
+
+		// Refresh tab stop ranges from snippet state to match final buffer positions.
+		snippetController.refreshTabStops()
+
+		// Convert offset-only TextPositions to proper line/column positions.
+		if let updated = snippetController.current {
+			for (i, stop) in updated.tabStops.enumerated() {
+				let anchor = buffer.convert(offset: min(stop.range.anchor.offset, buffer.size))
+				let head = buffer.convert(offset: min(stop.range.head.offset, buffer.size))
+				snippetController.updateTabStopRange(at: i, to: TextRange(anchor: anchor, head: head))
+			}
+		}
 	}
 
 	// MARK: - Insert with Auto-Pairing
@@ -391,6 +441,8 @@ public final class Editor: @unchecked Sendable {
 
 		undoManager.endUndoGroup(selections: SelectionState(newRanges))
 		selections = SelectionState(newRanges)
+
+		propagateSnippetMirrors()
 	}
 }
 
@@ -712,6 +764,8 @@ extension Editor {
 		undoManager.endUndoGroup(selections: newRanges)
 
 		selections = newRanges
+
+		propagateSnippetMirrors()
 	}
 
 	/// Extends empty selections by the given unit (used before delete operations).
