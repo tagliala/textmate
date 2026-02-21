@@ -68,6 +68,11 @@ public final class Editor: @unchecked Sendable {
 	/// Delegate for layout-dependent operations.
 	public weak var layoutDelegate: EditorLayoutDelegate?
 
+	/// Provider for grammar-aware indentation on newline.
+	/// Given a line number, returns the indent string for a new line inserted after it.
+	/// When `nil`, falls back to copying the current line's leading whitespace.
+	public var indentProvider: ((Int) -> String)?
+
 	/// Tracks the current completion session state.
 	public var completionInfo = CompletionInfo()
 
@@ -1516,7 +1521,11 @@ extension Editor {
 
 			// Determine indentation from the current line.
 			let pos = buffer.convert(offset: from)
-			let indent = leadingWhitespace(at: buffer.lineStart(pos.line))
+			let indent: String = if let provider = indentProvider {
+				provider(pos.line)
+			} else {
+				leadingWhitespace(at: buffer.lineStart(pos.line))
+			}
 
 			let insertString = "\n" + indent
 			let end = buffer.replace(from: from, to: to, with: insertString)

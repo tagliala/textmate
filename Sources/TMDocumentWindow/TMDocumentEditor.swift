@@ -86,6 +86,9 @@ public final class TMDocumentEditor {
 	/// Grammar-based fold info provider (compiled fold markers).
 	private var grammarFoldProvider: GrammarFoldProvider?
 
+	/// Grammar-aware indent pattern provider.
+	private var indentPatternProvider: IndentPatternProvider?
+
 	// MARK: - Init
 
 	/// Creates a document editor.
@@ -352,11 +355,34 @@ public final class TMDocumentEditor {
 		// Configure grammar-based fold markers.
 		configureFoldMarkers(registry: registry, scope: resolvedScope)
 
+		// Configure grammar-aware indentation.
+		configureIndentPatterns(scope: resolvedScope)
+
 		// Parse the current content.
 		if let text = document.content {
 			syntaxHighlighter.setText(text)
 			syntaxHighlighter.parseSync()
 			editorView?.needsDisplay = true
+		}
+	}
+
+	/// Configures grammar-aware indent patterns from bundle preferences.
+	private func configureIndentPatterns(scope: String?) {
+		let provider = IndentPatternProvider(
+			buffer: editor.buffer,
+			tabSize: editor.tabSize,
+			indentUsingSpaces: editor.indentUsingSpaces,
+		)
+		provider.configure(bundleIndex: bundleIndex, scope: scope)
+
+		if provider.hasPatterns {
+			indentPatternProvider = provider
+			editor.indentProvider = { [weak provider] line in
+				provider?.indentAfterLine(line) ?? ""
+			}
+		} else {
+			indentPatternProvider = nil
+			editor.indentProvider = nil
 		}
 	}
 
