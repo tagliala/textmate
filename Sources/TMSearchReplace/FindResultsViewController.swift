@@ -47,9 +47,6 @@ public final class FindResultsViewController: NSViewController, Sendable {
 	/// Called when the user double-clicks a result.
 	public var onDoubleClickResult: ((SearchResultNode) -> Void)?
 
-	/// Called when the user removes a file group from results.
-	public var onRemoveResult: ((SearchResultNode) -> Void)?
-
 	// MARK: - Subviews
 
 	private let scrollView = NSScrollView()

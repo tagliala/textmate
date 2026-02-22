@@ -358,9 +358,6 @@ public final class FindPanelController: NSWindowController, FindServer, Sendable
 		resultsVC.onDoubleClickResult = { [weak self] node in
 			self?.didDoubleClickResult(node)
 		}
-		resultsVC.onRemoveResult = { [weak self] node in
-			self?.didRemoveResult(node)
-		}
 
 		// Wire up status bar stop
 		statusBarVC.onStop = { [weak self] in
@@ -767,16 +764,7 @@ public final class FindPanelController: NSWindowController, FindServer, Sendable
 		window?.orderOut(nil)
 	}
 
-	private func didRemoveResult(_: SearchResultNode) {
-		// Re-compute status
-		if let root = resultsVC.results {
-			let total = root.matchCount
-			let s = total == 1 ? "" : "es"
-			let files = root.children.count
-			let fs = files == 1 ? "" : "s"
-			statusBarVC.statusText = "\(total) match\(s) in \(files) file\(fs)"
-		}
-	}
+
 
 	// MARK: - Recent Folders
 

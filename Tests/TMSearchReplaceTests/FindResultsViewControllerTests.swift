@@ -129,21 +129,17 @@ struct FindResultsViewControllerTests {
 		let vc = FindResultsViewController()
 		var selectCalled = false
 		var doubleClickCalled = false
-		var removeCalled = false
 
 		vc.onSelectResult = { _ in selectCalled = true }
 		vc.onDoubleClickResult = { _ in doubleClickCalled = true }
-		vc.onRemoveResult = { _ in removeCalled = true }
 
 		// Invoke callbacks directly to verify they're set
 		let node = SearchResultNode(type: .root)
 		vc.onSelectResult?(node)
 		vc.onDoubleClickResult?(node)
-		vc.onRemoveResult?(node)
 
 		#expect(selectCalled)
 		#expect(doubleClickCalled)
-		#expect(removeCalled)
 	}
 }
 #endif

@@ -54,9 +54,6 @@ public final class FindTextFieldController: NSViewController, NSTextFieldDelegat
 	/// History entries for the down-arrow popover (most recent first).
 	public var history: [String] = []
 
-	/// Callback when the user submits (presses Return).
-	public var onSubmit: ((String) -> Void)?
-
 	// MARK: - Private
 
 	private let textField = AutoSizingTextField()
