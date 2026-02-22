@@ -166,7 +166,7 @@ extension Scope: ExpressibleByStringLiteral {
 
 // MARK: - Wildcard
 
-public extension Scope {
+extension Scope {
 	/// The special wildcard scope `"x-any"` that matches everything.
 	static let wildcard = Scope("x-any")
 }
@@ -182,7 +182,7 @@ public extension Scope {
 /// ```
 /// sharedPrefix("foo bar quux", "foo bar baz qux")  // → "foo bar"
 /// ```
-public func sharedPrefix(_ lhs: Scope, _ rhs: Scope) -> Scope {
+func sharedPrefix(_ lhs: Scope, _ rhs: Scope) -> Scope {
 	let lhsSize = lhs.size
 	let rhsSize = rhs.size
 	var n1 = lhs.currentNode
@@ -230,7 +230,7 @@ public func sharedPrefix(_ lhs: Scope, _ rhs: Scope) -> Scope {
 /// xmlDifference(from: Scope("foo bar"), to: Scope("foo"))
 /// // → "</bar>"
 /// ```
-public func xmlDifference(
+func xmlDifference(
 	from: Scope,
 	to: Scope,
 	open: String = "<",

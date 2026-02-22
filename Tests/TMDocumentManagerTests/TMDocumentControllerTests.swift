@@ -235,15 +235,4 @@ struct TMDocumentControllerTests {
 		#expect(controller.documentForUUID(doc1.id) != nil)
 		#expect(controller.documentForUUID(doc2.id) == nil)
 	}
-
-	// MARK: - Debug Summary
-
-	@Test("Debug summary contains counts")
-	func debugSummary() {
-		let controller = freshController()
-		_ = controller.documentForPath("/tmp/summary_1.txt")
-		let summary = controller.debugSummary
-		#expect(summary.contains("1 total"))
-		#expect(summary.contains("0 open"))
-	}
 }

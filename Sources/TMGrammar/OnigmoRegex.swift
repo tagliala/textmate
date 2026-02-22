@@ -328,7 +328,7 @@ public final class OnigmoPattern: @unchecked Sendable {
 ///
 /// This is used for scope names like `"storage.type.$1"` where `$1` refers
 /// to the first capture group of the match.
-public func expandFormatString(
+func expandFormatString(
 	_ format: String,
 	captures: [String: String],
 ) -> String {
@@ -365,7 +365,7 @@ public func expandFormatString(
 // MARK: - Pattern Utilities
 
 /// Checks whether a pattern contains back references (`\1` - `\9`).
-public func patternHasBackReference(_ pattern: String) -> Bool {
+func patternHasBackReference(_ pattern: String) -> Bool {
 	var escape = false
 	for ch in pattern {
 		if escape, ch.isNumber {
@@ -377,7 +377,7 @@ public func patternHasBackReference(_ pattern: String) -> Bool {
 }
 
 /// Checks whether a pattern contains `\G` (anchor to previous match).
-public func patternHasAnchor(_ pattern: String) -> Bool {
+func patternHasAnchor(_ pattern: String) -> Bool {
 	var escape = false
 	for ch in pattern {
 		if escape, ch == "G" {
@@ -389,7 +389,7 @@ public func patternHasAnchor(_ pattern: String) -> Bool {
 }
 
 /// Checks whether a string contains `$` (indicating format string).
-public func patternIsFormatString(_ pattern: String) -> Bool {
+func patternIsFormatString(_ pattern: String) -> Bool {
 	pattern.contains("$")
 }
 
@@ -397,7 +397,7 @@ public func patternIsFormatString(_ pattern: String) -> Bool {
 ///
 /// Replaces `\1`-`\9` with the corresponding match group content,
 /// regex-escaping the replacement.
-public func expandBackReferences(
+func expandBackReferences(
 	_ pattern: String,
 	match: OnigmoMatch,
 ) -> String {

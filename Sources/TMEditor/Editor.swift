@@ -2201,7 +2201,7 @@ extension SelectionExtensionUnit {
 
 // MARK: - Visual Metrics
 
-public extension Editor {
+extension Editor {
 	/// Computes the visual column distance between two offsets on the same line,
 	/// accounting for tab stops and East Asian full-width characters.
 	///
@@ -2275,36 +2275,5 @@ public extension Editor {
 		let pos = buffer.convert(offset: primary.head.offset)
 		let lineStart = buffer.lineStart(pos.line)
 		return visualDistance(from: lineStart, to: primary.head.offset)
-	}
-}
-
-// MARK: - East Asian Width Helper
-
-public extension Unicode.Scalar {
-	/// Whether this scalar is classified as East Asian wide (W) or fullwidth (F).
-	///
-	/// This is a simplified check covering the most common ranges.
-	var isEastAsianWide: Bool {
-		let v = value
-		// CJK Unified Ideographs
-		if v >= 0x4E00, v <= 0x9FFF { return true }
-		// CJK Unified Ideographs Extension A
-		if v >= 0x3400, v <= 0x4DBF { return true }
-		// CJK Compatibility Ideographs
-		if v >= 0xF900, v <= 0xFAFF { return true }
-		// Fullwidth Forms
-		if v >= 0xFF01, v <= 0xFF60 { return true }
-		if v >= 0xFFE0, v <= 0xFFE6 { return true }
-		// CJK Unified Ideographs Extension B+
-		if v >= 0x20000, v <= 0x2FA1F { return true }
-		// Hangul Syllables
-		if v >= 0xAC00, v <= 0xD7AF { return true }
-		// CJK Radicals, Kangxi Radicals, Ideographic Description, CJK Symbols
-		if v >= 0x2E80, v <= 0x303E { return true }
-		// Hiragana, Katakana, Bopomofo
-		if v >= 0x3040, v <= 0x312F { return true }
-		// Katakana Phonetic Extensions, Enclosed CJK Letters
-		if v >= 0x31F0, v <= 0x33FF { return true }
-		return false
 	}
 }

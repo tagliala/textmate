@@ -92,7 +92,7 @@ public struct ThemeGutterSettings: Sendable {
 	}
 }
 
-public extension Theme {
+extension Theme {
 	/// Whether this theme has a dark background.
 	var isDark: Bool {
 		globalSettings.background.isDark

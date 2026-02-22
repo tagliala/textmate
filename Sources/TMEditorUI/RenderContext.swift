@@ -137,7 +137,7 @@ public final class RenderContext: @unchecked Sendable {
 ///
 /// - Parameter scalar: The Unicode scalar value to check.
 /// - Returns: A string representation, or `nil` if the character is printable.
-public func unprintableRepresentation(for scalar: Unicode.Scalar) -> String? {
+func unprintableRepresentation(for scalar: Unicode.Scalar) -> String? {
 	let ch = scalar.value
 
 	// Standard printable ASCII + tab + newline → no special representation

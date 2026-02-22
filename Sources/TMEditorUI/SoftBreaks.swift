@@ -1,3 +1,5 @@
+import TMCore
+
 /// Compute byte offsets at which a string should be soft-wrapped.
 ///
 /// This is the Swift port of C++ `text::soft_breaks()` from
@@ -18,7 +20,7 @@
 ///   - prefixSize: Extra columns consumed by the fill string on
 ///     continuation lines.
 /// - Returns: Sorted array of UTF-8 byte offsets where soft breaks occur.
-public func softBreaks(
+func softBreaks(
 	in string: String,
 	width: Int,
 	tabSize: Int,
@@ -65,7 +67,7 @@ public func softBreaks(
 		len += scalarLen
 		col += scalar == "\t"
 			? (tabSize - (col % tabSize))
-			: (isEastAsianWide(scalar) ? 2 : 1)
+			: (scalar.isEastAsianWide ? 2 : 1)
 
 		if scalar == "\n" {
 			col = 0
@@ -128,27 +130,4 @@ private func decodeUTF8(_ bytes: [UInt8], at index: Int, length: Int) -> Unicode
 		return nil
 	}
 	return UnicodeScalar(value)
-}
-
-/// Simple East Asian wide character detection.
-///
-/// Returns `true` for CJK Unified Ideographs and other commonly
-/// fullwidth ranges. This is a simplified check — a full ICU-based
-/// implementation would use `EastAsianWidth` property.
-private func isEastAsianWide(_ scalar: UnicodeScalar) -> Bool {
-	let v = scalar.value
-	// CJK Unified Ideographs
-	if v >= 0x4E00, v <= 0x9FFF { return true }
-	// CJK Extension A
-	if v >= 0x3400, v <= 0x4DBF { return true }
-	// CJK Compatibility Ideographs
-	if v >= 0xF900, v <= 0xFAFF { return true }
-	// Hangul Syllables
-	if v >= 0xAC00, v <= 0xD7AF { return true }
-	// Fullwidth Forms
-	if v >= 0xFF01, v <= 0xFF60 { return true }
-	if v >= 0xFFE0, v <= 0xFFE6 { return true }
-	// CJK Extension B+
-	if v >= 0x20000, v <= 0x2FA1F { return true }
-	return false
 }

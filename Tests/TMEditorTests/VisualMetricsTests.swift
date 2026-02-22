@@ -1,6 +1,6 @@
 import Testing
 import TMCore
-import TMEditor
+@testable import TMEditor
 
 @Suite("Visual Distance")
 struct VisualDistanceTests {

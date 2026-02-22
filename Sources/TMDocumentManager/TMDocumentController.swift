@@ -233,21 +233,9 @@ public final class TMDocumentController {
 	}
 }
 
-// MARK: - Open Documents Summary
-
-public extension TMDocumentController {
-	/// A summary of the current controller state for debugging.
-	var debugSummary: String {
-		let total = documentsByUUID.count
-		let open = openDocuments.count
-		let modified = modifiedDocuments.count
-		return "TMDocumentController: \(total) total, \(open) open, \(modified) modified"
-	}
-}
-
 // MARK: - Notification Names
 
-public extension Notification.Name {
+extension Notification.Name {
 	/// Posted when a document is registered with TMDocumentController.
 	/// `userInfo["document"]` contains the `TMDocument`.
 	static let documentControllerDidAddDocument = Notification.Name(

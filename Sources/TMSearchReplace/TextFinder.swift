@@ -234,7 +234,7 @@ public struct RegexFinder: TextFinder {
 // MARK: - Factory
 
 /// Creates the appropriate TextFinder for the given options.
-public func makeTextFinder(pattern: String, options: FindOptions) throws -> TextFinder {
+func makeTextFinder(pattern: String, options: FindOptions) throws -> TextFinder {
 	if options.contains(.regularExpression) {
 		try RegexFinder(pattern: pattern, options: options)
 	} else {
@@ -245,7 +245,7 @@ public func makeTextFinder(pattern: String, options: FindOptions) throws -> Text
 // MARK: - Regex Validation
 
 /// Validate a regex pattern string. Returns nil if valid, or an error message.
-public func validateRegexPattern(_ pattern: String) -> String? {
+func validateRegexPattern(_ pattern: String) -> String? {
 	do {
 		_ = try NSRegularExpression(pattern: pattern)
 		return nil

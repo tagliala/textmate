@@ -7,11 +7,18 @@ import Foundation
 
 // MARK: - East Asian Width Detection
 
+public extension Unicode.Scalar {
+	/// Whether this scalar is considered "wide" (East Asian Width W or F).
+	///
+	/// Wide characters occupy two visual columns in a monospaced font.
+	/// The ranges are derived from the Unicode East_Asian_Width property
+	/// (categories W = Wide and F = Fullwidth).
+	var isEastAsianWide: Bool {
+		TMCore.isEastAsianWide(self)
+	}
+}
+
 /// Whether a Unicode scalar is considered "wide" (East Asian Width W or F).
-///
-/// Wide characters occupy two visual columns in a monospaced font.
-/// The ranges are derived from the Unicode East_Asian_Width property
-/// (categories W = Wide and F = Fullwidth).
 func isEastAsianWide(_ scalar: Unicode.Scalar) -> Bool {
 	let v = scalar.value
 	return (v >= 0x1100 && v <= 0x115F) // Hangul Jamo
