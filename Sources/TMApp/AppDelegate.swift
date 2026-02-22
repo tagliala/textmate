@@ -73,6 +73,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency BundleMenuAc
 		startRMateServer()
 		setupRecentDocumentsMenu()
 		recoverBackupsIfNeeded()
+		AppPreferencesWindowController.shared.configure(bundleInstaller: bundleSystem.bundleInstaller)
 		restoreWindowState() ?? newDocument(nil)
 		backupManager.start()
 	}
