@@ -55,6 +55,9 @@ public class FileBrowserViewController: NSViewController,
 	/// QuickLook preview items.
 	private var previewItems: [FileItem] = []
 
+	/// Retained delegate for the "Open With" submenu.
+	private var openWithDelegate: OpenWithMenuDelegate?
+
 	/// User preferences.
 	public var canExpandSymbolicLinks: Bool = false {
 		didSet { reloadExpandability() }
@@ -364,6 +367,31 @@ public class FileBrowserViewController: NSViewController,
 			guard item.arrangedChildren != nil else { continue }
 			// Trigger FSEvents reload for the directory
 			stack.append(contentsOf: item.arrangedChildren ?? [])
+		}
+	}
+
+	/// Refresh SCM badge overlays on all visible rows without reloading the
+	/// entire outline. Called by the document window controller when
+	/// ``SCMManager`` reports a repository status change.
+	public func reloadSCMBadges() {
+		let ov = outlineView
+		let visibleRange = ov.rows(in: ov.visibleRect)
+		guard visibleRange.length > 0 else { return }
+
+		for row in visibleRange.location ..< NSMaxRange(visibleRange) {
+			guard let cellView = ov.view(atColumn: 0, row: row, makeIfNecessary: false) as? FileItemTableCellView,
+			      let item = ov.item(atRow: row) as? FileItem
+			else { continue }
+			let status = scmStatusProvider?(item.url) ?? .none
+			cellView.imageView?.image = FileItemImage.iconImage(
+				for: item.url,
+				isModified: false,
+				isMissing: item.isMissing,
+				isDirectory: item.isDirectory,
+				isSymbolicLink: item.isSymbolicLink,
+				scmStatus: status,
+				size: NSSize(width: 16, height: 16),
+			)
 		}
 	}
 
@@ -1593,6 +1621,18 @@ public class FileBrowserViewController: NSViewController,
 			action: #selector(openSelectedItems(_:)),
 			keyEquivalent: "",
 		))
+
+		// "Open With" submenu
+		let selectedURLs = selectedItems.filter { !$0.isDirectory }.map(\.url)
+		if !selectedURLs.isEmpty {
+			openWithDelegate = OpenWithMenuDelegate(documentURLs: selectedURLs)
+			let openWithSubmenu = NSMenu()
+			openWithSubmenu.delegate = openWithDelegate
+			let openWithItem = NSMenuItem(title: "Open With", action: nil, keyEquivalent: "")
+			openWithItem.submenu = openWithSubmenu
+			menu.addItem(openWithItem)
+		}
+
 		menu.addItem(.separator())
 
 		menu.addItem(NSMenuItem(

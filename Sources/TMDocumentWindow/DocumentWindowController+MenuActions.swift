@@ -7,8 +7,12 @@ import TMCore
 import TMDocumentManager
 import TMEditor
 import TMEditorUI
+import TMHTMLOutput
 import TMSearchReplace
 import TMServices
+#if canImport(WebKit)
+import WebKit
+#endif
 
 // MARK: - Menu Actions (Responder Chain)
 
@@ -267,22 +271,52 @@ public extension DocumentWindowController {
 	// MARK: - Toggle HTML Output
 
 	@objc func toggleHTMLOutput(_: Any?) {
-		if let controller = htmlOutputController, controller.window?.isVisible == true {
-			controller.window?.orderOut(nil)
+		#if canImport(WebKit)
+		if htmlOutputInWindow {
+			// Separate window mode
+			if let controller = htmlOutputController, controller.window?.isVisible == true {
+				controller.window?.orderOut(nil)
+			} else {
+				let controller = htmlOutputController ?? createHTMLOutputController()
+				controller.showWindow(nil)
+			}
 		} else {
-			let controller = htmlOutputController ?? createHTMLOutputController()
-			controller.showWindow(nil)
+			// In-window mode (embedded split)
+			if projectLayoutView.htmlOutputView != nil {
+				// Close the in-window panel; restore first responder if needed
+				if let fr = window?.firstResponder as? NSView,
+				   fr.isDescendant(of: projectLayoutView.htmlOutputView!)
+				{
+					window?.makeFirstResponder(editorView)
+				}
+				projectLayoutView.htmlOutputView = nil
+				inWindowHTMLOutputView = nil
+			} else {
+				let view = inWindowHTMLOutputView ?? HTMLOutputCommandView(frame: .zero)
+				inWindowHTMLOutputView = view
+				projectLayoutView.htmlOutputView = view
+			}
 		}
+		#endif
 	}
 
 	// MARK: - View HTML Source
 
 	@objc func viewHTMLSource(_: Any?) {
-		guard let controller = htmlOutputController,
-		      controller.window?.isVisible == true
-		else { return }
-		let webView = controller.commandView.browserView.webView
-		webView.evaluateJavaScript("document.documentElement.outerHTML") { [weak self] result, _ in
+		#if canImport(WebKit)
+		let webView: WKWebView?
+		if htmlOutputInWindow {
+			guard let controller = htmlOutputController,
+			      controller.window?.isVisible == true
+			else { return }
+			webView = controller.commandView.browserView.webView
+		} else {
+			guard let view = inWindowHTMLOutputView,
+			      projectLayoutView.htmlOutputView != nil
+			else { return }
+			webView = view.browserView.webView
+		}
+		webView?.evaluateJavaScript("document.documentElement.outerHTML") { [weak self] result, _ in
 			guard let self, let html = result as? String else { return }
 			let doc = TMDocument(fileType: "text.html")
 			doc.content = html
@@ -293,6 +327,7 @@ public extension DocumentWindowController {
 			)
 			openAndSelectDocument(doc, activate: true)
 		}
+		#endif
 	}
 
 	// MARK: - Sticky Tab

@@ -10,6 +10,7 @@ import TMEditor
 import TMEditorUI
 import TMFileBrowser
 import TMGrammar
+import TMHTMLOutput
 import TMSCM
 import TMSearchReplace
 import TMServices
@@ -142,6 +143,16 @@ public class DocumentWindowController: NSWindowController, NSMenuItemValidation 
 	/// Height constraint for the live search bar (0 when hidden).
 	private var searchBarHeightConstraint: NSLayoutConstraint?
 
+	/// Whether HTML output opens in a separate window (`true`) or inside the
+	/// document window's split view (`false`, the default). Matches C++
+	/// ``htmlOutputInWindow`` behaviour.
+	public var htmlOutputInWindow: Bool = false
+
+	// The in-window HTML output command view (embedded in `projectLayoutView`).
+	#if canImport(WebKit)
+	public var inWindowHTMLOutputView: HTMLOutputCommandView?
+	#endif
+
 	var currentTheme: Theme?
 
 	/// Creates a new document window with the standard TextMate layout.
@@ -183,6 +194,11 @@ public class DocumentWindowController: NSWindowController, NSMenuItemValidation 
 				.monospacedSystemFont(ofSize: CGFloat(savedSize), weight: .regular),
 			)
 			gutterView.font = .monospacedSystemFont(ofSize: CGFloat(savedSize), weight: .regular)
+		}
+
+		// Register for SCM status changes to refresh file browser badges.
+		SCMManager.shared.addGlobalObserver { [weak self] _ in
+			self?.fileBrowserController.reloadSCMBadges()
 		}
 
 		// Set ourselves as the window delegate for lifecycle events.
@@ -487,13 +503,22 @@ public class DocumentWindowController: NSWindowController, NSMenuItemValidation 
 			return true
 		case NSSelectorFromString("toggleHTMLOutput:"):
 			#if canImport(WebKit)
-			menuItem.title = htmlOutputController?.window?.isVisible == true
+			let isVisible: Bool = if htmlOutputInWindow {
+				htmlOutputController?.window?.isVisible == true
+			} else {
+				projectLayoutView.htmlOutputView != nil
+			}
+			menuItem.title = isVisible
 				? String(localized: "Hide HTML Output", comment: "View menu item")
 				: String(localized: "Show HTML Output", comment: "View menu item")
 			#endif
 			return true
 		case NSSelectorFromString("viewHTMLSource:"):
-			return htmlOutputController?.window?.isVisible == true
+			if htmlOutputInWindow {
+				return htmlOutputController?.window?.isVisible == true
+			} else {
+				return projectLayoutView.htmlOutputView != nil
+			}
 		case NSSelectorFromString("toggleMacroRecording:"):
 			menuItem.title = documentEditor?.macroRecorder.isRecording == true
 				? "Stop Recording" : "Start Recording"

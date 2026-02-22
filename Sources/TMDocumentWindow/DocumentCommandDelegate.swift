@@ -4,6 +4,7 @@ import TMCompatibility
 import TMCore
 import TMEditor
 import TMGrammar
+import TMHTMLOutput
 import TMSCM
 
 // MARK: - CommandDispatcherDelegate Conformance
@@ -247,10 +248,24 @@ extension DocumentWindowController: CommandDispatcherDelegate {
 		command: BundleCommand,
 	) {
 		#if canImport(WebKit)
-		let controller = htmlOutputController ?? createHTMLOutputController()
-		controller.window?.title = command.name
-		controller.commandView.setContent(html)
-		controller.showWindow(nil)
+		if htmlOutputInWindow {
+			// Separate window mode
+			let controller = htmlOutputController ?? createHTMLOutputController()
+			controller.window?.title = command.name
+			controller.commandView.setContent(html)
+			controller.showWindow(nil)
+		} else {
+			// In-window split mode
+			let view = inWindowHTMLOutputView ?? {
+				let v = HTMLOutputCommandView(frame: .zero)
+				inWindowHTMLOutputView = v
+				return v
+			}()
+			view.setContent(html)
+			if projectLayoutView.htmlOutputView == nil {
+				projectLayoutView.htmlOutputView = view
+			}
+		}
 		#endif
 	}
 

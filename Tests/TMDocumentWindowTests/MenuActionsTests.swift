@@ -612,4 +612,56 @@ struct RunCommandWindowTests {
 		// Cleanup
 		RunCommandWindowController.shared.onExecute = nil
 	}
+
+	// MARK: - HTML Output
+
+	#if canImport(WebKit)
+	@Test("toggleHTMLOutput in-window mode adds and removes htmlOutputView")
+	func toggleHTMLOutputInWindow() {
+		let controller = DocumentWindowController()
+		controller.htmlOutputInWindow = false
+
+		// Initially no html output view
+		#expect(controller.projectLayoutView.htmlOutputView == nil)
+
+		// Toggle on → sets htmlOutputView
+		controller.toggleHTMLOutput(nil)
+		#expect(controller.projectLayoutView.htmlOutputView != nil)
+		#expect(controller.inWindowHTMLOutputView != nil)
+
+		// Toggle off → removes htmlOutputView
+		controller.toggleHTMLOutput(nil)
+		#expect(controller.projectLayoutView.htmlOutputView == nil)
+	}
+
+	@Test("toggleHTMLOutput in separate window mode uses controller")
+	func toggleHTMLOutputSeparateWindow() {
+		let controller = DocumentWindowController()
+		controller.htmlOutputInWindow = true
+
+		// Toggle on creates the window controller
+		controller.toggleHTMLOutput(nil)
+		#expect(controller.htmlOutputController != nil)
+	}
+
+	@Test("validateMenuItem toggleHTMLOutput title changes with in-window state")
+	func validateMenuItemHTMLOutputTitle() {
+		let controller = DocumentWindowController()
+		controller.htmlOutputInWindow = false
+
+		let menuItem = NSMenuItem(
+			title: "Show HTML Output",
+			action: NSSelectorFromString("toggleHTMLOutput:"),
+			keyEquivalent: "",
+		)
+
+		_ = controller.validateMenuItem(menuItem)
+		#expect(menuItem.title.contains("Show"))
+
+		// Show the in-window output
+		controller.toggleHTMLOutput(nil)
+		_ = controller.validateMenuItem(menuItem)
+		#expect(menuItem.title.contains("Hide"))
+	}
+	#endif
 }
