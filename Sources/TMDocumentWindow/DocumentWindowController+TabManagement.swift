@@ -382,4 +382,17 @@ extension DocumentWindowController: TabBarViewDelegate {
 		documents.insert(doc, at: toIndex)
 		selectedTabIndex = toIndex
 	}
+
+	public func tabBarView(_: TabBarView, didReceiveFileDrop urls: [URL]) {
+		let newDocs = urls.filter(\.isFileURL).map { TMDocument(path: $0.path) }
+		guard !newDocs.isEmpty else { return }
+		insertDocuments(
+			newDocs,
+			atIndex: documents.count,
+			selecting: newDocs.first,
+		)
+		if let first = newDocs.first {
+			openAndSelectDocument(first, activate: true)
+		}
+	}
 }

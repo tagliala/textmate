@@ -157,7 +157,7 @@ enum MainMenuBuilder {
 		menu.addItem(.separator())
 		menu.addItem(
 			title: String(localized: "Print…", comment: "File menu item"),
-			action: #selector(NSView.printView(_:)),
+			action: NSSelectorFromString("printDocument:"),
 			key: "p",
 		)
 

@@ -48,7 +48,7 @@ public class TabBarView: NSView {
 	override public init(frame: NSRect) {
 		super.init(frame: frame)
 		setupViews()
-		registerForDraggedTypes([Self.tabDragType])
+		registerForDraggedTypes([Self.tabDragType, .fileURL])
 	}
 
 	@available(*, unavailable)
@@ -79,21 +79,45 @@ public class TabBarView: NSView {
 	// MARK: - Drag & Drop (Destination)
 
 	override public func draggingEntered(_ sender: any NSDraggingInfo) -> NSDragOperation {
-		guard sender.draggingPasteboard.availableType(from: [Self.tabDragType]) != nil else {
-			return []
+		let pb = sender.draggingPasteboard
+		if pb.availableType(from: [Self.tabDragType]) != nil {
+			return .move
 		}
-		return .move
+		if pb.availableType(from: [.fileURL]) != nil {
+			return .copy
+		}
+		return []
 	}
 
 	override public func draggingUpdated(_ sender: any NSDraggingInfo) -> NSDragOperation {
-		guard sender.draggingPasteboard.availableType(from: [Self.tabDragType]) != nil else {
-			return []
+		let pb = sender.draggingPasteboard
+		if pb.availableType(from: [Self.tabDragType]) != nil {
+			return .move
 		}
-		return .move
+		if pb.availableType(from: [.fileURL]) != nil {
+			return .copy
+		}
+		return []
 	}
 
 	override public func performDragOperation(_ sender: any NSDraggingInfo) -> Bool {
-		guard let data = sender.draggingPasteboard.data(forType: Self.tabDragType),
+		let pb = sender.draggingPasteboard
+
+		// Handle file URL drops — open files as new tabs.
+		if pb.availableType(from: [.fileURL]) != nil,
+		   pb.availableType(from: [Self.tabDragType]) == nil
+		{
+			guard let urls = pb.readObjects(forClasses: [NSURL.self]) as? [URL],
+			      !urls.isEmpty
+			else {
+				return false
+			}
+			delegate?.tabBarView(self, didReceiveFileDrop: urls)
+			return true
+		}
+
+		// Handle tab reorder.
+		guard let data = pb.data(forType: Self.tabDragType),
 		      let fromIndex = try? JSONDecoder().decode(Int.self, from: data)
 		else {
 			return false
@@ -249,11 +273,13 @@ public protocol TabBarViewDelegate: AnyObject {
 	func tabBarView(_ tabBarView: TabBarView, didSelectTabAt index: Int)
 	func tabBarView(_ tabBarView: TabBarView, didCloseTabAt index: Int)
 	func tabBarView(_ tabBarView: TabBarView, didReorderTabFrom fromIndex: Int, to toIndex: Int)
+	func tabBarView(_ tabBarView: TabBarView, didReceiveFileDrop urls: [URL])
 }
 
 /// Default no-op implementations.
 public extension TabBarViewDelegate {
 	func tabBarView(_: TabBarView, didReorderTabFrom _: Int, to _: Int) {}
+	func tabBarView(_: TabBarView, didReceiveFileDrop _: [URL]) {}
 }
 
 // MARK: - TabButton

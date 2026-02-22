@@ -127,6 +127,9 @@ public class DocumentWindowController: NSWindowController, NSMenuItemValidation 
 	/// Document-scoped spell check tag for tracking learned words.
 	public lazy var spellDocumentTag = SpellCheckService.DocumentTag()
 
+	/// Tracks modified state so UI only updates when it flips.
+	private var lastKnownModifiedState = false
+
 	/// File watcher for detecting external changes to open documents.
 	private var fileWatcher: FileWatcher?
 
@@ -721,7 +724,14 @@ public class DocumentWindowController: NSWindowController, NSMenuItemValidation 
 		}
 
 		documentEditor?.onContentChanged = { [weak self] in
-			self?.autoRefreshScheduler?.documentDidChange()
+			guard let self else { return }
+			let isModified = textDocument.isModified
+			if lastKnownModifiedState != isModified {
+				lastKnownModifiedState = isModified
+				updateWindowTitle()
+				updateTabBar()
+			}
+			autoRefreshScheduler?.documentDidChange()
 		}
 
 		// Wire the dialog shim so bundle commands can show menus, tooltips,
@@ -747,6 +757,7 @@ public class DocumentWindowController: NSWindowController, NSMenuItemValidation 
 			statusBarView.setGrammar("Plain Text")
 		}
 
+		lastKnownModifiedState = doc.isModified
 		updateWindowTitle()
 		statusBarView.setEncoding(doc.encoding.charset)
 		statusBarView.setLineEnding(doc.encoding.lineEnding.displayName)
