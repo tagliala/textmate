@@ -21,6 +21,9 @@ public final class TextUndoManager: @unchecked Sendable {
 		/// The text that replaced `before` after the edit.
 		var after: [UInt8]
 
+		/// Human-readable name for this action (e.g. "Typing", "Paste").
+		var actionName: String?
+
 		/// The selection state before this record's undo group began.
 		var preSelection: SelectionState?
 		/// The buffer revision before this record's undo group began.
@@ -50,6 +53,8 @@ public final class TextUndoManager: @unchecked Sendable {
 	private var preSelection: SelectionState?
 	/// Buffer revision captured at `beginUndoGroup`.
 	private var preRevision: Int = 0
+	/// Action name captured at `beginUndoGroup`.
+	private var pendingActionName: String?
 	/// Number of `willReplace` calls within the current undo group.
 	private var changeCount: Int = 0
 
@@ -79,6 +84,23 @@ public final class TextUndoManager: @unchecked Sendable {
 		index != records.count
 	}
 
+	/// The action name for the current undo step, if any.
+	public var undoActionName: String? {
+		guard canUndo else { return nil }
+		// Walk backwards to find the group-opening record (has preSelection).
+		var i = index - 1
+		while i > 0, records[i].preSelection == nil {
+			i -= 1
+		}
+		return records[i].actionName
+	}
+
+	/// The action name for the current redo step, if any.
+	public var redoActionName: String? {
+		guard canRedo else { return nil }
+		return records[index].actionName
+	}
+
 	/// Whether we are currently inside an undo group.
 	public var inUndoGroup: Bool {
 		nestingCount != 0
@@ -89,11 +111,12 @@ public final class TextUndoManager: @unchecked Sendable {
 	///
 	/// - Parameter selections: The current selection state (saved as the
 	///   "before" state for this undo group).
-	public func beginUndoGroup(selections: SelectionState? = nil) {
+	public func beginUndoGroup(selections: SelectionState? = nil, actionName: String? = nil) {
 		nestingCount += 1
 		if nestingCount == 1 {
 			preSelection = selections
 			preRevision = buffer.revision
+			pendingActionName = actionName
 			changeCount = 0
 		}
 	}
@@ -229,10 +252,12 @@ public final class TextUndoManager: @unchecked Sendable {
 			offset: from,
 			before: before,
 			after: bytes,
+			actionName: pendingActionName,
 			preSelection: preSelection,
 			preRevision: preRevision,
 		))
 		preSelection = nil
+		pendingActionName = nil
 		changeCount += 1
 		index += 1
 	}

@@ -451,8 +451,18 @@ public class DocumentWindowController: NSWindowController, NSMenuItemValidation 
 		case NSSelectorFromString("replayMacro:"):
 			return documentEditor?.macroRecorder.lastMacro != nil
 		case NSSelectorFromString("undo:"):
+			if let name = documentEditor?.editor.undoActionName {
+				menuItem.title = String(localized: "Undo \\(name)", comment: "Edit menu item with action name")
+			} else {
+				menuItem.title = String(localized: "Undo", comment: "Edit menu item")
+			}
 			return documentEditor?.editor.canUndo ?? false
 		case NSSelectorFromString("redo:"):
+			if let name = documentEditor?.editor.redoActionName {
+				menuItem.title = String(localized: "Redo \\(name)", comment: "Edit menu item with action name")
+			} else {
+				menuItem.title = String(localized: "Redo", comment: "Edit menu item")
+			}
 			return documentEditor?.editor.canRedo ?? false
 		default:
 			break
@@ -982,6 +992,7 @@ extension DocumentWindowController: StatusBarViewDelegate {
 
 	public func statusBarView(_: StatusBarView, didSelectGrammar scope: String) {
 		guard let registry = grammarRegistry, let engine = themeEngine else { return }
+		textDocument.fileType = scope.isEmpty ? nil : scope
 		if scope.isEmpty {
 			// "Plain Text" selected — clear syntax highlighting.
 			documentEditor?.syntaxHighlighter.setGrammar(scope: nil)

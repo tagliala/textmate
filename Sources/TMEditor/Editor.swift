@@ -254,7 +254,7 @@ public final class Editor: @unchecked Sendable {
 			)
 		}
 
-		undoManager.beginUndoGroup(selections: selections)
+		undoManager.beginUndoGroup(selections: selections, actionName: "Typing")
 		let newRanges = replaceSelections(with: string)
 		undoManager.endUndoGroup(selections: newRanges)
 
@@ -356,7 +356,7 @@ public final class Editor: @unchecked Sendable {
 		// Find matching pair for this string.
 		let matchedPair = pairs.first { $0.opener == string }
 
-		undoManager.beginUndoGroup(selections: selections)
+		undoManager.beginUndoGroup(selections: selections, actionName: "Typing")
 
 		let sortedSels = selections.selections.sorted { $0.start.offset > $1.start.offset }
 		var newRanges: [TextRange] = []
@@ -759,7 +759,7 @@ extension Editor {
 		// Now delete the selected text in each selection.
 		guard hasSelection else { return }
 
-		undoManager.beginUndoGroup(selections: selections)
+		undoManager.beginUndoGroup(selections: selections, actionName: "Delete")
 		let newRanges = deleteSelections()
 		undoManager.endUndoGroup(selections: newRanges)
 
@@ -800,7 +800,7 @@ extension Editor {
 	private func performCut() {
 		performCopy()
 		if hasSelection {
-			undoManager.beginUndoGroup(selections: selections)
+			undoManager.beginUndoGroup(selections: selections, actionName: "Cut")
 			let newRanges = deleteSelections()
 			undoManager.endUndoGroup(selections: newRanges)
 			selections = newRanges
@@ -875,7 +875,7 @@ extension Editor {
 
 	/// Pastes a clipboard entry, handling columnar, multi-fragment, and reindent scenarios.
 	private func pasteEntry(_ entry: ClipboardEntry) {
-		undoManager.beginUndoGroup(selections: selections)
+		undoManager.beginUndoGroup(selections: selections, actionName: "Paste")
 
 		if entry.options.isColumnar, entry.contents.count > 1 {
 			// Columnar paste: insert each fragment on successive lines.
@@ -987,7 +987,7 @@ extension Editor {
 
 		guard hasSelection else { return }
 
-		undoManager.beginUndoGroup(selections: selections)
+		undoManager.beginUndoGroup(selections: selections, actionName: "Transform")
 		let newRanges = applyTransformToSelections(transform)
 		undoManager.endUndoGroup(selections: newRanges)
 
@@ -1070,7 +1070,7 @@ extension Editor {
 
 	/// Transposes the two characters around each cursor.
 	private func performTransposeCharacters() {
-		undoManager.beginUndoGroup(selections: selections)
+		undoManager.beginUndoGroup(selections: selections, actionName: "Transpose")
 		var newRanges: [TextRange] = []
 
 		for sel in selections.selections {
@@ -1096,7 +1096,7 @@ extension Editor {
 
 	/// Transposes the two words around each cursor.
 	private func performTransposeWords() {
-		undoManager.beginUndoGroup(selections: selections)
+		undoManager.beginUndoGroup(selections: selections, actionName: "Transpose")
 		var newRanges: [TextRange] = []
 		var delta = 0
 
@@ -1304,7 +1304,7 @@ extension Editor {
 
 		let searcher = BufferSearcher(text: buffer.string)
 
-		undoManager.beginUndoGroup(selections: selections)
+		undoManager.beginUndoGroup(selections: selections, actionName: "Replace All")
 
 		if inSelection {
 			// Replace within each selection, processing from back to front
@@ -1355,7 +1355,7 @@ extension Editor {
 		guard let markPos = mark, let primary = selections.primary else { return }
 		let range = TextRange(anchor: primary.head, head: markPos)
 		selections = SelectionState([range])
-		undoManager.beginUndoGroup(selections: selections)
+		undoManager.beginUndoGroup(selections: selections, actionName: "Delete")
 		let newRanges = deleteSelections()
 		undoManager.endUndoGroup(selections: newRanges)
 		selections = newRanges
@@ -1563,7 +1563,7 @@ extension Editor {
 
 	/// Inserts a newline with auto-indentation.
 	private func performInsertNewline() {
-		undoManager.beginUndoGroup(selections: selections)
+		undoManager.beginUndoGroup(selections: selections, actionName: "Typing")
 
 		var newRanges: [TextRange] = []
 		var delta = 0
@@ -1623,7 +1623,7 @@ extension Editor {
 		let endLine = primary.end.line
 
 		if delta < 0, startLine > 0 {
-			undoManager.beginUndoGroup(selections: selections)
+			undoManager.beginUndoGroup(selections: selections, actionName: "Move")
 
 			// Swap the line above with the first selected line.
 			let aboveLine = startLine - 1
@@ -1668,7 +1668,7 @@ extension Editor {
 
 			undoManager.endUndoGroup(selections: selections)
 		} else if delta > 0, endLine < buffer.lines - 1 {
-			undoManager.beginUndoGroup(selections: selections)
+			undoManager.beginUndoGroup(selections: selections, actionName: "Move")
 
 			let belowLine = endLine + 1
 			let belowStart = buffer.lineStart(belowLine)
@@ -2058,6 +2058,16 @@ public extension Editor {
 	/// Whether a redo operation is available.
 	var canRedo: Bool {
 		undoManager.canRedo
+	}
+
+	/// The action name for the current undo step (e.g. \"Typing\", \"Paste\").
+	var undoActionName: String? {
+		undoManager.undoActionName
+	}
+
+	/// The action name for the current redo step.
+	var redoActionName: String? {
+		undoManager.redoActionName
 	}
 }
 
