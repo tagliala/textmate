@@ -230,4 +230,65 @@ struct SessionTests {
 		#expect(result == false)
 		DocumentWindowController.enableSessionSave()
 	}
+
+	// MARK: - View Override Persistence
+
+	@Test("SessionWindowInfo view overrides round-trip through Codable")
+	func viewOverridesCodable() throws {
+		var info = DocumentWindowController.SessionWindowInfo()
+		info.fontSize = 18
+		info.softWrap = true
+		info.showInvisibles = true
+		info.lineNumbersVisible = false
+		info.scrollPastEnd = true
+
+		let data = try JSONEncoder().encode(info)
+		let decoded = try JSONDecoder().decode(
+			DocumentWindowController.SessionWindowInfo.self,
+			from: data,
+		)
+
+		#expect(decoded.fontSize == 18)
+		#expect(decoded.softWrap == true)
+		#expect(decoded.showInvisibles == true)
+		#expect(decoded.lineNumbersVisible == false)
+		#expect(decoded.scrollPastEnd == true)
+	}
+
+	@Test("SessionWindowInfo view overrides default to nil")
+	func viewOverridesDefaultNil() throws {
+		let info = DocumentWindowController.SessionWindowInfo()
+		let data = try JSONEncoder().encode(info)
+		let decoded = try JSONDecoder().decode(
+			DocumentWindowController.SessionWindowInfo.self,
+			from: data,
+		)
+
+		#expect(decoded.fontSize == nil)
+		#expect(decoded.softWrap == nil)
+		#expect(decoded.showInvisibles == nil)
+		#expect(decoded.lineNumbersVisible == nil)
+		#expect(decoded.scrollPastEnd == nil)
+	}
+
+	@Test("sessionInfo captures non-default font size")
+	func sessionInfoCapturesFontSize() {
+		UserDefaults.standard.removeObject(forKey: "editorFontSize")
+		let controller = DocumentWindowController()
+		controller.editorView.layoutManager.setFont(
+			.monospacedSystemFont(ofSize: 18, weight: .regular),
+		)
+
+		let info = controller.sessionInfo(includeUntitled: true)
+		#expect(info.fontSize == 18)
+	}
+
+	@Test("sessionInfo omits default font size")
+	func sessionInfoOmitsDefaultFontSize() {
+		UserDefaults.standard.removeObject(forKey: "editorFontSize")
+		let controller = DocumentWindowController()
+
+		let info = controller.sessionInfo(includeUntitled: true)
+		#expect(info.fontSize == nil)
+	}
 }

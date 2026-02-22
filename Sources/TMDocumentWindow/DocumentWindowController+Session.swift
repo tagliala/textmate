@@ -26,6 +26,13 @@ public extension DocumentWindowController {
 		public var fileBrowserState: Data?
 		public var selectedTabIndex: Int = 0
 		public var documents: [SessionDocumentInfo] = []
+
+		// Per-window view overrides (nil = use global/default)
+		public var fontSize: CGFloat?
+		public var softWrap: Bool?
+		public var showInvisibles: Bool?
+		public var lineNumbersVisible: Bool?
+		public var scrollPastEnd: Bool?
 	}
 
 	/// Serialised form of a single document within a session.
@@ -88,6 +95,24 @@ public extension DocumentWindowController {
 			options: 0,
 		)
 		info.selectedTabIndex = selectedTabIndex
+
+		// Per-window view overrides
+		let currentFontSize = editorView.layoutManager.font.pointSize
+		if currentFontSize != 13 {
+			info.fontSize = currentFontSize
+		}
+		if editorView.layoutManager.softWrap {
+			info.softWrap = true
+		}
+		if editorView.showInvisibles {
+			info.showInvisibles = true
+		}
+		if !isLineNumbersVisible {
+			info.lineNumbersVisible = false
+		}
+		if editorView.layoutManager.scrollPastEnd {
+			info.scrollPastEnd = true
+		}
 
 		for (i, doc) in documents.enumerated() {
 			if !includeUntitled, doc.path == nil {
@@ -276,6 +301,26 @@ public extension DocumentWindowController {
 
 			// Open the selected document.
 			controller.openAndSelectDocument(docs[controller.selectedTabIndex], activate: true)
+
+			// Restore per-window view overrides.
+			if let fontSize = project.fontSize, fontSize >= 6, fontSize <= 72 {
+				controller.editorView.layoutManager.setFont(
+					.monospacedSystemFont(ofSize: fontSize, weight: .regular),
+				)
+				controller.gutterView.font = .monospacedSystemFont(ofSize: fontSize, weight: .regular)
+			}
+			if let softWrap = project.softWrap {
+				controller.editorView.layoutManager.softWrap = softWrap
+			}
+			if let showInvisibles = project.showInvisibles {
+				controller.editorView.showInvisibles = showInvisibles
+			}
+			if let lineNumbers = project.lineNumbersVisible {
+				controller.isLineNumbersVisible = lineNumbers
+			}
+			if let scrollPastEnd = project.scrollPastEnd {
+				controller.editorView.layoutManager.scrollPastEnd = scrollPastEnd
+			}
 
 			// Restore selection and scroll position for the selected document.
 			if let sel = docs[controller.selectedTabIndex].selection {

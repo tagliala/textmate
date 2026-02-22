@@ -551,6 +551,12 @@ public class DocumentWindowController: NSWindowController, NSMenuItemValidation 
 			return selectedTabIndex < documents.count - 1
 		case NSSelectorFromString("performCloseTabsToTheLeft:"):
 			return selectedTabIndex > 0
+		case NSSelectorFromString("performCloseAllTabs:"):
+			return !documents.isEmpty
+		case NSSelectorFromString("makeTextLarger:"):
+			return editorView.layoutManager.font.pointSize < 72
+		case NSSelectorFromString("makeTextSmaller:"):
+			return editorView.layoutManager.font.pointSize > 6
 		default:
 			break
 		}

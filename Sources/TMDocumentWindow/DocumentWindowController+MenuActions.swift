@@ -361,6 +361,16 @@ public extension DocumentWindowController {
 		findPanel.showPanel(withSelection: selection, scope: .project)
 	}
 
+	@objc func orderFrontFindInFolderPanel(_: Any?) {
+		let selection = documentEditor?.editor.selectedText
+		let findPanel = FindPanelController.shared
+		findPanel.navigationDelegate = self
+		findPanel.documentIdentifier = selectedDocument?.id
+		findPanel.openDocumentPaths = TMDocumentController.shared.documents.compactMap(\.path)
+		findPanel.fileBrowserItems = fileBrowserController.selectedFileURLs.map(\.path)
+		findPanel.showPanel(withSelection: selection, scope: .other)
+	}
+
 	@objc func findNext(_: Any?) {
 		FindPanelController.shared.findNext()
 	}

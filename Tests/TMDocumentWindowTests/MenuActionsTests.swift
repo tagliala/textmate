@@ -418,6 +418,15 @@ struct FindInProjectWiringTests {
 		// Should not crash even without a window on-screen
 		controller.bringToFront()
 	}
+
+	@Test("orderFrontFindInFolderPanel sets scope to other")
+	func findInFolderSetsScope() {
+		let controller = DocumentWindowController()
+		controller.orderFrontFindInFolderPanel(nil)
+
+		let findPanel = FindPanelController.shared
+		#expect(findPanel.searchTarget == .other)
+	}
 }
 
 // MARK: - Dirty Dot (window.isDocumentEdited)
@@ -484,6 +493,35 @@ struct UndoRedoMenuTests {
 		let controller = DocumentWindowController()
 		let item = NSMenuItem(title: "Redo", action: NSSelectorFromString("redo:"), keyEquivalent: "")
 		#expect(controller.validateMenuItem(item) == false)
+	}
+
+	@Test("validateMenuItem disables makeTextLarger at 72pt")
+	func textLargerDisabledAtMax() {
+		UserDefaults.standard.removeObject(forKey: "editorFontSize")
+		let controller = DocumentWindowController()
+		controller.editorView.layoutManager.setFont(.monospacedSystemFont(ofSize: 72, weight: .regular))
+
+		let item = NSMenuItem(title: "Bigger", action: NSSelectorFromString("makeTextLarger:"), keyEquivalent: "")
+		#expect(controller.validateMenuItem(item) == false)
+	}
+
+	@Test("validateMenuItem disables makeTextSmaller at 6pt")
+	func textSmallerDisabledAtMin() {
+		UserDefaults.standard.removeObject(forKey: "editorFontSize")
+		let controller = DocumentWindowController()
+		controller.editorView.layoutManager.setFont(.monospacedSystemFont(ofSize: 6, weight: .regular))
+
+		let item = NSMenuItem(title: "Smaller", action: NSSelectorFromString("makeTextSmaller:"), keyEquivalent: "")
+		#expect(controller.validateMenuItem(item) == false)
+	}
+
+	@Test("validateMenuItem enables makeTextLarger at normal size")
+	func textLargerEnabledAtNormal() {
+		UserDefaults.standard.removeObject(forKey: "editorFontSize")
+		let controller = DocumentWindowController()
+
+		let item = NSMenuItem(title: "Bigger", action: NSSelectorFromString("makeTextLarger:"), keyEquivalent: "")
+		#expect(controller.validateMenuItem(item) == true)
 	}
 }
 
