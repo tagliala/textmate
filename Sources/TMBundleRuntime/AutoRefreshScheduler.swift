@@ -4,7 +4,7 @@ import TMCompatibility
 // MARK: - Refresh Trigger
 
 /// Events that can trigger an auto-refresh.
-public enum RefreshTrigger: Sendable, Equatable {
+enum RefreshTrigger: Sendable, Equatable {
 	case documentChange
 	case documentSave
 	case documentClose

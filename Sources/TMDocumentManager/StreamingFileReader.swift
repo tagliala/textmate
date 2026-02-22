@@ -43,21 +43,15 @@ public struct EncodingCascadeOptions: Sendable {
 // MARK: - Read Result
 
 /// Result of reading a file with encoding detection.
-public struct FileReadResult: Sendable, Equatable {
+struct FileReadResult: Sendable, Equatable {
 	/// The decoded UTF-8 text content.
-	public let content: String
+	let content: String
 
 	/// The encoding detected/used during reading.
-	public let encoding: DocumentEncoding
+	let encoding: DocumentEncoding
 
 	/// The raw byte count read from disk.
-	public let rawByteCount: Int
-
-	public init(content: String, encoding: DocumentEncoding, rawByteCount: Int) {
-		self.content = content
-		self.encoding = encoding
-		self.rawByteCount = rawByteCount
-	}
+	let rawByteCount: Int
 }
 
 // MARK: - Streaming File Reader
@@ -79,9 +73,9 @@ public struct FileReadResult: Sendable, Equatable {
 /// `text::transcode_t`, this Swift version reads the full file and uses
 /// Foundation's charset conversion. For very large files, a chunked
 /// streaming mode is available.
-public struct StreamingFileReader: Sendable {
+struct StreamingFileReader: Sendable {
 	/// Maximum bytes to read in a single chunk (8KB, matching C++ reader).
-	public static let chunkSize = 8192
+	static let chunkSize = 8192
 
 	/// Read a file and detect its encoding.
 	///
@@ -91,7 +85,7 @@ public struct StreamingFileReader: Sendable {
 	///   - limit: Maximum bytes to read (0 = unlimited).
 	/// - Returns: The decoded content with encoding metadata.
 	/// - Throws: If the file cannot be read.
-	public static func read(
+	static func read(
 		path: String,
 		options: EncodingCascadeOptions = .init(),
 		limit: Int = 0,
@@ -123,7 +117,7 @@ public struct StreamingFileReader: Sendable {
 	///   - handler: Called with each decoded UTF-8 chunk.
 	/// - Returns: The detected encoding.
 	/// - Throws: If the file cannot be opened or read.
-	public static func readChunked(
+	static func readChunked(
 		path: String,
 		options: EncodingCascadeOptions = .init(),
 		handler: (String) -> Void,
@@ -190,7 +184,7 @@ public struct StreamingFileReader: Sendable {
 	///   - path: The file path (for xattr and settings lookup).
 	///   - options: Cascade configuration.
 	/// - Returns: The detected encoding.
-	public static func detectEncoding(
+	static func detectEncoding(
 		data: Data,
 		path: String,
 		options: EncodingCascadeOptions = .init(),
@@ -344,11 +338,11 @@ public struct StreamingFileReader: Sendable {
 
 	// MARK: - Errors
 
-	public enum FileReadError: Error, Sendable, CustomStringConvertible {
+	enum FileReadError: Error, Sendable, CustomStringConvertible {
 		case openFailed(String, String)
 		case readFailed(String, String)
 
-		public var description: String {
+		var description: String {
 			switch self {
 			case let .openFailed(path, reason):
 				"Failed to open '\(path)': \(reason)"

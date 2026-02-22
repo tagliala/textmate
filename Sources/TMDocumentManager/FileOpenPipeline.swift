@@ -3,7 +3,7 @@ import Foundation
 // MARK: - Open Pipeline Errors
 
 /// Errors that can occur during the file open pipeline.
-public enum FileOpenError: Error, Sendable, CustomStringConvertible {
+enum FileOpenError: Error, Sendable, CustomStringConvertible {
 	/// The file could not be read (permission denied, not found, etc.).
 	case readFailed(String, String)
 	/// Authorization was required but not granted.
@@ -15,7 +15,7 @@ public enum FileOpenError: Error, Sendable, CustomStringConvertible {
 	/// The open was cancelled (e.g., user dismissed charset picker).
 	case cancelled
 
-	public var description: String {
+	var description: String {
 		switch self {
 		case let .readFailed(path, reason):
 			"Failed to read '\(path)': \(reason)"
@@ -38,7 +38,7 @@ public enum FileOpenError: Error, Sendable, CustomStringConvertible {
 /// Replaces the C++ `open_callback_t` and `open_context_t` callbacks
 /// with a single async delegate protocol. Implementations provide
 /// authorization, charset selection, and filter execution.
-public protocol FileOpenDelegate: Sendable {
+protocol FileOpenDelegate: Sendable {
 	/// Called when the file requires elevated privileges to read.
 	/// Return `true` if authorization was obtained.
 	func obtainReadAuthorization(for path: String) async -> Bool
@@ -83,21 +83,21 @@ public protocol FileOpenDelegate: Sendable {
 
 /// Default delegate that performs no authorization, no filters,
 /// and auto-selects UTF-8 when encoding is ambiguous.
-public struct DefaultFileOpenDelegate: FileOpenDelegate {
-	public init() {}
+struct DefaultFileOpenDelegate: FileOpenDelegate {
+	init() {}
 
-	public func obtainReadAuthorization(for _: String) async -> Bool {
+	func obtainReadAuthorization(for _: String) async -> Bool {
 		false
 	}
 
-	public func selectCharset(
+	func selectCharset(
 		for _: String,
 		suggestedCharset: String,
 	) async -> String? {
 		suggestedCharset
 	}
 
-	public func runBinaryImportFilters(
+	func runBinaryImportFilters(
 		path _: String,
 		data: Data,
 		pathAttributes _: String,
@@ -105,7 +105,7 @@ public struct DefaultFileOpenDelegate: FileOpenDelegate {
 		data
 	}
 
-	public func runTextImportFilters(
+	func runTextImportFilters(
 		path _: String,
 		content: String,
 		pathAttributes _: String,
@@ -117,35 +117,21 @@ public struct DefaultFileOpenDelegate: FileOpenDelegate {
 // MARK: - Open Result
 
 /// The result of successfully opening a file.
-public struct FileOpenResult: Sendable {
+struct FileOpenResult: Sendable {
 	/// The decoded UTF-8 text content.
-	public let content: String
+	let content: String
 
 	/// The encoding detected during reading.
-	public let encoding: DocumentEncoding
+	let encoding: DocumentEncoding
 
 	/// The detected line ending style.
-	public let lineEnding: LineEnding
+	let lineEnding: LineEnding
 
 	/// The raw byte count of the file.
-	public let rawByteCount: Int
+	let rawByteCount: Int
 
 	/// The path attributes scope string.
-	public let pathAttributes: String
-
-	public init(
-		content: String,
-		encoding: DocumentEncoding,
-		lineEnding: LineEnding,
-		rawByteCount: Int,
-		pathAttributes: String,
-	) {
-		self.content = content
-		self.encoding = encoding
-		self.lineEnding = lineEnding
-		self.rawByteCount = rawByteCount
-		self.pathAttributes = pathAttributes
-	}
+	let pathAttributes: String
 }
 
 // MARK: - File Open Pipeline
@@ -164,14 +150,14 @@ public struct FileOpenResult: Sendable {
 /// 7. **Line ending harmonization** — normalize to LF internally.
 /// 8. **Text import filters** — run bundle-defined text transformations.
 /// 9. **Result** — deliver content with metadata.
-public struct FileOpenPipeline: Sendable {
+struct FileOpenPipeline: Sendable {
 	/// The delegate providing authorization, charset selection, and filter execution.
-	public let delegate: FileOpenDelegate
+	let delegate: FileOpenDelegate
 
 	/// Encoding cascade options.
-	public let encodingOptions: EncodingCascadeOptions
+	let encodingOptions: EncodingCascadeOptions
 
-	public init(
+	init(
 		delegate: FileOpenDelegate = DefaultFileOpenDelegate(),
 		encodingOptions: EncodingCascadeOptions = .init(),
 	) {
@@ -184,7 +170,7 @@ public struct FileOpenPipeline: Sendable {
 	/// - Parameter path: The file path to open.
 	/// - Returns: The decoded content with encoding and line ending metadata.
 	/// - Throws: `FileOpenError` if the pipeline fails at any stage.
-	public func open(path: String) async throws -> FileOpenResult {
+	func open(path: String) async throws -> FileOpenResult {
 		// 1. Check read access
 		try await checkReadAccess(path: path)
 

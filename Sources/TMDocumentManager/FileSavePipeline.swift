@@ -3,7 +3,7 @@ import Foundation
 // MARK: - Save Pipeline Errors
 
 /// Errors that can occur during the file save pipeline.
-public enum FileSaveError: Error, Sendable, CustomStringConvertible {
+enum FileSaveError: Error, Sendable, CustomStringConvertible {
 	/// No file path was set and the delegate did not provide one.
 	case noPath
 	/// The file is on a read-only filesystem.
@@ -21,7 +21,7 @@ public enum FileSaveError: Error, Sendable, CustomStringConvertible {
 	/// The save was cancelled (e.g., user dismissed dialog).
 	case cancelled
 
-	public var description: String {
+	var description: String {
 		switch self {
 		case .noPath:
 			"No path specified for save"
@@ -49,7 +49,7 @@ public enum FileSaveError: Error, Sendable, CustomStringConvertible {
 ///
 /// Replaces the C++ `save_callback_t` and `save_context_t` callbacks
 /// with a single async delegate protocol.
-public protocol FileSaveDelegate: Sendable {
+protocol FileSaveDelegate: Sendable {
 	/// Called when the document has no path. Return a path, or `nil` to cancel.
 	func selectPath(
 		suggestedPath: String?,
@@ -106,36 +106,36 @@ public protocol FileSaveDelegate: Sendable {
 
 /// Default delegate that performs no authorization, no filters,
 /// and refuses to create directories or change permissions.
-public struct DefaultFileSaveDelegate: FileSaveDelegate {
-	public init() {}
+struct DefaultFileSaveDelegate: FileSaveDelegate {
+	init() {}
 
-	public func selectPath(
+	func selectPath(
 		suggestedPath: String?,
 		content _: String,
 	) async -> String? {
 		suggestedPath
 	}
 
-	public func selectMakeWritable(path _: String) async -> Bool {
+	func selectMakeWritable(path _: String) async -> Bool {
 		false
 	}
 
-	public func selectCreateParent(path _: String) async -> Bool {
+	func selectCreateParent(path _: String) async -> Bool {
 		true
 	}
 
-	public func obtainWriteAuthorization(for _: String) async -> Bool {
+	func obtainWriteAuthorization(for _: String) async -> Bool {
 		false
 	}
 
-	public func selectCharset(
+	func selectCharset(
 		for _: String,
 		currentCharset: String,
 	) async -> String? {
 		currentCharset
 	}
 
-	public func runTextExportFilters(
+	func runTextExportFilters(
 		path _: String,
 		content: String,
 		pathAttributes _: String,
@@ -143,7 +143,7 @@ public struct DefaultFileSaveDelegate: FileSaveDelegate {
 		content
 	}
 
-	public func runBinaryExportFilters(
+	func runBinaryExportFilters(
 		path _: String,
 		data: Data,
 		pathAttributes _: String,
@@ -155,20 +155,20 @@ public struct DefaultFileSaveDelegate: FileSaveDelegate {
 // MARK: - Save Result
 
 /// The result of a successful save operation.
-public struct FileSaveResult: Sendable {
+struct FileSaveResult: Sendable {
 	/// The final path the file was saved to.
-	public let path: String
+	let path: String
 
 	/// The encoding used for saving.
-	public let encoding: DocumentEncoding
+	let encoding: DocumentEncoding
 
 	/// The number of bytes written.
-	public let bytesWritten: Int
+	let bytesWritten: Int
 
 	/// Extended attributes that were set.
-	public let attributes: [String: String]
+	let attributes: [String: String]
 
-	public init(
+	init(
 		path: String,
 		encoding: DocumentEncoding,
 		bytesWritten: Int,
@@ -196,14 +196,14 @@ public struct FileSaveResult: Sendable {
 /// 6. **Encode** — transcode from UTF-8 to target charset.
 /// 7. **Binary export filters** — run bundle-defined binary transformations.
 /// 8. **Write** — atomically save content to disk.
-public struct FileSavePipeline: Sendable {
+struct FileSavePipeline: Sendable {
 	/// The delegate providing path selection, authorization, and filter execution.
-	public let delegate: FileSaveDelegate
+	let delegate: FileSaveDelegate
 
 	/// Extended attributes to write alongside the file.
-	public let attributes: [String: String]
+	let attributes: [String: String]
 
-	public init(
+	init(
 		delegate: FileSaveDelegate = DefaultFileSaveDelegate(),
 		attributes: [String: String] = [:],
 	) {
@@ -219,7 +219,7 @@ public struct FileSavePipeline: Sendable {
 	///   - encoding: The target encoding.
 	/// - Returns: The save result with final path and byte count.
 	/// - Throws: `FileSaveError` if the pipeline fails at any stage.
-	public func save(
+	func save(
 		path: String?,
 		content: String,
 		encoding: DocumentEncoding,

@@ -58,7 +58,7 @@ public protocol CommandDispatcherDelegate: AnyObject {
 // MARK: - Dispatcher State
 
 /// Tracks the state of the command execution pipeline.
-public enum CommandDispatcherState: Sendable, Equatable {
+enum CommandDispatcherState: Sendable, Equatable {
 	case idle
 	case running(commandName: String)
 	case waitingForPermission
@@ -95,7 +95,7 @@ public final class CommandDispatcher {
 	private var activeRunner: ActiveRunner?
 
 	/// Current state.
-	public private(set) var state: CommandDispatcherState = .idle
+	private(set) var state: CommandDispatcherState = .idle
 
 	/// Callback for permission prompts (set by the UI layer).
 	public var permissionHandler: (@MainActor (PermissionRequest) async -> PermissionResponse)?

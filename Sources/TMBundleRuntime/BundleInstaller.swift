@@ -3,25 +3,25 @@ import Foundation
 // MARK: - Remote Bundle Info
 
 /// Metadata for a bundle available on the remote server.
-public struct RemoteBundleInfo: Sendable, Identifiable, Equatable {
-	public let uuid: String
-	public let name: String
-	public let category: String
-	public let summary: String
-	public let downloadURL: URL
-	public let downloadSize: Int
-	public let lastUpdated: Date
-	public let minimumAppVersion: String
-	public let isMandatory: Bool
-	public let isRecommended: Bool
-	public let grammarScopes: [String]
-	public let dependencies: [String] // UUIDs
+struct RemoteBundleInfo: Sendable, Identifiable, Equatable {
+	let uuid: String
+	let name: String
+	let category: String
+	let summary: String
+	let downloadURL: URL
+	let downloadSize: Int
+	let lastUpdated: Date
+	let minimumAppVersion: String
+	let isMandatory: Bool
+	let isRecommended: Bool
+	let grammarScopes: [String]
+	let dependencies: [String] // UUIDs
 
-	public var id: String {
+	var id: String {
 		uuid
 	}
 
-	public init(
+	init(
 		uuid: String,
 		name: String,
 		category: String = "",
