@@ -1,6 +1,7 @@
 #if canImport(AppKit)
 import AppKit
 import TMBundleRuntime
+import TMCompatibility
 
 // MARK: - Run Command Window Controller
 

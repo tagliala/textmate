@@ -8,7 +8,7 @@ import Testing
 @MainActor
 struct GutterBookmarkWiringTests {
 	@Test("toggling a gutter bookmark propagates to MarkTracker")
-	func togglePropagates() throws {
+	func togglePropagates() {
 		let path = "/tmp/test-gutter-bookmark-\(UUID().uuidString).swift"
 		let doc = TMDocument(path: path)
 		let controller = DocumentWindowController(document: doc)
@@ -26,7 +26,7 @@ struct GutterBookmarkWiringTests {
 	}
 
 	@Test("toggling twice removes the bookmark")
-	func toggleTwiceRemoves() throws {
+	func toggleTwiceRemoves() {
 		let path = "/tmp/test-gutter-bookmark-\(UUID().uuidString).swift"
 		let doc = TMDocument(path: path)
 		let controller = DocumentWindowController(document: doc)

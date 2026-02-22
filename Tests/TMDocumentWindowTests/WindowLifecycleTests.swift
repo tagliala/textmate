@@ -192,7 +192,7 @@ struct AutoRefreshWiringTests {
 			name: "Test",
 			uuid: "auto-1",
 			command: "echo",
-			autoRefresh: TMBundleRuntime.AutoRefresh.onDocumentSave,
+			autoRefresh: AutoRefresh.onDocumentSave,
 		)
 		scheduler.register(command: cmd)
 		#expect(scheduler.registeredCount == 1)
@@ -211,7 +211,7 @@ struct AutoRefreshWiringTests {
 			name: "OnChange",
 			uuid: "auto-change-1",
 			command: "echo changed",
-			autoRefresh: TMBundleRuntime.AutoRefresh.onDocumentChange,
+			autoRefresh: AutoRefresh.onDocumentChange,
 		)
 		controller.autoRefreshScheduler?.register(command: cmd)
 		#expect(controller.autoRefreshScheduler?.registeredCount == 1)

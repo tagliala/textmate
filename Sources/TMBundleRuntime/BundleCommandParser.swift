@@ -1,4 +1,5 @@
 import Foundation
+import TMCompatibility
 
 // MARK: - Bundle Command Parser
 
@@ -66,17 +67,17 @@ public struct BundleCommandParser: Sendable {
 		guard let value = plist["input"] as? String else {
 			return .selection
 		}
-		return CommandInput(plistString: value) ?? .selection
+		return CommandInput(plistString: value)
 	}
 
 	private func parseInputFallback(_ plist: [String: Any]) -> CommandInput {
 		// v2 format: inputFormat is separate.
 		if let value = plist["inputFallback"] as? String {
-			return CommandInput(plistString: value) ?? .entireDocument
+			return CommandInput(plistString: value)
 		}
 		// v1 format: fallbackInput key.
 		if let value = plist["fallbackInput"] as? String {
-			return CommandInput(plistString: value) ?? .entireDocument
+			return CommandInput(plistString: value)
 		}
 		return .entireDocument
 	}
@@ -95,7 +96,7 @@ public struct BundleCommandParser: Sendable {
 		guard let value = plist["output"] as? String else {
 			return .replaceInput
 		}
-		return CommandOutput(plistString: value) ?? .replaceInput
+		return CommandOutput(plistString: value)
 	}
 
 	private func parseOutputFormat(_ plist: [String: Any]) -> CommandOutputFormat {
@@ -150,177 +151,5 @@ public struct BundleCommandParser: Sendable {
 			return result
 		}
 		return .never
-	}
-}
-
-// MARK: - BundleCommand Types (re-exported from TMCompatibility conceptually)
-
-/// Pre-execution action before running a command.
-public enum PreExecAction: String, Sendable, Codable {
-	case nop
-	case saveDocument
-	case saveProject
-}
-
-/// Input source for a command.
-public enum CommandInput: String, Sendable, Codable {
-	case selection
-	case entireDocument
-	case scope
-	case line
-	case word
-	case character
-	case nothing
-
-	public init?(plistString: String) {
-		switch plistString {
-		case "selection": self = .selection
-		case "document", "entireDocument": self = .entireDocument
-		case "scope": self = .scope
-		case "line": self = .line
-		case "word": self = .word
-		case "character": self = .character
-		case "none", "nothing": self = .nothing
-		default: return nil
-		}
-	}
-}
-
-/// Input format for a command.
-public enum CommandInputFormat: String, Sendable, Codable {
-	case text
-	case xml
-}
-
-/// Output destination for a command.
-public enum CommandOutput: String, Sendable, Codable {
-	case replaceInput
-	case replaceDocument
-	case atCaret
-	case afterInput
-	case newWindow
-	case toolTip
-	case discard
-	case replaceSelection
-
-	public init?(plistString: String) {
-		switch plistString {
-		case "replaceInput", "replaceSelectedText": self = .replaceInput
-		case "replaceDocument": self = .replaceDocument
-		case "atCaret", "insertAtCaret", "insertAsText": self = .atCaret
-		case "afterInput", "afterSelectedText": self = .afterInput
-		case "newWindow", "openAsNewDocument": self = .newWindow
-		case "toolTip", "showAsTooltip": self = .toolTip
-		case "discard": self = .discard
-		case "replaceSelection": self = .replaceSelection
-		default: return nil
-		}
-	}
-}
-
-/// Output format for a command.
-public enum CommandOutputFormat: String, Sendable, Codable {
-	case text
-	case snippet
-	case html
-	case completionList
-	case snippetNoAutoIndent
-}
-
-/// Caret placement after output.
-public enum CommandOutputCaret: String, Sendable, Codable {
-	case afterOutput
-	case selectOutput
-	case interpolateByChar
-	case interpolateByLine
-	case heuristic
-}
-
-/// HTML output window reuse strategy.
-public enum CommandOutputReuse: String, Sendable, Codable {
-	case reuseAvailable
-	case reuseNone
-	case reuseBusy
-	case abortAndReuseBusy
-}
-
-/// Auto-refresh trigger bitmask.
-public struct AutoRefresh: OptionSet, Sendable, Codable {
-	public let rawValue: Int
-	public init(rawValue: Int) {
-		self.rawValue = rawValue
-	}
-
-	public static let never = AutoRefresh([])
-	public static let onDocumentChange = AutoRefresh(rawValue: 1 << 0)
-	public static let onDocumentSave = AutoRefresh(rawValue: 1 << 1)
-	public static let onDocumentClose = AutoRefresh(rawValue: 1 << 2)
-}
-
-/// A fully parsed bundle command ready for execution.
-public struct BundleCommand: Sendable {
-	public let name: String
-	public let uuid: String
-	public let scopeSelector: String
-	public var command: String
-
-	public let preExec: PreExecAction
-	public let input: CommandInput
-	public let inputFallback: CommandInput
-	public let inputFormat: CommandInputFormat
-	public let output: CommandOutput
-	public let outputFormat: CommandOutputFormat
-	public let outputCaret: CommandOutputCaret
-	public let outputReuse: CommandOutputReuse
-	public let autoRefresh: AutoRefresh
-
-	public let autoScrollOutput: Bool
-	public let disableOutputAutoIndent: Bool
-	public let disableJavaScriptAPI: Bool
-
-	public init(
-		name: String,
-		uuid: String,
-		scopeSelector: String = "",
-		command: String,
-		preExec: PreExecAction = .nop,
-		input: CommandInput = .selection,
-		inputFallback: CommandInput = .entireDocument,
-		inputFormat: CommandInputFormat = .text,
-		output: CommandOutput = .replaceInput,
-		outputFormat: CommandOutputFormat = .text,
-		outputCaret: CommandOutputCaret = .afterOutput,
-		outputReuse: CommandOutputReuse = .reuseAvailable,
-		autoRefresh: AutoRefresh = .never,
-		autoScrollOutput: Bool = false,
-		disableOutputAutoIndent: Bool = false,
-		disableJavaScriptAPI: Bool = false,
-	) {
-		self.name = name
-		self.uuid = uuid
-		self.scopeSelector = scopeSelector
-		self.command = command
-		self.preExec = preExec
-		self.input = input
-		self.inputFallback = inputFallback
-		self.inputFormat = inputFormat
-		self.output = output
-		self.outputFormat = outputFormat
-		self.outputCaret = outputCaret
-		self.outputReuse = outputReuse
-		self.autoRefresh = autoRefresh
-		self.autoScrollOutput = autoScrollOutput
-		self.disableOutputAutoIndent = disableOutputAutoIndent
-		self.disableJavaScriptAPI = disableJavaScriptAPI
-	}
-
-	/// Prepends `#!/bin/bash` and support script sourcing if no shebang present.
-	public mutating func fixShebang(supportPath: String? = nil) {
-		guard !command.hasPrefix("#!") else { return }
-		var preamble = "#!/bin/bash\n"
-		if let supportPath {
-			preamble += "[[ -f \"\(supportPath)/lib/bash_init.sh\" ]] && source \"\(supportPath)/lib/bash_init.sh\"\n"
-		}
-		command = preamble + command
 	}
 }

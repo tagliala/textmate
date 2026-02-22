@@ -1,4 +1,5 @@
 import Foundation
+import TMCompatibility
 
 // MARK: - Refresh Trigger
 

@@ -1,5 +1,6 @@
 import AppKit
 import TMBundleRuntime
+import TMCompatibility
 import TMCore
 import TMDocumentManager
 import TMEditor

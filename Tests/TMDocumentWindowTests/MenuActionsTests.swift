@@ -1,6 +1,7 @@
 import AppKit
 import Testing
 import TMBundleRuntime
+import TMCompatibility
 import TMCore
 @testable import TMDocumentManager
 @testable import TMDocumentWindow
@@ -511,7 +512,7 @@ struct RunCommandWindowTests {
 	func executeCallback() {
 		let controller = RunCommandWindowController.shared
 		var receivedCommand: String?
-		var receivedOutput: TMBundleRuntime.CommandOutput?
+		var receivedOutput: CommandOutput?
 
 		controller.onExecute = { cmd, out in
 			receivedCommand = cmd

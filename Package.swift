@@ -225,6 +225,9 @@ let package = Package(
 
 		.target(
 			name: "TMBundleRuntime",
+			dependencies: [
+				"TMCompatibility",
+			],
 			path: "Sources/TMBundleRuntime",
 		),
 
@@ -377,7 +380,7 @@ let package = Package(
 
 		.testTarget(
 			name: "TMBundleRuntimeTests",
-			dependencies: ["TMBundleRuntime"],
+			dependencies: ["TMBundleRuntime", "TMCompatibility"],
 			path: "Tests/TMBundleRuntimeTests",
 		),
 

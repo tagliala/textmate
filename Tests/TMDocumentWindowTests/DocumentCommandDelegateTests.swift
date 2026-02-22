@@ -264,7 +264,7 @@ struct DocumentCommandDelegateTests {
 
 	@Test("Show error presents alert without crashing")
 	@MainActor func showErrorDoesNotCrash() {
-		let command = TMBundleRuntime.BundleCommand(
+		let command = BundleCommand(
 			name: "Test Command",
 			uuid: "test-uuid",
 			command: "echo hello",

@@ -251,15 +251,18 @@ public struct BundleCommand: Sendable {
 public extension BundleCommand {
 	/// Ensure the command starts with a shebang line.
 	///
-	/// If no shebang is present, prepends `#!/bin/bash` and sources
+	/// If no shebang is present, prepends `#!/bin/bash` and optionally sources
 	/// the TextMate bash init script (matching C++ `fix_shebang()`).
-	mutating func fixShebang() {
+	mutating func fixShebang(supportPath: String? = nil) {
 		guard !command.hasPrefix("#!") else { return }
-		command = """
-		#!/bin/bash
-		[[ -f "${TM_SUPPORT_PATH}/lib/bash_init.sh" ]] && . "${TM_SUPPORT_PATH}/lib/bash_init.sh"
-
-		\(command)
-		"""
+		var preamble = "#!/bin/bash\n"
+		if let supportPath {
+			preamble +=
+				"[[ -f \"\(supportPath)/lib/bash_init.sh\" ]] && source \"\(supportPath)/lib/bash_init.sh\"\n"
+		} else {
+			preamble +=
+				"[[ -f \"${TM_SUPPORT_PATH}/lib/bash_init.sh\" ]] && . \"${TM_SUPPORT_PATH}/lib/bash_init.sh\"\n"
+		}
+		command = preamble + "\n" + command
 	}
 }

@@ -23,9 +23,9 @@ extension DocumentWindowController: CommandDispatcherDelegate {
 	// MARK: - Input
 
 	public func inputData(
-		for source: TMBundleRuntime.CommandInput,
-		fallback: TMBundleRuntime.CommandInput,
-		format _: TMBundleRuntime.CommandInputFormat,
+		for source: CommandInput,
+		fallback: CommandInput,
+		format _: CommandInputFormat,
 		scope: String,
 	) -> Data {
 		guard let editor = documentEditor?.editor else { return Data() }
@@ -38,7 +38,7 @@ extension DocumentWindowController: CommandDispatcherDelegate {
 
 	/// Resolves a `CommandInput` source to a text string from the editor.
 	private func resolveInput(
-		source: TMBundleRuntime.CommandInput,
+		source: CommandInput,
 		editor: Editor,
 		scope: String,
 	) -> String? {
@@ -142,9 +142,9 @@ extension DocumentWindowController: CommandDispatcherDelegate {
 
 	public func applyTextOutput(
 		_ text: String,
-		placement: TMBundleRuntime.CommandOutput,
-		format _: TMBundleRuntime.CommandOutputFormat,
-		caret _: TMBundleRuntime.CommandOutputCaret,
+		placement: CommandOutput,
+		format _: CommandOutputFormat,
+		caret _: CommandOutputCaret,
 	) {
 		guard let docEditor = documentEditor else { return }
 
@@ -189,8 +189,8 @@ extension DocumentWindowController: CommandDispatcherDelegate {
 
 	public func showHTMLOutput(
 		_ html: String,
-		reuse _: TMBundleRuntime.CommandOutputReuse,
-		command: TMBundleRuntime.BundleCommand,
+		reuse _: CommandOutputReuse,
+		command: BundleCommand,
 	) {
 		#if canImport(WebKit)
 		let controller = htmlOutputController ?? createHTMLOutputController()
@@ -232,7 +232,7 @@ extension DocumentWindowController: CommandDispatcherDelegate {
 	}
 
 	public func showError(
-		command: TMBundleRuntime.BundleCommand,
+		command: BundleCommand,
 		exitCode: Int,
 		stdout: String,
 		stderr: String,
@@ -263,7 +263,7 @@ extension DocumentWindowController: CommandDispatcherDelegate {
 		}
 	}
 
-	public func performPreExecAction(_ action: TMBundleRuntime.PreExecAction) async -> Bool {
+	public func performPreExecAction(_ action: PreExecAction) async -> Bool {
 		switch action {
 		case .nop:
 			return true

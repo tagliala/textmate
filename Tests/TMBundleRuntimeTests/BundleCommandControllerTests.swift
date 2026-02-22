@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+import TMCompatibility
 @testable import TMBundleRuntime
 
 // MARK: - BundleCommandController Tests

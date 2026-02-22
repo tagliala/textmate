@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import TMCompatibility
 
 /// Notification posted when a bundle command finishes execution.
 ///

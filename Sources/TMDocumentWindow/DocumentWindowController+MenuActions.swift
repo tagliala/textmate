@@ -2,6 +2,7 @@
 import AppKit
 import TMBundleRuntime
 import TMBundleUI
+import TMCompatibility
 import TMCore
 import TMDocumentManager
 import TMEditor
@@ -304,7 +305,7 @@ public extension DocumentWindowController {
 		let panel = RunCommandWindowController.shared
 		panel.onExecute = { [weak self] command, output in
 			guard let self, let dispatcher = commandDispatcher else { return }
-			var bundleCommand = TMBundleRuntime.BundleCommand(
+			var bundleCommand = BundleCommand(
 				name: "Filter Through Command",
 				uuid: "",
 				command: command,
