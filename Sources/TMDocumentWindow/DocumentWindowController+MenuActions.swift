@@ -180,6 +180,7 @@ public extension DocumentWindowController {
 		let findPanel = FindPanelController.shared
 		findPanel.navigationDelegate = self
 		findPanel.documentIdentifier = selectedDocument?.id
+		findPanel.openDocumentPaths = TMDocumentController.shared.documents.compactMap(\.path)
 		findPanel.showPanel(withSelection: selection)
 	}
 
@@ -190,6 +191,7 @@ public extension DocumentWindowController {
 			?? selectedDocument?.path.map { ($0 as NSString).deletingLastPathComponent }
 		findPanel.documentIdentifier = selectedDocument?.id
 		findPanel.navigationDelegate = self
+		findPanel.openDocumentPaths = TMDocumentController.shared.documents.compactMap(\.path)
 		findPanel.showPanel(withSelection: selection, scope: .project)
 	}
 

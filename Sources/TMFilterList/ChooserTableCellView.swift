@@ -19,6 +19,9 @@ public class FileChooserCellView: NSTableCellView {
 		}
 	}
 
+	/// Called when the user clicks the close button on this cell.
+	public var onClose: (() -> Void)?
+
 	override public init(frame frameRect: NSRect) {
 		super.init(frame: frameRect)
 		setupUI()
@@ -105,7 +108,9 @@ public class FileChooserCellView: NSTableCellView {
 		}
 	}
 
-	@objc private func closeClicked() {}
+	@objc private func closeClicked() {
+		onClose?()
+	}
 }
 
 /// Custom table cell view for bundle item chooser items.

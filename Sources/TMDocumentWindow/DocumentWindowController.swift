@@ -134,7 +134,7 @@ public class DocumentWindowController: NSWindowController {
 	/// Height constraint for the live search bar (0 when hidden).
 	private var searchBarHeightConstraint: NSLayoutConstraint?
 
-	private var currentTheme: Theme?
+	var currentTheme: Theme?
 
 	/// Creates a new document window with the standard TextMate layout.
 	public init(document: TMDocument? = nil) {
@@ -780,10 +780,13 @@ extension DocumentWindowController: LiveSearchBarViewDelegate {
 		if let match = incrementalSearch.currentMatch {
 			applySearchMatch(match)
 		}
+
+		updateIncrementalHighlights()
 	}
 
 	public func liveSearchBarDidAccept(_: LiveSearchBarView) {
 		// Accept the current match position and dismiss.
+		editorView.highlightRanges = []
 		hideLiveSearch()
 	}
 
@@ -794,6 +797,7 @@ extension DocumentWindowController: LiveSearchBarViewDelegate {
 			let pos = editor.buffer.convert(offset: min(anchor, editor.buffer.size))
 			editor.selections = SelectionState(caret: pos)
 		}
+		editorView.highlightRanges = []
 		hideLiveSearch()
 	}
 
@@ -808,6 +812,20 @@ extension DocumentWindowController: LiveSearchBarViewDelegate {
 		incrementalSearch.findPrevious()
 		if let match = incrementalSearch.currentMatch {
 			applySearchMatch(match)
+		}
+	}
+
+	/// Pushes incremental search highlight ranges to the editor view.
+	private func updateIncrementalHighlights() {
+		guard let editor = documentEditor?.editor else {
+			editorView.highlightRanges = []
+			return
+		}
+		let buf = editor.buffer
+		editorView.highlightRanges = incrementalSearch.highlightedRanges.map { range in
+			let start = buf.convert(offset: min(range.lowerBound, buf.size))
+			let end = buf.convert(offset: min(range.upperBound, buf.size))
+			return (start: (line: start.line, index: start.column), end: (line: end.line, index: end.column))
 		}
 	}
 

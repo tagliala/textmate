@@ -204,6 +204,11 @@ extension DocumentWindowController: CommandDispatcherDelegate {
 
 	public func showNewDocument(_ text: String) {
 		let newController = DocumentWindowController()
+		newController.bundleIndex = bundleIndex
+		newController.commandDispatcher = commandDispatcher
+		if let theme = currentTheme {
+			newController.applyTheme(theme)
+		}
 		let doc = newController.textDocument
 		doc.setContent(text)
 		newController.wireDocumentEditor()

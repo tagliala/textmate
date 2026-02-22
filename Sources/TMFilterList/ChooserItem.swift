@@ -30,6 +30,8 @@ public struct FileChooserItem: ChooserItem {
 	public let path: String
 	/// Whether this is the currently open document.
 	public let isCurrentDocument: Bool
+	/// Whether this item represents an open document (has close button).
+	public let isOpenDocument: Bool
 	/// LRU rank (0 = most recent, higher = older).
 	public let lruRank: Int
 
@@ -54,6 +56,7 @@ public struct FileChooserItem: ChooserItem {
 	public init(
 		path: String,
 		isCurrentDocument: Bool = false,
+		isOpenDocument: Bool = false,
 		lruRank: Int = 0,
 	) {
 		let url = URL(fileURLWithPath: path)
@@ -61,6 +64,7 @@ public struct FileChooserItem: ChooserItem {
 		fileName = url.lastPathComponent
 		directory = url.deletingLastPathComponent().path
 		self.isCurrentDocument = isCurrentDocument
+		self.isOpenDocument = isOpenDocument
 		self.lruRank = lruRank
 		isMatched = true
 		sortRank = 0

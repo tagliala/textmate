@@ -370,6 +370,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency BundleMenuAc
 			_ = symbolString
 		}
 
+		chooser.onCloseDocument = { [weak controller] path in
+			controller?.closeDocument(at: path)
+		}
+
 		chooser.showAndEnumerate(relativeTo: frame)
 	}
 

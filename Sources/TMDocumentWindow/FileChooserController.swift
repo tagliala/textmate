@@ -15,6 +15,9 @@ public final class FileChooserController: ChooserPanelController, NSTableViewDat
 	/// Parameters: file path, optional selection string (line number), optional symbol string.
 	public var onSelectFile: ((String, String?, String?) -> Void)?
 
+	/// Callback invoked when the user clicks the close button on an open document cell.
+	public var onCloseDocument: ((String) -> Void)?
+
 	public init(projectPath: String) {
 		state = FileChooserState(projectPath: projectPath)
 		super.init(title: "Open Quickly")
@@ -81,6 +84,10 @@ public final class FileChooserController: ChooserPanelController, NSTableViewDat
 			?? FileChooserCellView(frame: .zero)
 		cell.identifier = cellID
 		cell.configure(with: item)
+		cell.showCloseButton = item.isOpenDocument
+		cell.onClose = { [weak self] in
+			self?.onCloseDocument?(item.path)
+		}
 		return cell
 	}
 }

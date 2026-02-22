@@ -196,6 +196,17 @@ public extension DocumentWindowController {
 
 	// MARK: - Close Tabs
 
+	/// Close the document with the given file path, prompting to save if modified.
+	func closeDocument(at path: String) {
+		guard let index = documents.firstIndex(where: { $0.path == path }) else { return }
+		closeTabsAtIndexes(
+			IndexSet(integer: index),
+			askToSaveChanges: true,
+			createDocumentIfEmpty: true,
+			activate: true,
+		)
+	}
+
 	/// Close tabs at specific indexes.
 	///
 	/// Mirrors C++ `closeTabsAtIndexes:askToSaveChanges:createDocumentIfEmpty:activate:`.

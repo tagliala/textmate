@@ -158,6 +158,7 @@ public final class FileChooserState: @unchecked Sendable {
 			FileChooserItem(
 				path: path,
 				isCurrentDocument: path == currentDocumentPath,
+				isOpenDocument: source == .openDocuments,
 				lruRank: source == .openDocuments ? index : 0,
 			)
 		}

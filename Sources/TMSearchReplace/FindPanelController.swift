@@ -66,6 +66,9 @@ public final class FindPanelController: NSWindowController, FindServer, Sendable
 	/// File browser item paths for file-browser-scope searches.
 	public var fileBrowserItems: [String] = []
 
+	/// Paths of currently open documents for open-files-scope searches.
+	public var openDocumentPaths: [String] = []
+
 	/// Identifier of the current document (for document-scope searches).
 	public var documentIdentifier: UUID?
 
@@ -642,6 +645,8 @@ public final class FindPanelController: NSWindowController, FindServer, Sendable
 			searchPaths = [folder]
 		case .fileBrowserItems:
 			searchPaths = fileBrowserItems
+		case .openFiles:
+			searchPaths = openDocumentPaths
 		default:
 			return
 		}
