@@ -143,7 +143,7 @@ extension DocumentWindowController: CommandDispatcherDelegate {
 		_ text: String,
 		placement: CommandOutput,
 		format _: CommandOutputFormat,
-		caret _: CommandOutputCaret,
+		caret: CommandOutputCaret,
 	) {
 		guard let docEditor = documentEditor else { return }
 
@@ -152,9 +152,11 @@ extension DocumentWindowController: CommandDispatcherDelegate {
 
 		let editor = docEditor.editor
 
+		// Save insertion point offset before modification for caret placement.
+		let preInsertOffset = editor.selections.primary?.start.offset ?? 0
+
 		switch placement {
 		case .replaceInput, .replaceSelection:
-			// insertText replaces whatever is currently selected.
 			editor.insertText(text)
 
 		case .replaceDocument:
@@ -162,7 +164,6 @@ extension DocumentWindowController: CommandDispatcherDelegate {
 			editor.insertText(text)
 
 		case .atCaret:
-			// Collapse selection to caret first to avoid replacing.
 			if editor.hasSelection {
 				if let sel = editor.selections.primary {
 					editor.selections = SelectionState(caret: sel.head)
@@ -171,7 +172,6 @@ extension DocumentWindowController: CommandDispatcherDelegate {
 			editor.insertText(text)
 
 		case .afterInput:
-			// Move caret to end of selection (if any), then insert.
 			if let sel = editor.selections.primary, !sel.isEmpty {
 				let endPos = sel.end
 				editor.selections = SelectionState(caret: endPos)
@@ -179,11 +179,66 @@ extension DocumentWindowController: CommandDispatcherDelegate {
 			editor.insertText(text)
 
 		case .newWindow, .toolTip, .discard:
-			// These are handled by other delegate methods.
 			break
 		}
 
+		// Apply caret placement policy after insertion.
+		applyCaret(caret, preInsertOffset: preInsertOffset, insertedText: text)
+
 		syncEditorToView()
+	}
+
+	/// Adjust the caret/selection after a command output insertion.
+	private func applyCaret(
+		_ caret: CommandOutputCaret,
+		preInsertOffset: Int,
+		insertedText: String,
+	) {
+		guard let editor = documentEditor?.editor else { return }
+
+		switch caret {
+		case .afterOutput:
+			// Default behavior — caret stays where insertText left it (end of insertion).
+			break
+
+		case .selectOutput:
+			let insertionLength = insertedText.utf8.count
+			let startOffset = max(0, (editor.selections.primary?.start.offset ?? 0) - insertionLength)
+			let endOffset = startOffset + insertionLength
+			let startPos = editor.buffer.convert(offset: startOffset)
+			let endPos = editor.buffer.convert(offset: endOffset)
+			editor.selections = SelectionState([TextRange(anchor: startPos, head: endPos)])
+
+		case .interpolateByChar:
+			// Map the old caret column into the new text character-by-character.
+			// Find the corresponding offset in the new text.
+			let oldOffset = preInsertOffset
+			let insertionLength = insertedText.utf8.count
+			let startOffset = max(0, (editor.selections.primary?.start.offset ?? 0) - insertionLength)
+			let clampedOffset = min(oldOffset - startOffset, insertionLength)
+			let newOffset = startOffset + max(0, clampedOffset)
+			let pos = editor.buffer.convert(offset: min(newOffset, editor.buffer.size))
+			editor.selections = SelectionState(caret: pos)
+
+		case .interpolateByLine:
+			// Map the old caret line into the new text.
+			let oldOffset = preInsertOffset
+			let oldPos = editor.buffer.convert(offset: min(oldOffset, editor.buffer.size))
+			let insertionLength = insertedText.utf8.count
+			let startOffset = max(0, (editor.selections.primary?.start.offset ?? 0) - insertionLength)
+			let startPos = editor.buffer.convert(offset: startOffset)
+			let lineOffset = max(0, oldPos.line - startPos.line)
+			let targetLine = min(startPos.line + lineOffset, editor.buffer.lines - 1)
+			let bol = editor.buffer.lineStart(targetLine)
+			let eol = editor.buffer.lineEnd(targetLine)
+			let col = min(oldPos.column, eol - bol)
+			let pos = editor.buffer.convert(offset: bol + col)
+			editor.selections = SelectionState(caret: pos)
+
+		case .heuristic:
+			// Similar to afterOutput — the caret stays at end of insertion.
+			break
+		}
 	}
 
 	public func showHTMLOutput(

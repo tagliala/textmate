@@ -745,9 +745,29 @@ public class DocumentWindowController: NSWindowController, NSMenuItemValidation 
 	}
 
 	func updateWindowTitle() {
-		let title = textDocument.displayName
-		window?.title = textDocument.isModified ? "● \(title)" : title
-		window?.isDocumentEdited = textDocument.isModified
+		let docName = textDocument.displayName
+		let modified = textDocument.isModified
+
+		if let projPath = projectPath {
+			let projName = (projPath as NSString).lastPathComponent
+			// Show "filename — Project" like the C++ version
+			window?.title = modified ? "● \(docName) — \(projName)" : "\(docName) — \(projName)"
+			// Show relative path as subtitle when file is inside the project
+			if let filePath = textDocument.path,
+			   filePath.hasPrefix(projPath)
+			{
+				let relative = String(filePath.dropFirst(projPath.count + 1))
+				let dir = (relative as NSString).deletingLastPathComponent
+				window?.subtitle = dir.isEmpty ? "" : dir
+			} else {
+				window?.subtitle = ""
+			}
+		} else {
+			window?.title = modified ? "● \(docName)" : docName
+			window?.subtitle = ""
+		}
+
+		window?.isDocumentEdited = modified
 		window?.representedURL = textDocument.path.map { URL(fileURLWithPath: $0) }
 	}
 
@@ -1040,9 +1060,27 @@ extension DocumentWindowController: StatusBarViewDelegate {
 	}
 
 	public func statusBarView(_: StatusBarView, didSelectEncoding encoding: String) {
-		textDocument.encoding = DocumentEncoding(charset: encoding, lineEnding: textDocument.encoding.lineEnding)
-		textDocument.markModified()
-		updateWindowTitle()
+		let newEncoding = DocumentEncoding(charset: encoding, lineEnding: textDocument.encoding.lineEnding)
+
+		// If the file exists on disk and is unmodified, reopen with the new encoding.
+		if textDocument.isOnDisk, !textDocument.isModified {
+			Task { @MainActor in
+				do {
+					try await textDocument.reopen(withEncoding: newEncoding)
+					wireDocumentEditor()
+					updateWindowTitle()
+				} catch {
+					// Fall back to just setting the encoding for next save.
+					textDocument.encoding = newEncoding
+					textDocument.markModified()
+					updateWindowTitle()
+				}
+			}
+		} else {
+			textDocument.encoding = newEncoding
+			textDocument.markModified()
+			updateWindowTitle()
+		}
 	}
 
 	public func statusBarView(_: StatusBarView, didSelectLineEnding lineEnding: String) {

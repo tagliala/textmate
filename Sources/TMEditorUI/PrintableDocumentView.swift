@@ -209,6 +209,52 @@ public class PrintableDocumentView: NSView {
 		}
 	}
 
+	// MARK: - Header & Footer
+
+	override public func drawPageBorder(with borderSize: NSSize) {
+		guard let printInfo = NSPrintOperation.current?.printInfo else { return }
+
+		let showHeaderFooter = (printInfo.dictionary()[PrintSettingKey.headerAndFooter] as? Bool) ?? false
+		guard showHeaderFooter else { return }
+
+		let pageNumber = NSPrintOperation.current?.currentPage ?? 1
+		let headerFont = NSFont.systemFont(ofSize: 9)
+		let attrs: [NSAttributedString.Key: Any] = [
+			.font: headerFont,
+			.foregroundColor: NSColor.gray,
+		]
+
+		let leftMargin = printInfo.leftMargin
+		let topMargin = printInfo.topMargin
+		let bottomMargin = printInfo.bottomMargin
+		let usableWidth = borderSize.width - leftMargin - printInfo.rightMargin
+
+		// Header: document title (left) and date (right)
+		let headerY = topMargin - 14
+
+		let titleStr = NSAttributedString(string: documentTitle, attributes: attrs)
+		titleStr.draw(at: NSPoint(x: leftMargin, y: headerY))
+
+		let formatter = DateFormatter()
+		formatter.dateStyle = .medium
+		formatter.timeStyle = .short
+		let dateStr = NSAttributedString(string: formatter.string(from: Date()), attributes: attrs)
+		let dateWidth = dateStr.size().width
+		dateStr.draw(at: NSPoint(x: leftMargin + usableWidth - dateWidth, y: headerY))
+
+		// Footer: page number (centered)
+		let footerY = borderSize.height - bottomMargin + 4
+		let pageStr = NSAttributedString(
+			string: "Page \(pageNumber)",
+			attributes: attrs,
+		)
+		let pageWidth = pageStr.size().width
+		pageStr.draw(at: NSPoint(
+			x: leftMargin + (usableWidth - pageWidth) / 2,
+			y: footerY,
+		))
+	}
+
 	// MARK: - Layout
 
 	/// Recomputes the layout and page break positions.

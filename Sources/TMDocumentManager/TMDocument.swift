@@ -327,6 +327,35 @@ public final class TMDocument: Identifiable, Equatable, Hashable {
 		}
 	}
 
+	/// Reloads the file from disk using the specified encoding.
+	///
+	/// Unlike `load()`, this skips encoding detection and decodes the raw
+	/// bytes with the given charset. Used when the user explicitly selects
+	/// an encoding from the status bar to fix misdetected files.
+	public func reopen(withEncoding newEncoding: DocumentEncoding) async throws {
+		guard let filePath = path else {
+			throw DocumentIOError.noPath
+		}
+
+		let url = URL(fileURLWithPath: filePath)
+		let data = try Data(contentsOf: url)
+		let enc = newEncoding.stringEncoding
+
+		guard let text = String(data: data, encoding: enc) else {
+			throw DocumentIOError.encodingFailed(newEncoding.charset)
+		}
+
+		content = text
+		encoding = newEncoding
+		encoding.lineEnding = LineEnding.detect(in: text)
+		contentSnapshot = text
+
+		revision = 0
+		savedRevision = 0
+		state = .loaded
+		notifyChange()
+	}
+
 	// MARK: - Saving
 
 	/// Saves the document content to disk.
