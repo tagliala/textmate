@@ -39,6 +39,16 @@ public class TabBarView: NSView {
 	/// The drag pasteboard type used for tab reordering.
 	static let tabDragType = NSPasteboard.PasteboardType("com.macromates.textmate.tab")
 
+	/// Codable payload written to the pasteboard during tab drags.
+	public struct TabDragInfo: Codable {
+		public var windowID: UUID?
+		public var tabIndex: Int
+	}
+
+	/// Identifier of the owning window controller, written into drag payloads
+	/// so the drop target can distinguish same-window vs cross-window drags.
+	public var windowIdentifier: UUID?
+
 	public var tabBarHeight: CGFloat = 24
 
 	override public var isFlipped: Bool {
@@ -116,15 +126,15 @@ public class TabBarView: NSView {
 			return true
 		}
 
-		// Handle tab reorder.
+		// Handle tab drag (same-window reorder or cross-window move).
 		guard let data = pb.data(forType: Self.tabDragType),
-		      let fromIndex = try? JSONDecoder().decode(Int.self, from: data)
+		      let info = try? JSONDecoder().decode(TabDragInfo.self, from: data)
 		else {
 			return false
 		}
 
 		let dropPoint = convert(sender.draggingLocation, from: nil)
-		var toIndex = tabs.count - 1
+		var toIndex = tabs.count
 
 		for (i, button) in tabButtons.enumerated() {
 			let mid = button.frame.midX
@@ -134,6 +144,20 @@ public class TabBarView: NSView {
 			}
 		}
 
+		let fromIndex = info.tabIndex
+
+		// Cross-window drop: notify delegate to move the tab between windows.
+		if let sourceID = info.windowID, sourceID != windowIdentifier {
+			delegate?.tabBarView(
+				self,
+				didReceiveTabFrom: sourceID,
+				tabIndex: fromIndex,
+				dropIndex: min(toIndex, tabs.count),
+			)
+			return true
+		}
+
+		// Same-window reorder.
 		guard fromIndex != toIndex, fromIndex >= 0, fromIndex < tabs.count else {
 			return false
 		}
@@ -274,12 +298,18 @@ public protocol TabBarViewDelegate: AnyObject {
 	func tabBarView(_ tabBarView: TabBarView, didCloseTabAt index: Int)
 	func tabBarView(_ tabBarView: TabBarView, didReorderTabFrom fromIndex: Int, to toIndex: Int)
 	func tabBarView(_ tabBarView: TabBarView, didReceiveFileDrop urls: [URL])
+	/// Called when a tab from another tab bar is dropped onto this one.
+	func tabBarView(_ tabBarView: TabBarView, didReceiveTabFrom sourceWindowID: UUID, tabIndex: Int, dropIndex: Int)
+	/// Called when a tab is dragged out of the tab bar (tear-off).
+	func tabBarView(_ tabBarView: TabBarView, didTearOffTabAt index: Int, screenPoint: NSPoint)
 }
 
 /// Default no-op implementations.
 public extension TabBarViewDelegate {
 	func tabBarView(_: TabBarView, didReorderTabFrom _: Int, to _: Int) {}
 	func tabBarView(_: TabBarView, didReceiveFileDrop _: [URL]) {}
+	func tabBarView(_: TabBarView, didReceiveTabFrom _: UUID, tabIndex _: Int, dropIndex _: Int) {}
+	func tabBarView(_: TabBarView, didTearOffTabAt _: Int, screenPoint _: NSPoint) {}
 }
 
 // MARK: - TabButton
@@ -360,8 +390,13 @@ private class TabButton: NSView {
 		let dy = abs(current.y - dragStartLocation.y)
 		guard dx > 3 || dy > 3 else { return }
 
+		let ownerTabBar = superview?.superview?.superview as? TabBarView
+		let info = TabBarView.TabDragInfo(
+			windowID: ownerTabBar?.windowIdentifier,
+			tabIndex: tabIndex,
+		)
 		let pasteboardItem = NSPasteboardItem()
-		if let data = try? JSONEncoder().encode(tabIndex) {
+		if let data = try? JSONEncoder().encode(info) {
 			pasteboardItem.setData(data, forType: TabBarView.tabDragType)
 		}
 
@@ -399,5 +434,16 @@ extension TabButton: NSDraggingSource {
 		sourceOperationMaskFor _: NSDraggingContext,
 	) -> NSDragOperation {
 		.move
+	}
+
+	func draggingSession(
+		_: NSDraggingSession,
+		endedAt screenPoint: NSPoint,
+		operation: NSDragOperation,
+	) {
+		// If the drop was not accepted by any tab bar, treat as tear-off.
+		guard operation == [] || operation == .none else { return }
+		let ownerTabBar = superview?.superview?.superview as? TabBarView
+		ownerTabBar?.delegate?.tabBarView(ownerTabBar!, didTearOffTabAt: tabIndex, screenPoint: screenPoint)
 	}
 }

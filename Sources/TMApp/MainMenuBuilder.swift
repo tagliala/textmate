@@ -659,6 +659,13 @@ enum MainMenuBuilder {
 
 		menu.addItem(.separator())
 		menu.addItem(
+			title: String(localized: "View Source", comment: "View menu item"),
+			action: NSSelectorFromString("viewHTMLSource:"),
+			key: "u",
+			modifiers: [.command, .option],
+		)
+		menu.addItem(.separator())
+		menu.addItem(
 			title: String(localized: "Enter Full Screen", comment: "View menu item"),
 			action: #selector(NSWindow.toggleFullScreen(_:)),
 			key: "f",

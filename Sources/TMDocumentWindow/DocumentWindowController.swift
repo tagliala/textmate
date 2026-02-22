@@ -172,6 +172,7 @@ public class DocumentWindowController: NSWindowController, NSMenuItemValidation 
 		selectedTabIndex = 0
 
 		setupLayout()
+		tabBarView.windowIdentifier = identifier
 		wireDocumentEditor()
 
 		// Set ourselves as the window delegate for lifecycle events.
@@ -481,6 +482,8 @@ public class DocumentWindowController: NSWindowController, NSMenuItemValidation 
 				: String(localized: "Show HTML Output", comment: "View menu item")
 			#endif
 			return true
+		case NSSelectorFromString("viewHTMLSource:"):
+			return htmlOutputController?.window?.isVisible == true
 		case NSSelectorFromString("toggleMacroRecording:"):
 			menuItem.title = documentEditor?.macroRecorder.isRecording == true
 				? "Stop Recording" : "Start Recording"

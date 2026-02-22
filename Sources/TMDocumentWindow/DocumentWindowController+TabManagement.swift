@@ -395,4 +395,49 @@ extension DocumentWindowController: TabBarViewDelegate {
 			openAndSelectDocument(first, activate: true)
 		}
 	}
+
+	public func tabBarView(_: TabBarView, didReceiveTabFrom sourceWindowID: UUID, tabIndex: Int, dropIndex: Int) {
+		guard let source = Self.allControllers[sourceWindowID],
+		      tabIndex >= 0, tabIndex < source.documents.count
+		else { return }
+
+		let doc = source.documents[tabIndex]
+
+		// Remove from source window.
+		source.closeTabsAtIndexes(
+			IndexSet(integer: tabIndex),
+			askToSaveChanges: false,
+			createDocumentIfEmpty: true,
+			activate: true,
+		)
+
+		// Insert into this window.
+		let clampedIndex = min(dropIndex, documents.count)
+		insertDocuments([doc], atIndex: clampedIndex, selecting: doc)
+		openAndSelectDocument(doc, activate: true)
+	}
+
+	public func tabBarView(_: TabBarView, didTearOffTabAt index: Int, screenPoint: NSPoint) {
+		guard documents.count > 1, index >= 0, index < documents.count else { return }
+
+		let doc = documents[index]
+		let controller = DocumentWindowController(document: doc)
+		if let path = projectPath {
+			controller.defaultProjectPath = path
+		}
+
+		// Position the new window at the drop point.
+		if let win = controller.window {
+			let origin = NSPoint(x: screenPoint.x - win.frame.width / 2, y: screenPoint.y - win.frame.height)
+			win.setFrameOrigin(origin)
+		}
+		controller.showWindow(self)
+
+		closeTabsAtIndexes(
+			IndexSet(integer: index),
+			askToSaveChanges: false,
+			createDocumentIfEmpty: true,
+			activate: true,
+		)
+	}
 }

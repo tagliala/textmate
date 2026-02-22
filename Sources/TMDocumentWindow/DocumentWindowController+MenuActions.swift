@@ -271,6 +271,26 @@ public extension DocumentWindowController {
 		}
 	}
 
+	// MARK: - View HTML Source
+
+	@objc func viewHTMLSource(_: Any?) {
+		guard let controller = htmlOutputController,
+		      controller.window?.isVisible == true
+		else { return }
+		let webView = controller.commandView.browserView.webView
+		webView.evaluateJavaScript("document.documentElement.outerHTML") { [weak self] result, _ in
+			guard let self, let html = result as? String else { return }
+			let doc = TMDocument(fileType: "text.html")
+			doc.content = html
+			insertDocuments(
+				[doc],
+				atIndex: selectedTabIndex + 1,
+				selecting: doc,
+			)
+			openAndSelectDocument(doc, activate: true)
+		}
+	}
+
 	// MARK: - Sticky Tab
 
 	@objc func toggleSticky(_: Any?) {
