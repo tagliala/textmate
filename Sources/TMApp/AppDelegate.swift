@@ -7,6 +7,7 @@ import TMDocumentManager
 import TMDocumentWindow
 import TMFilterList
 import TMPreferences
+import TMSearchReplace
 import TMServices
 import TMTheme
 
@@ -63,6 +64,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency BundleMenuAc
 		DocumentBackupManager.shared
 	}
 
+	/// Notification observers for preference changes.
+	private var preferenceObservers: [Any] = []
+
 	// MARK: - Application Lifecycle
 
 	func applicationDidFinishLaunching(_: Notification) {
@@ -73,7 +77,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency BundleMenuAc
 		startRMateServer()
 		setupRecentDocumentsMenu()
 		observeDocumentRegistry()
+		observePreferenceChanges()
 		recoverBackupsIfNeeded()
+		FindPasteboard.shared.restoreHistory()
 		AppPreferencesWindowController.shared.configure(bundleInstaller: bundleSystem.bundleInstaller)
 		restoreWindowState() ?? newDocument(nil)
 		backupManager.start()
@@ -87,6 +93,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency BundleMenuAc
 		rmateServer?.stop()
 		backupManager.stop()
 		backupManager.backupAllModifiedDocuments()
+		FindPasteboard.shared.saveHistory()
 		saveWindowState()
 		if let monitor = keyEventMonitor {
 			NSEvent.removeMonitor(monitor)
@@ -134,6 +141,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency BundleMenuAc
 	}
 
 	func applicationDidBecomeActive(_: Notification) {
+		FindPasteboard.shared.syncFromSystem()
 		for controller in DocumentWindowController.allControllers.values {
 			controller.checkForExternalChanges()
 		}
@@ -590,6 +598,30 @@ class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency BundleMenuAc
 			guard let path = doc.path else { return }
 			RecentDocumentsManager.shared.noteDocumentOpened(path: path)
 		}
+	}
+
+	/// Listen for preference changes and refresh affected UI.
+	private func observePreferenceChanges() {
+		let nc = NotificationCenter.default
+		preferenceObservers.append(nc.addObserver(
+			forName: .preferencesDidChange,
+			object: nil,
+			queue: .main,
+		) { _ in
+			MainActor.assumeIsolated {
+				for controller in DocumentWindowController.allControllers.values {
+					controller.fileBrowserController.reload(nil)
+				}
+			}
+		})
+		preferenceObservers.append(nc.addObserver(
+			forName: .preferencesEnvironmentVariablesDidChange,
+			object: nil,
+			queue: .main,
+		) { _ in
+			// Environment variable changes take effect on next command
+			// invocation — no immediate refresh needed.
+		})
 	}
 
 	private func rebuildRecentDocumentsMenu() {

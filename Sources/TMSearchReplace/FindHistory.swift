@@ -16,7 +16,7 @@ public final class FindPasteboard: Observable {
 	/// The current find string.
 	public var findString: String = "" {
 		didSet {
-			if findString != oldValue {
+			if findString != oldValue, !suppressPush {
 				pushToSystemPasteboard()
 				addToHistory(findString)
 			}
@@ -46,6 +46,9 @@ public final class FindPasteboard: Observable {
 
 	/// Last known system pasteboard change count.
 	private var lastPasteboardChangeCount: Int = 0
+
+	/// Flag to suppress push-back when pulling from the system pasteboard.
+	private var suppressPush = false
 
 	private init() {
 		pullFromSystemPasteboard()
@@ -92,13 +95,10 @@ public final class FindPasteboard: Observable {
 		guard pb.changeCount != lastPasteboardChangeCount else { return }
 		lastPasteboardChangeCount = pb.changeCount
 		if let string = pb.string(forType: .string), !string.isEmpty {
-			// Update without triggering push back
-			findHistory.removeAll { $0 == string }
-			findHistory.insert(string, at: 0)
-			if findHistory.count > maxHistory {
-				findHistory.removeLast(findHistory.count - maxHistory)
-			}
+			suppressPush = true
 			findString = string
+			suppressPush = false
+			addToHistory(string)
 		}
 		#endif
 	}
