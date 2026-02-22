@@ -260,6 +260,31 @@ public extension DocumentWindowController {
 		documentEditor?.toggleComment()
 	}
 
+	// MARK: - Toggle HTML Output
+
+	@objc func toggleHTMLOutput(_: Any?) {
+		if let controller = htmlOutputController, controller.window?.isVisible == true {
+			controller.window?.orderOut(nil)
+		} else {
+			let controller = htmlOutputController ?? createHTMLOutputController()
+			controller.showWindow(nil)
+		}
+	}
+
+	// MARK: - Sticky Tab
+
+	@objc func toggleSticky(_: Any?) {
+		guard let doc = selectedDocument else { return }
+		doc.isSticky.toggle()
+		updateTabBar()
+	}
+
+	// MARK: - Page Setup
+
+	@objc func runPageLayout(_: Any?) {
+		NSApp.runPageLayout(nil)
+	}
+
 	// MARK: - Move Focus
 
 	@objc func moveFocus(_: Any?) {

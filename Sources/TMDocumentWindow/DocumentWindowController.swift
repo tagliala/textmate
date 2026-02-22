@@ -470,6 +470,16 @@ public class DocumentWindowController: NSWindowController, NSMenuItemValidation 
 		case NSSelectorFromString("toggleContinuousSpellChecking:"):
 			menuItem.state = isSpellCheckingEnabled ? .on : .off
 			return true
+		case NSSelectorFromString("toggleSticky:"):
+			menuItem.state = selectedDocument?.isSticky == true ? .on : .off
+			return true
+		case NSSelectorFromString("toggleHTMLOutput:"):
+			#if canImport(WebKit)
+			menuItem.title = htmlOutputController?.window?.isVisible == true
+				? String(localized: "Hide HTML Output", comment: "View menu item")
+				: String(localized: "Show HTML Output", comment: "View menu item")
+			#endif
+			return true
 		case NSSelectorFromString("toggleMacroRecording:"):
 			menuItem.title = documentEditor?.macroRecorder.isRecording == true
 				? "Stop Recording" : "Start Recording"
@@ -969,6 +979,30 @@ extension DocumentWindowController: NSWindowDelegate {
 		if let doc = selectedDocument {
 			statusBarView.setTabSettings(useSoftTabs: doc.softTabs, tabSize: doc.tabSize)
 		}
+
+		// Register as delegate for dynamic submenus.
+		installDynamicMenuDelegates()
+	}
+
+	/// Installs this controller as the NSMenuDelegate for the
+	/// "Jump to Bookmark" and "Show Tab" dynamic submenus.
+	private func installDynamicMenuDelegates() {
+		guard let mainMenu = NSApp.mainMenu else { return }
+		// Navigate > Jump to Bookmark
+		if let navigateMenu = mainMenu.item(withTitle: String(localized: "Navigate", comment: "Menu title"))?.submenu,
+		   let bookmarkItem = navigateMenu.item(withTitle: String(
+		   	localized: "Jump to Bookmark",
+		   	comment: "Navigate menu item",
+		   ))
+		{
+			bookmarkItem.submenu?.delegate = self
+		}
+		// Window > Show Tab
+		if let windowMenu = NSApp.windowsMenu,
+		   let showTabItem = windowMenu.item(withTitle: String(localized: "Show Tab", comment: "Window menu item"))
+		{
+			showTabItem.submenu?.delegate = self
+		}
 	}
 }
 
@@ -1242,5 +1276,77 @@ extension SCMStatus {
 		case .unknown: .unknown
 		case .none, .ignored: .none
 		}
+	}
+}
+
+// MARK: - Dynamic Menu Delegate (Bookmarks + Show Tab)
+
+extension DocumentWindowController: NSMenuDelegate {
+	public func menuNeedsUpdate(_ menu: NSMenu) {
+		let title = menu.title
+		if title == String(localized: "Jump to Bookmark", comment: "Navigate menu submenu") {
+			updateBookmarksMenu(menu)
+		} else if title == String(localized: "Show Tab", comment: "Window menu submenu") {
+			updateShowTabMenu(menu)
+		}
+	}
+
+	private func updateBookmarksMenu(_ menu: NSMenu) {
+		menu.removeAllItems()
+		let sorted = gutterView.bookmarkedLines.sorted()
+		guard !sorted.isEmpty else {
+			let noItem = menu.addItem(
+				withTitle: String(localized: "No Bookmarks", comment: "Bookmark submenu placeholder"),
+				action: nil,
+				keyEquivalent: "",
+			)
+			noItem.isEnabled = false
+			return
+		}
+		for line in sorted {
+			let item = menu.addItem(
+				withTitle: String(localized: "Line \(line)", comment: "Bookmark submenu item"),
+				action: #selector(goToBookmarkedLine(_:)),
+				keyEquivalent: "",
+			)
+			item.target = self
+			item.tag = line
+		}
+	}
+
+	@objc private func goToBookmarkedLine(_ sender: Any?) {
+		guard let menuItem = sender as? NSMenuItem else { return }
+		goToLine(menuItem.tag)
+	}
+
+	private func updateShowTabMenu(_ menu: NSMenu) {
+		menu.removeAllItems()
+		for (index, doc) in documents.enumerated() {
+			let title = doc.displayName
+			let item = menu.addItem(
+				withTitle: title,
+				action: #selector(selectTabFromMenu(_:)),
+				keyEquivalent: "",
+			)
+			item.target = self
+			item.tag = index
+			if index == selectedTabIndex {
+				item.state = .on
+			}
+			if doc.isModified {
+				item.attributedTitle = NSAttributedString(
+					string: title,
+					attributes: [.obliqueness: 0.15],
+				)
+			}
+		}
+	}
+
+	@objc private func selectTabFromMenu(_ sender: Any?) {
+		guard let menuItem = sender as? NSMenuItem else { return }
+		let index = menuItem.tag
+		guard index >= 0, index < documents.count else { return }
+		selectedTabIndex = index
+		openAndSelectDocument(documents[index], activate: true)
 	}
 }

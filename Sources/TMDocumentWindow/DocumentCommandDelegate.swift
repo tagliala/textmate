@@ -439,7 +439,7 @@ extension DocumentWindowController: CommandDispatcherDelegate {
 		}
 	}
 
-	private func createHTMLOutputController() -> HTMLOutputWindowController {
+	func createHTMLOutputController() -> HTMLOutputWindowController {
 		let controller = HTMLOutputWindowController()
 		htmlOutputController = controller
 		return controller

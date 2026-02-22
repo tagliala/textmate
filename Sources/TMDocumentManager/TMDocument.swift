@@ -209,6 +209,9 @@ public final class TMDocument: Identifiable, Equatable, Hashable {
 	/// Whether soft tabs (spaces) are enabled.
 	public var softTabs: Bool = false
 
+	/// Whether this tab is "sticky" (pinned).
+	public var isSticky: Bool = false
+
 	/// The spelling language (e.g., "en_US").
 	public var spellingLanguage: String?
 

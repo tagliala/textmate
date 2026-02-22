@@ -142,6 +142,27 @@ enum MainMenuBuilder {
 			key: "w",
 			modifiers: [.command, .option, .control],
 		)
+		menu.addItem(
+			title: String(localized: "Close Other Tabs", comment: "File menu item"),
+			action: NSSelectorFromString("performCloseOtherTabs:"),
+			key: "w",
+			modifiers: [.command, .control],
+		)
+		menu.addItem(
+			title: String(localized: "Close Tabs to the Right", comment: "File menu item"),
+			action: NSSelectorFromString("performCloseTabsToTheRight:"),
+		)
+		let closeLeftItem = menu.addItem(
+			title: String(localized: "Close Tabs to the Left", comment: "File menu item"),
+			action: NSSelectorFromString("performCloseTabsToTheLeft:"),
+		)
+		closeLeftItem.keyEquivalentModifierMask = [.command, .option]
+		closeLeftItem.isAlternate = true
+		menu.addItem(.separator())
+		menu.addItem(
+			title: String(localized: "Sticky", comment: "File menu item"),
+			action: NSSelectorFromString("toggleSticky:"),
+		)
 		menu.addItem(.separator())
 		menu.addItem(
 			title: String(localized: "Save", comment: "File menu item"),
@@ -165,6 +186,10 @@ enum MainMenuBuilder {
 			action: NSSelectorFromString("revertDocumentToSaved:"),
 		)
 		menu.addItem(.separator())
+		menu.addItem(
+			title: String(localized: "Page Setup…", comment: "File menu item"),
+			action: NSSelectorFromString("runPageLayout:"),
+		)
 		menu.addItem(
 			title: String(localized: "Print…", comment: "File menu item"),
 			action: NSSelectorFromString("printDocument:"),
@@ -495,6 +520,12 @@ enum MainMenuBuilder {
 			modifiers: [.command, .option, .control],
 		)
 		menu.addItem(
+			title: String(localized: "Show HTML Output", comment: "View menu item"),
+			action: NSSelectorFromString("toggleHTMLOutput:"),
+			key: "h",
+			modifiers: [.command, .option, .control],
+		)
+		menu.addItem(
 			title: String(localized: "Show Line Numbers", comment: "View menu item"),
 			action: NSSelectorFromString("toggleLineNumbers:"),
 			key: "l",
@@ -684,6 +715,15 @@ enum MainMenuBuilder {
 			key: String(Character(UnicodeScalar(NSF2FunctionKey)!)),
 			modifiers: [.shift],
 		)
+
+		// Jump to Bookmark — dynamic submenu populated via delegate
+		let bookmarkMenu = NSMenu(title: String(localized: "Jump to Bookmark", comment: "Navigate menu submenu"))
+		let bookmarkItem = menu.addItem(
+			title: String(localized: "Jump to Bookmark", comment: "Navigate menu item"),
+			action: nil,
+		)
+		bookmarkItem.submenu = bookmarkMenu
+
 		menu.addItem(.separator())
 
 		menu.addItem(
@@ -910,6 +950,12 @@ enum MainMenuBuilder {
 			key: "r",
 			modifiers: [.command, .control],
 		)
+		menu.addItem(
+			title: String(localized: "Select None", comment: "File Browser menu item"),
+			action: NSSelectorFromString("deselectAll:"),
+			key: "a",
+			modifiers: [.command, .shift],
+		)
 		menu.addItem(.separator())
 		menu.addItem(
 			title: String(localized: "Project Folder", comment: "File Browser menu item"),
@@ -944,6 +990,15 @@ enum MainMenuBuilder {
 		menu.addItem(
 			title: String(localized: "Favorites", comment: "File Browser menu item"),
 			action: NSSelectorFromString("goToFavorites:"),
+		)
+		menu.addItem(.separator())
+		menu.addItem(
+			title: String(localized: "Go to Folder…", comment: "File Browser menu item"),
+			action: NSSelectorFromString("orderFrontGoToFolder:"),
+		)
+		menu.addItem(
+			title: String(localized: "Reload", comment: "File Browser menu item"),
+			action: NSSelectorFromString("reload:"),
 		)
 
 		return item
@@ -1067,6 +1122,14 @@ enum MainMenuBuilder {
 		)
 		nextAlt2.isHidden = true
 		nextAlt2.allowsKeyEquivalentWhenHidden = true
+
+		// Show Tab — dynamic submenu populated via delegate
+		let showTabMenu = NSMenu(title: String(localized: "Show Tab", comment: "Window menu submenu"))
+		let showTabItem = menu.addItem(
+			title: String(localized: "Show Tab", comment: "Window menu item"),
+			action: nil,
+		)
+		showTabItem.submenu = showTabMenu
 
 		menu.addItem(.separator())
 
