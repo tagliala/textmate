@@ -1,5 +1,4 @@
 import AppKit
-import TMTheme
 
 /// KeyBindings.dict loader — parses the TextMate key-binding plist format
 /// and registers actions to selectors.

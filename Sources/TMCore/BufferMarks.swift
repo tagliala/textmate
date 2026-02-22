@@ -10,7 +10,7 @@
 /// ``TextBuffer`` to have positions auto-adjusted on edits.
 ///
 /// Ported from C++ `marks_t` in `Frameworks/buffer/src/marks.cc`.
-public final class BufferMarks: BufferCallback, @unchecked Sendable {
+final class BufferMarks: BufferCallback, @unchecked Sendable {
 	/// The indexed map type: position → label string.
 	private typealias MarkMap = IndexedMap<String>
 
@@ -18,29 +18,29 @@ public final class BufferMarks: BufferCallback, @unchecked Sendable {
 	private var marks: [String: MarkMap] = [:]
 
 	/// Creates an empty mark set.
-	public init() {}
+	init() {}
 
 	// MARK: - Query
 
 	/// Whether there are no marks of any type.
-	public var isEmpty: Bool {
+	var isEmpty: Bool {
 		marks.values.allSatisfy(\.isEmpty)
 	}
 
 	/// Total number of marks across all types.
-	public var count: Int {
+	var count: Int {
 		marks.values.reduce(0) { $0 + $1.count }
 	}
 
 	/// Returns the label of the mark at `position` with the given `type`,
 	/// or `nil` if no such mark exists.
-	public func get(at position: Int, type: String) -> String? {
+	func get(at position: Int, type: String) -> String? {
 		marks[type]?.find(at: position)?.value
 	}
 
 	/// Returns all marks of the given type whose positions fall in
 	/// `[from, to)`.
-	public func getRange(from: Int, to: Int, type: String) -> [(position: Int, label: String)] {
+	func getRange(from: Int, to: Int, type: String) -> [(position: Int, label: String)] {
 		guard let map = marks[type] else { return [] }
 		var result: [(Int, String)] = []
 		let start = map.lowerBound(at: from)
@@ -54,7 +54,7 @@ public final class BufferMarks: BufferCallback, @unchecked Sendable {
 
 	/// Returns all marks whose positions fall in `[from, to)`, across all
 	/// types.
-	public func getRange(from: Int, to: Int) -> [(position: Int, type: String, label: String)] {
+	func getRange(from: Int, to: Int) -> [(position: Int, type: String, label: String)] {
 		var result: [(Int, String, String)] = []
 		for (type, map) in marks {
 			let start = map.lowerBound(at: from)
@@ -75,7 +75,7 @@ public final class BufferMarks: BufferCallback, @unchecked Sendable {
 	///   - types: Mark types to consider. If empty, all types are searched.
 	///   - bufferSize: Total buffer size (used for wrapping).
 	/// - Returns: The nearest matching mark, or `nil` if no marks exist.
-	public func next(
+	func next(
 		after position: Int,
 		types: [String] = [],
 		bufferSize: Int,
@@ -112,7 +112,7 @@ public final class BufferMarks: BufferCallback, @unchecked Sendable {
 	///   - types: Mark types to consider. If empty, all types are searched.
 	///   - bufferSize: Total buffer size (used for wrapping).
 	/// - Returns: The nearest matching mark, or `nil` if no marks exist.
-	public func prev(
+	func prev(
 		before position: Int,
 		types: [String] = [],
 		bufferSize _: Int,
@@ -143,13 +143,13 @@ public final class BufferMarks: BufferCallback, @unchecked Sendable {
 	// MARK: - Mutation
 
 	/// Sets a mark at the given position with the specified type and label.
-	public func set(at position: Int, type: String, label: String = "") {
+	func set(at position: Int, type: String, label: String = "") {
 		marks[type, default: MarkMap()].set(at: position, value: label)
 	}
 
 	/// Removes the mark at the given position with the specified type.
 	@discardableResult
-	public func remove(at position: Int, type: String) -> Bool {
+	func remove(at position: Int, type: String) -> Bool {
 		marks[type]?.remove(at: position) ?? false
 	}
 
@@ -158,7 +158,7 @@ public final class BufferMarks: BufferCallback, @unchecked Sendable {
 	/// If `type` ends with `"/"`, removes all marks whose type starts with
 	/// that prefix (e.g., `"search/"` removes `"search/highlight"`,
 	/// `"search/current"`, etc.).
-	public func removeAll(type: String) {
+	func removeAll(type: String) {
 		if type.hasSuffix("/") {
 			let keysToRemove = marks.keys.filter { $0.hasPrefix(type) }
 			for key in keysToRemove {
@@ -170,17 +170,17 @@ public final class BufferMarks: BufferCallback, @unchecked Sendable {
 	}
 
 	/// Removes all marks of all types.
-	public func clear() {
+	func clear() {
 		marks.removeAll()
 	}
 
 	// MARK: - BufferCallback
 
-	public func willReplace(from _: Int, to _: Int, bytes _: [UInt8]) {
+	func willReplace(from _: Int, to _: Int, bytes _: [UInt8]) {
 		// No pre-mutation work needed.
 	}
 
-	public func didReplace(from: Int, to: Int, length: Int) {
+	func didReplace(from: Int, to: Int, length: Int) {
 		for type in marks.keys {
 			// The C++ marks_t preserves marks at `to` if there is an entry
 			// exactly at the boundary (checked via upper_bound). We replicate

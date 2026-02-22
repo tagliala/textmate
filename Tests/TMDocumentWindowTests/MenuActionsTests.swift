@@ -2,7 +2,6 @@ import AppKit
 import Testing
 import TMBundleRuntime
 import TMCompatibility
-import TMCore
 @testable import TMDocumentManager
 @testable import TMDocumentWindow
 @testable import TMEditor

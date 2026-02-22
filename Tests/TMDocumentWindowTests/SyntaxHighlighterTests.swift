@@ -2,9 +2,7 @@ import AppKit
 import Testing
 import TMBundle
 import TMBundleRuntime
-import TMCore
 import TMEditorUI
-import TMFilterList
 import TMGrammar
 import TMTheme
 @testable import TMDocumentWindow

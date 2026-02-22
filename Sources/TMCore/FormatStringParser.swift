@@ -8,7 +8,7 @@ import Foundation
 /// Both format string syntax (used in regex replacements) and snippet syntax
 /// (`$N` placeholders, `${N:content}`, choices, code blocks) are handled by
 /// the same parser with mode-specific entry points.
-public struct FormatStringParser: Sendable {
+struct FormatStringParser: Sendable {
 	/// The full input string.
 	private let input: String
 	/// Current parse position.
@@ -17,14 +17,14 @@ public struct FormatStringParser: Sendable {
 	private let endIndex: String.Index
 
 	/// Creates a parser for the given input string.
-	public init(_ input: String) {
+	init(_ input: String) {
 		self.input = input
 		index = input.startIndex
 		endIndex = input.endIndex
 	}
 
 	/// Number of characters consumed so far.
-	public var bytesParsed: Int {
+	var bytesParsed: Int {
 		input.distance(from: input.startIndex, to: index)
 	}
 
@@ -33,7 +33,7 @@ public struct FormatStringParser: Sendable {
 	/// Parses as a format string (regex replacement syntax).
 	///
 	/// Supports variables, conditionals, case changes, control codes, escapes.
-	public mutating func parseFormatString(stopChars: String = "") -> [FormatStringNode] {
+	mutating func parseFormatString(stopChars: String = "") -> [FormatStringNode] {
 		var nodes: [FormatStringNode] = []
 		parseFormatString(stopChars: stopChars, into: &nodes)
 		return nodes
@@ -43,20 +43,20 @@ public struct FormatStringParser: Sendable {
 	///
 	/// Supports all format string syntax plus tab-stop placeholders, choices,
 	/// transforms, and code blocks.
-	public mutating func parseSnippet() -> [FormatStringNode] {
+	mutating func parseSnippet() -> [FormatStringNode] {
 		var nodes: [FormatStringNode] = []
 		parseSnippet(stopChars: "", into: &nodes)
 		return nodes
 	}
 
 	/// Parses a format string from a string, returning the AST nodes.
-	public static func parseFormatString(_ input: String, stopChars: String = "") -> [FormatStringNode] {
+	static func parseFormatString(_ input: String, stopChars: String = "") -> [FormatStringNode] {
 		var parser = FormatStringParser(input)
 		return parser.parseFormatString(stopChars: stopChars)
 	}
 
 	/// Parses a snippet body from a string, returning the AST nodes.
-	public static func parseSnippet(_ input: String) -> [FormatStringNode] {
+	static func parseSnippet(_ input: String) -> [FormatStringNode] {
 		var parser = FormatStringParser(input)
 		return parser.parseSnippet()
 	}

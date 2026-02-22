@@ -1,5 +1,4 @@
 import AppKit
-import TMDocumentManager
 import TMFileBrowser
 
 // MARK: - FileBrowserDelegate Conformance

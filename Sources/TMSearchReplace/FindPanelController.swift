@@ -764,8 +764,6 @@ public final class FindPanelController: NSWindowController, FindServer, Sendable
 		window?.orderOut(nil)
 	}
 
-
-
 	// MARK: - Recent Folders
 
 	private func addRecentFolder(_ path: String) {

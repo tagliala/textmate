@@ -3,7 +3,6 @@ import Foundation
 import Testing
 import TMBundle
 import TMTheme
-@testable import TMBundleRuntime
 @testable import TMCompatibility
 @testable import TMCore
 @testable import TMDocumentManager

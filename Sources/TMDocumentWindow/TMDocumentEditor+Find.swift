@@ -1,7 +1,5 @@
 #if canImport(AppKit)
 import TMCore
-import TMEditor
-import TMEditorUI
 import TMSearchReplace
 
 // MARK: - Find & Replace Operations

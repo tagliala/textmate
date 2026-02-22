@@ -8,12 +8,12 @@ import Foundation
 /// Ports the C++ `expand_visitor` from `format_string.cc`.
 /// Used for regex replacement strings, grammar transforms, and snippet body
 /// expansion.
-public final class FormatStringExpander: @unchecked Sendable {
+final class FormatStringExpander: @unchecked Sendable {
 	/// Variable lookup callback: given a name, returns its value or nil.
-	public typealias VariableLookup = (String) -> String?
+	typealias VariableLookup = (String) -> String?
 
 	/// Command execution callback for snippet code blocks.
-	public typealias CommandRunner = (String) -> String
+	typealias CommandRunner = (String) -> String
 
 	/// The variable lookup function.
 	private let variable: VariableLookup
@@ -35,7 +35,7 @@ public final class FormatStringExpander: @unchecked Sendable {
 	private(set) var ambiguous: [(Int, SnippetField)] = []
 
 	/// Creates an expander with the given variable lookup.
-	public init(variable: @escaping VariableLookup, commandRunner: CommandRunner? = nil) {
+	init(variable: @escaping VariableLookup, commandRunner: CommandRunner? = nil) {
 		self.variable = variable
 		self.commandRunner = commandRunner
 	}
@@ -43,14 +43,14 @@ public final class FormatStringExpander: @unchecked Sendable {
 	// MARK: - Public API
 
 	/// Traverses the AST nodes, appending to the result.
-	public func traverse(_ nodes: [FormatStringNode]) {
+	func traverse(_ nodes: [FormatStringNode]) {
 		for node in nodes {
 			visit(node)
 		}
 	}
 
 	/// Applies accumulated case changes to the result string.
-	public func handleCaseChanges() {
+	func handleCaseChanges() {
 		guard !caseChanges.isEmpty else { return }
 		caseChanges.append((result.count, .none))
 
@@ -87,7 +87,7 @@ public final class FormatStringExpander: @unchecked Sendable {
 	}
 
 	/// Performs regex replacement using format nodes.
-	public func replace(
+	func replace(
 		source: String,
 		pattern: NSRegularExpression,
 		format: [FormatStringNode],

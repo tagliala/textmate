@@ -3,9 +3,7 @@ import TMBundleRuntime
 import TMCompatibility
 import TMCore
 import TMEditor
-import TMFileBrowser
 import TMGrammar
-import TMHTMLOutput
 
 // MARK: - CommandDispatcherDelegate Conformance
 

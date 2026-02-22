@@ -1,6 +1,5 @@
 #if canImport(AppKit)
 import AppKit
-import TMCore
 import TMEditor
 import TMEditorUI
 import TMSearchReplace

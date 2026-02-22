@@ -1,5 +1,4 @@
 import Testing
-import TMCore
 import TMDocumentManager
 import TMDocumentWindow
 

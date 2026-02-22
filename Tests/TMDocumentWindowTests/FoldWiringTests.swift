@@ -1,9 +1,7 @@
 import AppKit
 import Testing
-import TMAppKit
 import TMCore
 import TMDocumentManager
-import TMEditor
 import TMEditorUI
 @testable import TMDocumentWindow
 

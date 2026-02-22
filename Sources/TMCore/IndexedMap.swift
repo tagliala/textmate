@@ -8,15 +8,15 @@
 /// Ported from C++ `indexed_map_t` in `Frameworks/buffer/src/indexed_map.h`.
 /// Uses a sorted array internally; the interface could be upgraded to an
 /// augmented balanced tree for O(log n) mutations.
-public struct IndexedMap<Value: Sendable>: Sendable {
+struct IndexedMap<Value: Sendable>: Sendable {
 	/// A single entry associating a buffer position with a value.
-	public struct Entry: Sendable {
+	struct Entry: Sendable {
 		/// The byte offset in the buffer.
-		public var position: Int
+		var position: Int
 		/// The associated value.
-		public var value: Value
+		var value: Value
 
-		public init(position: Int, value: Value) {
+		init(position: Int, value: Value) {
 			self.position = position
 			self.value = value
 		}
@@ -26,17 +26,17 @@ public struct IndexedMap<Value: Sendable>: Sendable {
 	private var entries: [Entry] = []
 
 	/// Creates an empty indexed map.
-	public init() {}
+	init() {}
 
 	// MARK: - Properties
 
 	/// Whether the map contains no entries.
-	public var isEmpty: Bool {
+	var isEmpty: Bool {
 		entries.isEmpty
 	}
 
 	/// The number of entries in the map.
-	public var count: Int {
+	var count: Int {
 		entries.count
 	}
 
@@ -74,7 +74,7 @@ public struct IndexedMap<Value: Sendable>: Sendable {
 	}
 
 	/// Returns the index of the entry at the exact position, or `nil`.
-	public func findIndex(at position: Int) -> Int? {
+	func findIndex(at position: Int) -> Int? {
 		let idx = insertionIndex(for: position)
 		if idx < entries.count, entries[idx].position == position {
 			return idx
@@ -83,7 +83,7 @@ public struct IndexedMap<Value: Sendable>: Sendable {
 	}
 
 	/// Returns the entry at the exact position, or `nil`.
-	public func find(at position: Int) -> Entry? {
+	func find(at position: Int) -> Entry? {
 		if let idx = findIndex(at: position) {
 			return entries[idx]
 		}
@@ -91,17 +91,17 @@ public struct IndexedMap<Value: Sendable>: Sendable {
 	}
 
 	/// Returns the index of the first entry with `position >= key`.
-	public func lowerBound(at key: Int) -> Int {
+	func lowerBound(at key: Int) -> Int {
 		insertionIndex(for: key)
 	}
 
 	/// Returns the index of the first entry with `position > key`.
-	public func upperBound(at key: Int) -> Int {
+	func upperBound(at key: Int) -> Int {
 		upperBoundIndex(for: key)
 	}
 
 	/// Returns the `n`-th entry (zero-based), or `nil` if out of range.
-	public func nth(_ n: Int) -> Entry? {
+	func nth(_ n: Int) -> Entry? {
 		guard n >= 0, n < entries.count else { return nil }
 		return entries[n]
 	}
@@ -109,14 +109,14 @@ public struct IndexedMap<Value: Sendable>: Sendable {
 	/// Returns the entry at the given element index.
 	///
 	/// - Precondition: `index` is in `0 ..< count`.
-	public subscript(index: Int) -> Entry {
+	subscript(index: Int) -> Entry {
 		entries[index]
 	}
 
 	// MARK: - Mutation
 
 	/// Inserts or updates the value at the given position.
-	public mutating func set(at position: Int, value: Value) {
+	mutating func set(at position: Int, value: Value) {
 		let idx = insertionIndex(for: position)
 		if idx < entries.count, entries[idx].position == position {
 			entries[idx].value = value
@@ -129,7 +129,7 @@ public struct IndexedMap<Value: Sendable>: Sendable {
 	///
 	/// - Returns: `true` if an entry was found and removed.
 	@discardableResult
-	public mutating func remove(at position: Int) -> Bool {
+	mutating func remove(at position: Int) -> Bool {
 		if let idx = findIndex(at: position) {
 			entries.remove(at: idx)
 			return true
@@ -138,13 +138,13 @@ public struct IndexedMap<Value: Sendable>: Sendable {
 	}
 
 	/// Removes entries at element indices in the given range.
-	public mutating func removeSubrange(_ range: Range<Int>) {
+	mutating func removeSubrange(_ range: Range<Int>) {
 		guard !range.isEmpty else { return }
 		entries.removeSubrange(range)
 	}
 
 	/// Removes all entries.
-	public mutating func clear() {
+	mutating func clear() {
 		entries.removeAll()
 	}
 
@@ -160,7 +160,7 @@ public struct IndexedMap<Value: Sendable>: Sendable {
 	///   - bindRight: When `true` (default), entries at `from` are removed and
 	///     entries at `to` are kept (shifted). When `false`, entries at `from`
 	///     are kept and entries at `to` are removed.
-	public mutating func replace(from: Int, to: Int, newLength: Int, bindRight: Bool = true) {
+	mutating func replace(from: Int, to: Int, newLength: Int, bindRight: Bool = true) {
 		let delta = newLength - (to - from)
 
 		if bindRight {
@@ -194,7 +194,7 @@ public struct IndexedMap<Value: Sendable>: Sendable {
 // MARK: - Sequence
 
 extension IndexedMap: Sequence {
-	public func makeIterator() -> IndexingIterator<[Entry]> {
+	func makeIterator() -> IndexingIterator<[Entry]> {
 		entries.makeIterator()
 	}
 }
@@ -202,7 +202,7 @@ extension IndexedMap: Sequence {
 // MARK: - CustomStringConvertible
 
 extension IndexedMap: CustomStringConvertible where Value: CustomStringConvertible {
-	public var description: String {
+	var description: String {
 		let items = entries.map { "\($0.position): \($0.value)" }.joined(separator: ", ")
 		return "IndexedMap([\(items)])"
 	}
