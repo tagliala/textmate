@@ -1,6 +1,8 @@
 import AppKit
+import ObjectiveC
 import TMAppKit
 import TMBundleRuntime
+import TMBundleUI
 import TMCompatibility
 import TMCore
 import TMDocumentManager
@@ -239,6 +241,7 @@ public class DocumentWindowController: NSWindowController {
 				window?.title = doc.displayName
 				statusBarView.setEncoding(doc.encoding.charset)
 				statusBarView.setLineEnding(doc.encoding.lineEnding.displayName)
+				statusBarView.setTabSettings(useSoftTabs: doc.softTabs, tabSize: doc.tabSize)
 				updateWindowTitle()
 			} catch {
 				let alert = NSAlert(error: error)
@@ -730,6 +733,7 @@ public class DocumentWindowController: NSWindowController {
 		updateWindowTitle()
 		statusBarView.setEncoding(doc.encoding.charset)
 		statusBarView.setLineEnding(doc.encoding.lineEnding.displayName)
+		statusBarView.setTabSettings(useSoftTabs: doc.softTabs, tabSize: doc.tabSize)
 		watchDocumentFile(doc)
 		updateGutterFoldState()
 	}
@@ -951,6 +955,72 @@ extension DocumentWindowController: StatusBarViewDelegate {
 				.query(BundleQuery(field: .grammarScope, value: scope, kinds: .grammar))
 				.first?.name ?? scope
 			statusBarView.setGrammar(name)
+		}
+	}
+
+	public func statusBarView(_: StatusBarView, didSelectTabSize size: Int) {
+		guard size > 0 else { return }
+		documentEditor?.editor.tabSize = size
+		editorView.layoutManager.tabSize = size
+		if let doc = selectedDocument {
+			doc.tabSize = size
+		}
+		statusBarView.setTabSettings(useSoftTabs: textDocument.softTabs, tabSize: size)
+		editorView.needsDisplay = true
+	}
+
+	public func statusBarView(_: StatusBarView, didSelectUseSoftTabs useSoftTabs: Bool) {
+		if let doc = selectedDocument {
+			doc.softTabs = useSoftTabs
+		}
+		documentEditor?.editor.indentUsingSpaces = useSoftTabs
+		statusBarView.setTabSettings(useSoftTabs: useSoftTabs, tabSize: textDocument.tabSize)
+	}
+
+	public func statusBarViewWillShowBundleItemsMenu(_: StatusBarView, popup: NSPopUpButton) {
+		popup.removeAllItems()
+		guard let bundleIndex else { return }
+
+		let activeScope = documentEditor?.syntaxHighlighter.activeScope
+
+		let bundles = bundleIndex.allBundles
+			.filter(\.isEnabled)
+			.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+
+		var selectedItem: NSMenuItem?
+		for bundle in bundles {
+			let items = bundleIndex.items(inBundle: bundle.uuid)
+			let hasExecutable = items.contains { $0.kind.intersection(.executable) != [] }
+			guard hasExecutable || !bundle.menuItems.isEmpty else { continue }
+
+			let menuItem = NSMenuItem(title: bundle.name, action: nil, keyEquivalent: "")
+			let submenu = NSMenu(title: bundle.uuid)
+			submenu.identifier = NSUserInterfaceItemIdentifier(bundle.uuid)
+			let builder = BundleMenuBuilder(bundleIndex: bundleIndex)
+			submenu.delegate = builder
+			// Keep builder alive for the lifetime of the submenu.
+			objc_setAssociatedObject(submenu, "builder", builder, .OBJC_ASSOCIATION_RETAIN)
+			menuItem.submenu = submenu
+			popup.menu?.addItem(menuItem)
+
+			// Check-mark the bundle containing the active grammar.
+			if let activeScope, !activeScope.isEmpty {
+				let hasActiveGrammar = items.contains {
+					$0.kind == .grammar && $0.scopeSelector == activeScope
+				}
+				if hasActiveGrammar {
+					menuItem.state = .on
+					selectedItem = menuItem
+				}
+			}
+		}
+
+		if bundles.isEmpty {
+			popup.menu?.addItem(NSMenuItem(title: "No Bundles Loaded", action: nil, keyEquivalent: ""))
+		}
+
+		if let selectedItem {
+			popup.select(selectedItem)
 		}
 	}
 }
