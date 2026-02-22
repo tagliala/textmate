@@ -41,6 +41,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency BundleMenuAc
 
 	private var windowControllers: [DocumentWindowController] = []
 
+	/// Cascade point for new document windows.
+	private var cascadePoint: NSPoint = .zero
+
 	/// The currently loaded theme, applied to every new window.
 	private var currentTheme: Theme?
 
@@ -325,6 +328,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency BundleMenuAc
 		applyTheme(to: controller)
 		windowControllers.append(controller)
 		controller.showWindow(nil)
+		cascadePoint = controller.window?.cascadeTopLeft(from: cascadePoint) ?? cascadePoint
 	}
 
 	@objc func newDocumentInTab(_: Any?) {
@@ -677,6 +681,17 @@ class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency BundleMenuAc
 		var isDir: ObjCBool = false
 		FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir)
 
+		// For files, check if already open in an existing window.
+		if !isDir.boolValue {
+			for controller in windowControllers {
+				if let idx = controller.documents.firstIndex(where: { $0.path == url.path }) {
+					controller.openAndSelectDocument(controller.documents[idx], activate: true)
+					controller.window?.makeKeyAndOrderFront(nil)
+					return
+				}
+			}
+		}
+
 		let controller = DocumentWindowController()
 		controller.bundleIndex = bundleSystem.bundleIndex
 		controller.commandDispatcher = bundleSystem.commandDispatcher
@@ -690,6 +705,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency BundleMenuAc
 		}
 		windowControllers.append(controller)
 		controller.showWindow(nil)
+		cascadePoint = controller.window?.cascadeTopLeft(from: cascadePoint) ?? cascadePoint
 	}
 
 	private func currentWindowController() -> DocumentWindowController? {

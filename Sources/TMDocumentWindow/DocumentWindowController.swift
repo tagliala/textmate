@@ -230,6 +230,12 @@ public class DocumentWindowController: NSWindowController, NSMenuItemValidation 
 
 	/// Open a file, detecting its encoding automatically.
 	public func openFile(at url: URL) {
+		// Check if the file is already open in this window.
+		if let idx = documents.firstIndex(where: { $0.path == url.path }) {
+			openAndSelectDocument(documents[idx], activate: true)
+			return
+		}
+
 		let doc = TMDocument(path: url.path)
 		Task { @MainActor in
 			do {

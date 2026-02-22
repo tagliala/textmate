@@ -398,6 +398,12 @@ public final class CommandDispatcher {
 			return
 		}
 
+		// Completion list output bypasses normal placement routing.
+		if command.outputFormat == .completionList {
+			delegate.showCompletions(stdout)
+			return
+		}
+
 		switch effectiveOutput {
 		case .discard:
 			break
