@@ -12,7 +12,7 @@ import Foundation
 /// Wide characters occupy two visual columns in a monospaced font.
 /// The ranges are derived from the Unicode East_Asian_Width property
 /// (categories W = Wide and F = Fullwidth).
-public func isEastAsianWide(_ scalar: Unicode.Scalar) -> Bool {
+func isEastAsianWide(_ scalar: Unicode.Scalar) -> Bool {
 	let v = scalar.value
 	return (v >= 0x1100 && v <= 0x115F) // Hangul Jamo
 		|| v == 0x2329 || v == 0x232A // Angle brackets
@@ -60,7 +60,7 @@ private func characterWidth(_ char: Character, currentColumn: Int, tabSize: Int)
 ///   - caret: The caret position (may have non-zero carry).
 ///   - tabSize: Number of columns per tab stop.
 /// - Returns: The visual column count.
-public func countColumns(in buffer: TextBuffer, caret: TextPosition, tabSize: Int) -> Int {
+func countColumns(in buffer: TextBuffer, caret: TextPosition, tabSize: Int) -> Int {
 	let line = buffer.convert(offset: caret.offset).line
 	let bol = buffer.lineStart(line)
 	guard caret.offset > bol else { return caret.carry }
@@ -85,7 +85,7 @@ public func countColumns(in buffer: TextBuffer, caret: TextPosition, tabSize: In
 ///   - column: The target visual column.
 ///   - tabSize: Number of columns per tab stop.
 /// - Returns: A `TextPosition` at or near the target column.
-public func atColumn(in buffer: TextBuffer, line: Int, column: Int, tabSize: Int) -> TextPosition {
+func atColumn(in buffer: TextBuffer, line: Int, column: Int, tabSize: Int) -> TextPosition {
 	let bol = buffer.lineStart(line)
 	let eol = buffer.lineEnd(line)
 	let str = buffer.substring(from: bol, to: eol)
@@ -131,7 +131,7 @@ public func atColumn(in buffer: TextBuffer, line: Int, column: Int, tabSize: Int
 ///   - selection: The selection ranges (may contain columnar ranges).
 ///   - tabSize: Number of columns per tab stop.
 /// - Returns: The dissected ranges (no columnar flags remain).
-public func dissectColumnar(in buffer: TextBuffer, selection: [TextRange], tabSize: Int) -> [TextRange] {
+func dissectColumnar(in buffer: TextBuffer, selection: [TextRange], tabSize: Int) -> [TextRange] {
 	var result: [TextRange] = []
 	for range in selection {
 		if range.isColumnar, !range.isEmpty {
@@ -186,7 +186,7 @@ public func dissectColumnar(in buffer: TextBuffer, selection: [TextRange], tabSi
 ///   - buffer: The text buffer.
 ///   - selection: The ranges to sanitize.
 /// - Returns: Sanitized, non-overlapping ranges.
-public func sanitize(in buffer: TextBuffer, selection: [TextRange]) -> [TextRange] {
+func sanitize(in buffer: TextBuffer, selection: [TextRange]) -> [TextRange] {
 	guard !selection.isEmpty else { return [] }
 
 	// 1. Build indexed ranges with sanitized byte offsets.
@@ -301,7 +301,7 @@ public func sanitize(in buffer: TextBuffer, selection: [TextRange]) -> [TextRang
 ///   - selection: The selection ranges.
 ///   - tabSize: Number of columns per tab stop.
 /// - Returns: `true` if at least one range covers content.
-public func notEmpty(in buffer: TextBuffer, selection: [TextRange], tabSize: Int) -> Bool {
+func notEmpty(in buffer: TextBuffer, selection: [TextRange], tabSize: Int) -> Bool {
 	for range in selection {
 		if range.isEmpty {
 			continue
@@ -327,7 +327,7 @@ public func notEmpty(in buffer: TextBuffer, selection: [TextRange], tabSize: Int
 ///   - buffer: The text buffer.
 ///   - selection: The selection ranges.
 /// - Returns: `true` if at least one range covers more than one line.
-public func multiline(in buffer: TextBuffer, selection: [TextRange]) -> Bool {
+func multiline(in buffer: TextBuffer, selection: [TextRange]) -> Bool {
 	for range in selection {
 		let lineA = buffer.convert(offset: range.anchor.offset).line
 		let lineB = buffer.convert(offset: range.head.offset).line
@@ -346,7 +346,7 @@ public func multiline(in buffer: TextBuffer, selection: [TextRange]) -> Bool {
 ///
 /// - Parameter selection: The selection ranges.
 /// - Returns: A new selection with the last range's columnar flag toggled.
-public func toggleColumnar(_ selection: [TextRange]) -> [TextRange] {
+func toggleColumnar(_ selection: [TextRange]) -> [TextRange] {
 	guard !selection.isEmpty else { return selection }
 	var result = selection
 	let i = result.count - 1
@@ -371,7 +371,7 @@ public func toggleColumnar(_ selection: [TextRange]) -> [TextRange] {
 ///
 /// - Parameter selection: The selection ranges.
 /// - Returns: The reduced selection.
-public func deselectLast(_ selection: [TextRange]) -> [TextRange] {
+func deselectLast(_ selection: [TextRange]) -> [TextRange] {
 	guard !selection.isEmpty else { return selection }
 
 	if selection.count == 1 {
@@ -415,7 +415,7 @@ public func deselectLast(_ selection: [TextRange]) -> [TextRange] {
 ///   - buffer: The text buffer (for offset conversion).
 ///   - string: The serialized selection string.
 /// - Returns: The parsed ranges.
-public func selectionFromString(in buffer: TextBuffer, string: String) -> [TextRange] {
+func selectionFromString(in buffer: TextBuffer, string: String) -> [TextRange] {
 	var result: [TextRange] = []
 	let parts = string.split(separator: "&")
 	for part in parts {
@@ -456,7 +456,7 @@ public func selectionFromString(in buffer: TextBuffer, string: String) -> [TextR
 ///   - buffer: The text buffer (for line/column conversion).
 ///   - selection: The selection ranges.
 /// - Returns: The serialized selection string.
-public func selectionToString(in buffer: TextBuffer, selection: [TextRange]) -> String {
+func selectionToString(in buffer: TextBuffer, selection: [TextRange]) -> String {
 	var parts: [String] = []
 	for range in selection {
 		let fromPos = buffer.convert(offset: range.anchor.offset)

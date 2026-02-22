@@ -6,7 +6,7 @@ import Foundation
 ///
 /// Replaces the C++ `plist::any_t` (`boost::recursive_variant`).
 /// Every case maps 1‑to‑1 with a Core Foundation plist type.
-public indirect enum PlistValue: Sendable, Equatable {
+indirect enum PlistValue: Sendable, Equatable {
 	case bool(Bool)
 	case int(Int)
 	case string(String)
@@ -17,67 +17,67 @@ public indirect enum PlistValue: Sendable, Equatable {
 
 	// MARK: Convenience initialisers
 
-	public init(_ value: Bool) {
+	init(_ value: Bool) {
 		self = .bool(value)
 	}
 
-	public init(_ value: Int) {
+	init(_ value: Int) {
 		self = .int(value)
 	}
 
-	public init(_ value: String) {
+	init(_ value: String) {
 		self = .string(value)
 	}
 
-	public init(_ value: Data) {
+	init(_ value: Data) {
 		self = .data(value)
 	}
 
-	public init(_ value: Date) {
+	init(_ value: Date) {
 		self = .date(value)
 	}
 
-	public init(_ value: [PlistValue]) {
+	init(_ value: [PlistValue]) {
 		self = .array(value)
 	}
 
-	public init(_ value: PlistDictionary) {
+	init(_ value: PlistDictionary) {
 		self = .dictionary(value)
 	}
 
 	// MARK: Type accessors
 
-	public var boolValue: Bool? {
+	var boolValue: Bool? {
 		if case let .bool(v) = self { return v }
 		return nil
 	}
 
-	public var intValue: Int? {
+	var intValue: Int? {
 		if case let .int(v) = self { return v }
 		return nil
 	}
 
-	public var stringValue: String? {
+	var stringValue: String? {
 		if case let .string(v) = self { return v }
 		return nil
 	}
 
-	public var dataValue: Data? {
+	var dataValue: Data? {
 		if case let .data(v) = self { return v }
 		return nil
 	}
 
-	public var dateValue: Date? {
+	var dateValue: Date? {
 		if case let .date(v) = self { return v }
 		return nil
 	}
 
-	public var arrayValue: [PlistValue]? {
+	var arrayValue: [PlistValue]? {
 		if case let .array(v) = self { return v }
 		return nil
 	}
 
-	public var dictionaryValue: PlistDictionary? {
+	var dictionaryValue: PlistDictionary? {
 		if case let .dictionary(v) = self { return v }
 		return nil
 	}
@@ -88,7 +88,7 @@ public indirect enum PlistValue: Sendable, Equatable {
 	///
 	/// Matches C++ `plist::is_true`: booleans return their value,
 	/// integers ≠ 0 are true, non‑empty strings other than `"0"` are true.
-	public var isTruthy: Bool {
+	var isTruthy: Bool {
 		switch self {
 		case let .bool(v): v
 		case let .int(v): v != 0
@@ -100,7 +100,7 @@ public indirect enum PlistValue: Sendable, Equatable {
 	// MARK: Conversion helpers (port of convert_to)
 
 	/// Attempt to coerce this value into a `Bool`.
-	public func asBool() -> Bool? {
+	func asBool() -> Bool? {
 		switch self {
 		case let .bool(v): v
 		case let .int(v): v != 0
@@ -110,7 +110,7 @@ public indirect enum PlistValue: Sendable, Equatable {
 	}
 
 	/// Attempt to coerce this value into an `Int`.
-	public func asInt() -> Int? {
+	func asInt() -> Int? {
 		switch self {
 		case let .bool(v): v ? 1 : 0
 		case let .int(v): v
@@ -120,7 +120,7 @@ public indirect enum PlistValue: Sendable, Equatable {
 	}
 
 	/// Attempt to coerce this value into a `String`.
-	public func asString() -> String? {
+	func asString() -> String? {
 		switch self {
 		case let .bool(v): v ? "1" : "0"
 		case let .int(v): Swift.String(v)
@@ -136,7 +136,7 @@ public indirect enum PlistValue: Sendable, Equatable {
 	/// Key paths may span multiple levels of nested dictionaries.
 	/// When a single key segment fails, the parser tries longer segments
 	/// to support keys that themselves contain dots.
-	public func valueForKeyPath(_ keyPath: String) -> PlistValue? {
+	func valueForKeyPath(_ keyPath: String) -> PlistValue? {
 		guard case let .dictionary(dict) = self else { return nil }
 
 		let segments = keyPath.split(separator: ".", omittingEmptySubsequences: false)
@@ -158,7 +158,7 @@ public indirect enum PlistValue: Sendable, Equatable {
 	// MARK: Foundation bridge — from
 
 	/// Convert a Foundation plist object (`Any`) into a `PlistValue`.
-	public static func from(foundation obj: Any) -> PlistValue? {
+	static func from(foundation obj: Any) -> PlistValue? {
 		switch obj {
 		case let b as NSNumber where CFGetTypeID(b as CFTypeRef) == CFBooleanGetTypeID():
 			return .bool(b.boolValue)
@@ -186,7 +186,7 @@ public indirect enum PlistValue: Sendable, Equatable {
 	}
 
 	/// Convert this value back to a Foundation plist object.
-	public func toFoundation() -> Any {
+	func toFoundation() -> Any {
 		switch self {
 		case let .bool(v): return v as NSNumber
 		case let .int(v): return v as NSNumber
@@ -206,7 +206,7 @@ public indirect enum PlistValue: Sendable, Equatable {
 
 // MARK: - PlistDictionary
 
-public typealias PlistDictionary = [String: PlistValue]
+typealias PlistDictionary = [String: PlistValue]
 
 // MARK: - PlistIO
 
