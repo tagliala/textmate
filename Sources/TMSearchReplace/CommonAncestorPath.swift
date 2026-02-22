@@ -6,12 +6,12 @@ import Foundation
 ///
 /// If the common prefix is a file rather than a directory, the parent directory is returned.
 /// Returns `nil` for empty input.
-public enum CommonAncestorPath {
+enum CommonAncestorPath {
 	/// Compute the common ancestor directory of the given paths.
 	///
 	/// - Parameter paths: An array of absolute paths.
 	/// - Returns: The longest shared directory prefix, or `nil` when `paths` is empty.
-	public static func compute(_ paths: [String]) -> String? {
+	static func compute(_ paths: [String]) -> String? {
 		guard let first = paths.first else { return nil }
 		if paths.count == 1 {
 			return directoryOrParent(first)

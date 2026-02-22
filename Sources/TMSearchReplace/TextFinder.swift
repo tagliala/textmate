@@ -7,7 +7,7 @@ import Foundation
 /// Implementations process text in chunks via `eachMatch(in:moreToCome:callback:)`.
 /// After all text has been fed, call with an empty buffer and `moreToCome: false`
 /// to flush pending matches (important for regex patterns that match at end-of-input).
-public protocol TextFinder: Sendable {
+protocol TextFinder: Sendable {
 	/// Feed a chunk of text. The callback receives each match range (byte offsets
 	/// within the cumulative input) and its capture groups. Return `false` from
 	/// the callback to stop searching.
@@ -22,17 +22,17 @@ public protocol TextFinder: Sendable {
 // MARK: - Plain Text Finder
 
 /// A plain-text search engine with Unicode normalization — equivalent to `regular_find_t`.
-public struct PlainTextFinder: TextFinder {
+struct PlainTextFinder: TextFinder {
 	/// The search string.
-	public let searchString: String
+	let searchString: String
 
 	/// Search options.
-	public let options: FindOptions
+	let options: FindOptions
 
 	/// The comparison options derived from FindOptions.
 	private let comparisonOptions: String.CompareOptions
 
-	public init(searchString: String, options: FindOptions = .none) {
+	init(searchString: String, options: FindOptions = .none) {
 		self.searchString = searchString
 		self.options = options
 
@@ -46,7 +46,7 @@ public struct PlainTextFinder: TextFinder {
 		comparisonOptions = opts
 	}
 
-	public func eachMatch(
+	func eachMatch(
 		in text: String,
 		offset: Int,
 		moreToCome _: Bool,
@@ -135,17 +135,17 @@ private extension Character {
 // MARK: - Regex Finder
 
 /// A regex-based search engine — equivalent to `regexp_find_t`.
-public struct RegexFinder: TextFinder {
+struct RegexFinder: TextFinder {
 	/// The compiled regex pattern.
-	public let regex: NSRegularExpression
+	let regex: NSRegularExpression
 
 	/// Search options.
-	public let options: FindOptions
+	let options: FindOptions
 
 	/// The original pattern string.
-	public let patternString: String
+	let patternString: String
 
-	public init(pattern: String, options: FindOptions = .none) throws {
+	init(pattern: String, options: FindOptions = .none) throws {
 		patternString = pattern
 		self.options = options
 
@@ -156,7 +156,7 @@ public struct RegexFinder: TextFinder {
 		regex = try NSRegularExpression(pattern: pattern, options: regexOptions)
 	}
 
-	public func eachMatch(
+	func eachMatch(
 		in text: String,
 		offset: Int,
 		moreToCome _: Bool,

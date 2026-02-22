@@ -28,24 +28,24 @@ public struct OnigmoMatch: Sendable {
 	let buffer: [UInt8]
 
 	/// Number of capture groups (including group 0 = full match).
-	public var count: Int {
+	var count: Int {
 		region.count
 	}
 
 	/// Whether capture group `i` participated in the match.
-	public func didMatch(_ i: Int = 0) -> Bool {
+	func didMatch(_ i: Int = 0) -> Bool {
 		guard i < region.count, let r = region[i] else { return false }
 		return r.lowerBound >= 0
 	}
 
 	/// Byte offset of the start of capture group `i`.
-	public func begin(_ i: Int = 0) -> Int {
+	func begin(_ i: Int = 0) -> Int {
 		guard didMatch(i), let r = region[i] else { return end() }
 		return r.lowerBound
 	}
 
 	/// Byte offset past the end of capture group `i`.
-	public func end(_ i: Int = 0) -> Int {
+	func end(_ i: Int = 0) -> Int {
 		guard i < region.count, let r = region[i] else {
 			return region.first.flatMap { $0?.upperBound } ?? 0
 		}
@@ -53,22 +53,22 @@ public struct OnigmoMatch: Sendable {
 	}
 
 	/// Byte offset of the start of the full match.
-	public var matchBegin: Int {
+	var matchBegin: Int {
 		begin(0)
 	}
 
 	/// Byte offset past the end of the full match.
-	public var matchEnd: Int {
+	var matchEnd: Int {
 		end(0)
 	}
 
 	/// Whether the match is zero-width.
-	public var isEmpty: Bool {
+	var isEmpty: Bool {
 		matchBegin == matchEnd
 	}
 
 	/// Extracts the matched string for capture group `i`.
-	public func captureString(_ i: Int = 0) -> String? {
+	func captureString(_ i: Int = 0) -> String? {
 		guard didMatch(i) else { return nil }
 		let b = begin(i)
 		let e = end(i)
@@ -77,7 +77,7 @@ public struct OnigmoMatch: Sendable {
 	}
 
 	/// Returns all capture values as a dictionary (numeric + named keys).
-	public var captures: [String: String] {
+	var captures: [String: String] {
 		var result: [String: String] = [:]
 		for (name, ranges) in namedCaptures {
 			for r in ranges {
@@ -97,7 +97,7 @@ public struct OnigmoMatch: Sendable {
 	}
 
 	/// Returns capture indices as a list of (key, begin, end) tuples.
-	public var captureIndices: [(key: String, begin: Int, end: Int)] {
+	var captureIndices: [(key: String, begin: Int, end: Int)] {
 		var result: [(key: String, begin: Int, end: Int)] = []
 		for i in 0 ..< count where didMatch(i) {
 			result.append((key: String(i), begin: begin(i), end: end(i)))

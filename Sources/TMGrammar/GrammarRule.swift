@@ -103,9 +103,9 @@ public final class GrammarRule: @unchecked Sendable {
 /// `GrammarRule` tree ready for the parse engine.
 ///
 /// Mirrors C++ `convert_plist()` and `compile_patterns()`.
-public enum GrammarCompiler {
+enum GrammarCompiler {
 	/// Converts a `GrammarDefinition` into a root `GrammarRule`.
-	public static func compile(_ grammar: GrammarDefinition) -> GrammarRule {
+	static func compile(_ grammar: GrammarDefinition) -> GrammarRule {
 		let root = convertPatternToRule(grammar)
 		compilePatterns(root)
 		return root
@@ -242,7 +242,7 @@ public enum GrammarCompiler {
 
 	/// Resolves `include` references throughout the rule tree.
 	/// Mirrors C++ `grammar_t::setup_includes()`.
-	public static func setupIncludes(
+	static func setupIncludes(
 		rule: GrammarRule,
 		base: GrammarRule,
 		self selfRule: GrammarRule,

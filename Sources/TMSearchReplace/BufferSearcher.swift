@@ -21,11 +21,11 @@ public struct BufferSearchResult: Sendable {
 	}
 
 	/// The number of matches.
-	public var count: Int {
+	var count: Int {
 		matches.count
 	}
 
-	public init(matches: [FindMatch] = [], didWrap: Bool = false) {
+	init(matches: [FindMatch] = [], didWrap: Bool = false) {
 		self.matches = matches
 		self.didWrap = didWrap
 	}

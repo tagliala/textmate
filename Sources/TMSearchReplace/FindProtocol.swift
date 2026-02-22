@@ -66,23 +66,13 @@ public protocol FindNavigationDelegate: AnyObject {
 /// A reference to a match across documents for cross-file find next/previous — equivalent to `FindMatch` (ObjC).
 public struct DocumentMatchReference: Sendable, Equatable {
 	/// The document identifier.
-	public var documentID: UUID
+	var documentID: UUID
 
 	/// The first match range in this document.
-	public var firstRange: LineColumnRange
+	var firstRange: LineColumnRange
 
 	/// The last match range in this document.
-	public var lastRange: LineColumnRange
-
-	public init(
-		documentID: UUID,
-		firstRange: LineColumnRange,
-		lastRange: LineColumnRange,
-	) {
-		self.documentID = documentID
-		self.firstRange = firstRange
-		self.lastRange = lastRange
-	}
+	var lastRange: LineColumnRange
 }
 
 // MARK: - Find State

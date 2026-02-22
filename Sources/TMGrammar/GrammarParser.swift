@@ -112,7 +112,7 @@ struct RankedMatch: Comparable {
 /// of byte positions to scopes. This is the core of syntax highlighting.
 ///
 /// Mirrors the C++ `parse::parse()` function.
-public enum GrammarParser {
+enum GrammarParser {
 	/// Parses a single line of text.
 	///
 	/// - Parameters:
@@ -120,7 +120,7 @@ public enum GrammarParser {
 	///   - state: The parser state from the end of the previous line.
 	///   - firstLine: Whether this is the first line of the document.
 	/// - Returns: A tuple of (new state, scope map).
-	public static func parseLine(
+	static func parseLine(
 		_ line: String,
 		state: ParserState,
 		firstLine: Bool = false,

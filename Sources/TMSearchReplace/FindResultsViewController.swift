@@ -9,11 +9,11 @@ import AppKit
 /// rows beneath each file. Supports checkbox exclusion, replacement previews,
 /// navigation among results, and keyboard shortcuts for quick file access.
 @MainActor
-public final class FindResultsViewController: NSViewController, Sendable {
+final class FindResultsViewController: NSViewController, Sendable {
 	// MARK: - Properties
 
 	/// The results tree (root node with file children containing match children).
-	public var results: SearchResultNode? {
+	var results: SearchResultNode? {
 		didSet {
 			guard isViewLoaded else { return }
 			outlineView.reloadData()
@@ -21,7 +21,7 @@ public final class FindResultsViewController: NSViewController, Sendable {
 	}
 
 	/// The replacement string used for previews.
-	public var replaceString: String = "" {
+	var replaceString: String = "" {
 		didSet {
 			guard isViewLoaded else { return }
 			outlineView.reloadData()
@@ -29,7 +29,7 @@ public final class FindResultsViewController: NSViewController, Sendable {
 	}
 
 	/// Whether replacement previews are shown in match cells.
-	public var showReplacementPreviews: Bool = false {
+	var showReplacementPreviews: Bool = false {
 		didSet {
 			guard isViewLoaded else { return }
 			outlineView.reloadData()
@@ -37,15 +37,15 @@ public final class FindResultsViewController: NSViewController, Sendable {
 	}
 
 	/// Whether the checkbox column is hidden (e.g. for count-only results).
-	public var hideCheckBoxes: Bool = false {
+	var hideCheckBoxes: Bool = false {
 		didSet { updateCheckBoxVisibility() }
 	}
 
 	/// Called when the user selects a result (single click).
-	public var onSelectResult: ((SearchResultNode) -> Void)?
+	var onSelectResult: ((SearchResultNode) -> Void)?
 
 	/// Called when the user double-clicks a result.
-	public var onDoubleClickResult: ((SearchResultNode) -> Void)?
+	var onDoubleClickResult: ((SearchResultNode) -> Void)?
 
 	// MARK: - Subviews
 
@@ -60,7 +60,7 @@ public final class FindResultsViewController: NSViewController, Sendable {
 
 	// MARK: - Lifecycle
 
-	override public func loadView() {
+	override func loadView() {
 		loadResultsFont()
 		configureOutlineView()
 		configureScrollView()
@@ -98,7 +98,7 @@ public final class FindResultsViewController: NSViewController, Sendable {
 	// MARK: - Public API
 
 	/// All selected leaf match nodes. If nothing is selected, returns all leaf nodes.
-	public var selectedResults: [SearchResultNode] {
+	var selectedResults: [SearchResultNode] {
 		let rows = outlineView.numberOfSelectedRows == 0
 			? IndexSet(integersIn: 0 ..< outlineView.numberOfRows)
 			: outlineView.selectedRowIndexes
@@ -110,7 +110,7 @@ public final class FindResultsViewController: NSViewController, Sendable {
 	}
 
 	/// Incrementally insert new file groups at the given indexes.
-	public func insertItems(at indexes: IndexSet) {
+	func insertItems(at indexes: IndexSet) {
 		guard let results else { return }
 		outlineView.beginUpdates()
 		outlineView.insertItems(at: indexes, inParent: nil, withAnimation: [])
@@ -122,7 +122,7 @@ public final class FindResultsViewController: NSViewController, Sendable {
 	}
 
 	/// Show and select a specific result node.
-	public func showResultNode(_ node: SearchResultNode?) {
+	func showResultNode(_ node: SearchResultNode?) {
 		guard let node else { return }
 
 		if let parent = node.parent, !outlineView.isItemExpanded(parent) {
@@ -143,7 +143,7 @@ public final class FindResultsViewController: NSViewController, Sendable {
 	// MARK: - Navigation
 
 	/// Select the next match result, optionally wrapping around.
-	public func selectNextResult(wrapAround: Bool) {
+	func selectNextResult(wrapAround: Bool) {
 		guard let results else { return }
 		let row = outlineView.selectedRow
 		let current = row >= 0 ? outlineView.item(atRow: row) as? SearchResultNode : nil
@@ -156,7 +156,7 @@ public final class FindResultsViewController: NSViewController, Sendable {
 	}
 
 	/// Select the previous match result, optionally wrapping around.
-	public func selectPreviousResult(wrapAround: Bool) {
+	func selectPreviousResult(wrapAround: Bool) {
 		guard let results else { return }
 		let row = outlineView.selectedRow
 		let current = row >= 0 ? outlineView.item(atRow: row) as? SearchResultNode : nil
@@ -169,7 +169,7 @@ public final class FindResultsViewController: NSViewController, Sendable {
 	}
 
 	/// Select the first match in the next file group.
-	public func selectNextDocument() {
+	func selectNextDocument() {
 		guard let results else { return }
 		let row = outlineView.selectedRow
 		let current = row >= 0 ? outlineView.item(atRow: row) as? SearchResultNode : nil
@@ -188,7 +188,7 @@ public final class FindResultsViewController: NSViewController, Sendable {
 	}
 
 	/// Select the first match in the previous file group.
-	public func selectPreviousDocument() {
+	func selectPreviousDocument() {
 		guard let results else { return }
 		let row = outlineView.selectedRow
 		let current = row >= 0 ? outlineView.item(atRow: row) as? SearchResultNode : nil
@@ -207,7 +207,7 @@ public final class FindResultsViewController: NSViewController, Sendable {
 	}
 
 	/// Toggle between collapsed and expanded state for all groups.
-	public func toggleCollapsedState() {
+	func toggleCollapsedState() {
 		if isCollapsed {
 			outlineView.expandItem(nil, expandChildren: true)
 		} else {
@@ -216,7 +216,7 @@ public final class FindResultsViewController: NSViewController, Sendable {
 	}
 
 	/// Whether more than half the groups are collapsed.
-	public var isCollapsed: Bool {
+	var isCollapsed: Bool {
 		guard let results, !results.children.isEmpty else { return false }
 		let expanded = results.children.count(where: { outlineView.isItemExpanded($0) })
 		return 2 * expanded <= results.children.count
@@ -378,17 +378,17 @@ public final class FindResultsViewController: NSViewController, Sendable {
 // MARK: - NSOutlineViewDataSource
 
 extension FindResultsViewController: NSOutlineViewDataSource {
-	public func outlineView(_: NSOutlineView, numberOfChildrenOfItem item: Any?) -> Int {
+	func outlineView(_: NSOutlineView, numberOfChildrenOfItem item: Any?) -> Int {
 		let node = (item as? SearchResultNode) ?? results
 		return node?.children.count ?? 0
 	}
 
-	public func outlineView(_: NSOutlineView, isItemExpandable item: Any) -> Bool {
+	func outlineView(_: NSOutlineView, isItemExpandable item: Any) -> Bool {
 		guard let node = item as? SearchResultNode else { return false }
 		return !node.children.isEmpty
 	}
 
-	public func outlineView(_: NSOutlineView, child index: Int, ofItem item: Any?) -> Any {
+	func outlineView(_: NSOutlineView, child index: Int, ofItem item: Any?) -> Any {
 		let node = (item as? SearchResultNode) ?? results
 		return node!.children[index]
 	}
@@ -397,16 +397,16 @@ extension FindResultsViewController: NSOutlineViewDataSource {
 // MARK: - NSOutlineViewDelegate
 
 extension FindResultsViewController: NSOutlineViewDelegate {
-	public func outlineView(_ outlineView: NSOutlineView, shouldSelectItem item: Any) -> Bool {
+	func outlineView(_ outlineView: NSOutlineView, shouldSelectItem item: Any) -> Bool {
 		// Don't select group (file) rows directly
 		outlineView.level(forItem: item) > 0
 	}
 
-	public func outlineView(_ outlineView: NSOutlineView, isGroupItem item: Any) -> Bool {
+	func outlineView(_ outlineView: NSOutlineView, isGroupItem item: Any) -> Bool {
 		outlineView.level(forItem: item) == 0
 	}
 
-	public func outlineView(_: NSOutlineView, viewFor tableColumn: NSTableColumn?, item: Any) -> NSView? {
+	func outlineView(_: NSOutlineView, viewFor tableColumn: NSTableColumn?, item: Any) -> NSView? {
 		guard let node = item as? SearchResultNode else { return nil }
 		let columnID = tableColumn?.identifier.rawValue ?? "group"
 
@@ -419,7 +419,7 @@ extension FindResultsViewController: NSOutlineViewDelegate {
 		}
 	}
 
-	public func outlineViewSelectionDidChange(_: Notification) {
+	func outlineViewSelectionDidChange(_: Notification) {
 		guard outlineView.numberOfSelectedRows == 1 else { return }
 		let row = outlineView.selectedRowIndexes.first ?? -1
 		guard row >= 0, let node = outlineView.item(atRow: row) as? SearchResultNode else { return }

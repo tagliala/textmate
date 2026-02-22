@@ -433,9 +433,9 @@ final class FormatStringExpander: @unchecked Sendable {
 // MARK: - Convenience API
 
 /// Top-level format string expansion functions matching the C++ API.
-public enum FormatString {
+enum FormatString {
 	/// Expands a format string template using the given variables.
-	public static func expand(_ format: String, variables: [String: String] = [:]) -> String {
+	static func expand(_ format: String, variables: [String: String] = [:]) -> String {
 		// Fast path: no special characters
 		if !format.contains("$"), !format.contains("("), !format.contains("\\") {
 			return format
@@ -449,7 +449,7 @@ public enum FormatString {
 	}
 
 	/// Expands a format string template using a variable lookup callback.
-	public static func expand(_ format: String, lookup: @escaping (String) -> String?) -> String {
+	static func expand(_ format: String, lookup: @escaping (String) -> String?) -> String {
 		if !format.contains("$"), !format.contains("("), !format.contains("\\") {
 			return format
 		}
@@ -462,7 +462,7 @@ public enum FormatString {
 	}
 
 	/// Replaces matches of a regex pattern in `source` using the format string.
-	public static func replace(
+	static func replace(
 		_ source: String,
 		pattern: String,
 		format: String,
@@ -478,7 +478,7 @@ public enum FormatString {
 	}
 
 	/// Escape special characters in a format string.
-	public static func escape(_ format: String) -> String {
+	static func escape(_ format: String) -> String {
 		var res = ""
 		let chars = Array(format)
 		for i in 0 ..< chars.count {

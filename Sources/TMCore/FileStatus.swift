@@ -120,11 +120,11 @@ public enum FileStatus: Sendable {
 	}
 
 	/// BOM detection result.
-	public struct BOMResult: Sendable, Equatable {
+	struct BOMResult: Sendable, Equatable {
 		/// Detected charset, or `nil` if no BOM found.
-		public let charset: Charset?
+		let charset: Charset?
 		/// Number of BOM bytes consumed.
-		public let bomLength: Int
+		let bomLength: Int
 	}
 
 	/// UTF-32 and UTF-16 BOM byte sequences (order matters — check 4-byte before 2-byte)
@@ -137,7 +137,7 @@ public enum FileStatus: Sendable {
 	]
 
 	/// Detect a Unicode BOM at the start of a byte sequence.
-	public static func charsetFromBOM(_ bytes: some Collection<UInt8>) -> BOMResult {
+	static func charsetFromBOM(_ bytes: some Collection<UInt8>) -> BOMResult {
 		let array = Array(bytes.prefix(4))
 		for test in bomTests {
 			if array.count >= test.bom.count, Array(array.prefix(test.bom.count)) == test.bom {

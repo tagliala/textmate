@@ -6,11 +6,11 @@ import Foundation
 ///
 /// Results are organized as: Root → File parents → Match children.
 @MainActor
-public final class SearchResultNode: Identifiable, Sendable {
-	public nonisolated let id = UUID()
+final class SearchResultNode: Identifiable, Sendable {
+	nonisolated let id = UUID()
 
 	/// The type of node.
-	public enum NodeType: Sendable {
+	enum NodeType: Sendable {
 		/// Root node containing file groups.
 		case root
 
@@ -21,26 +21,26 @@ public final class SearchResultNode: Identifiable, Sendable {
 		case match(DocumentMatch)
 	}
 
-	public let type: NodeType
+	let type: NodeType
 
 	/// Child nodes (file groups for root, matches for file).
-	public var children: [SearchResultNode] = []
+	var children: [SearchResultNode] = []
 
 	/// Whether this result is excluded from replacement.
-	public var isExcluded: Bool = false
+	var isExcluded: Bool = false
 
 	/// Whether this result has already been replaced (prevents double-replace).
-	public var isReadOnly: Bool = false
+	var isReadOnly: Bool = false
 
 	/// Parent node (weak to avoid retain cycles).
-	public weak var parent: SearchResultNode?
+	weak var parent: SearchResultNode?
 
-	public init(type: NodeType) {
+	init(type: NodeType) {
 		self.type = type
 	}
 
 	/// Total number of match leaves.
-	public var matchCount: Int {
+	var matchCount: Int {
 		switch type {
 		case .root, .file:
 			children.reduce(0) { $0 + $1.matchCount }
@@ -50,7 +50,7 @@ public final class SearchResultNode: Identifiable, Sendable {
 	}
 
 	/// Number of excluded matches.
-	public var excludedCount: Int {
+	var excludedCount: Int {
 		switch type {
 		case .root, .file:
 			children.reduce(0) { $0 + $1.excludedCount }
@@ -60,19 +60,19 @@ public final class SearchResultNode: Identifiable, Sendable {
 	}
 
 	/// Number of active (non-excluded) matches.
-	public var activeMatchCount: Int {
+	var activeMatchCount: Int {
 		matchCount - excludedCount
 	}
 
 	/// Add a match to a file group node.
-	public func addMatch(_ match: DocumentMatch) {
+	func addMatch(_ match: DocumentMatch) {
 		let child = SearchResultNode(type: .match(match))
 		child.parent = self
 		children.append(child)
 	}
 
 	/// Find or create a file group for the given path.
-	public func fileGroup(forPath path: String, displayName: String) -> SearchResultNode {
+	func fileGroup(forPath path: String, displayName: String) -> SearchResultNode {
 		if let existing = children.first(where: {
 			if case let .file(p, _) = $0.type { return p == path }
 			return false
@@ -87,7 +87,7 @@ public final class SearchResultNode: Identifiable, Sendable {
 	}
 
 	/// All matches across all file groups (flattened).
-	public var allMatches: [DocumentMatch] {
+	var allMatches: [DocumentMatch] {
 		switch type {
 		case .root, .file:
 			children.flatMap(\.allMatches)
@@ -97,7 +97,7 @@ public final class SearchResultNode: Identifiable, Sendable {
 	}
 
 	/// All file paths that have matches.
-	public var filePaths: [String] {
+	var filePaths: [String] {
 		children.compactMap {
 			if case let .file(path, _) = $0.type { return path }
 			return nil
@@ -108,41 +108,41 @@ public final class SearchResultNode: Identifiable, Sendable {
 // MARK: - Project Search Configuration
 
 /// Configuration for a project-wide search.
-public struct ProjectSearchConfig: Sendable {
+struct ProjectSearchConfig: Sendable {
 	/// The search pattern.
-	public var pattern: String
+	var pattern: String
 
 	/// Search options.
-	public var options: FindOptions
+	var options: FindOptions
 
 	/// Root paths to search in.
-	public var searchPaths: [String]
+	var searchPaths: [String]
 
 	/// File glob patterns to include (e.g., "*.swift").
-	public var includeGlobs: [String]
+	var includeGlobs: [String]
 
 	/// File glob patterns to exclude (e.g., "*.o", ".git").
-	public var excludeGlobs: [String]
+	var excludeGlobs: [String]
 
 	/// Directory glob patterns to exclude.
-	public var excludeDirectoryGlobs: [String]
+	var excludeDirectoryGlobs: [String]
 
 	/// Whether to follow symbolic links for files.
-	public var followFileLinks: Bool
+	var followFileLinks: Bool
 
 	/// Whether to follow symbolic links for directories.
-	public var followDirectoryLinks: Bool
+	var followDirectoryLinks: Bool
 
 	/// Whether to search hidden files and folders.
-	public var searchHidden: Bool
+	var searchHidden: Bool
 
 	/// Whether to search binary files.
-	public var searchBinary: Bool
+	var searchBinary: Bool
 
 	/// Maximum file size in bytes (0 = no limit).
-	public var maxFileSize: Int
+	var maxFileSize: Int
 
-	public init(
+	init(
 		pattern: String,
 		options: FindOptions = .default,
 		searchPaths: [String] = [],
@@ -178,23 +178,23 @@ public struct ProjectSearchConfig: Sendable {
 // MARK: - Search Progress
 
 /// Progress information for an ongoing search.
-public struct SearchProgress: Sendable {
+struct SearchProgress: Sendable {
 	/// Number of files scanned so far.
-	public var filesScanned: Int
+	var filesScanned: Int
 
 	/// Number of files with matches.
-	public var filesMatched: Int
+	var filesMatched: Int
 
 	/// Total number of matches found.
-	public var totalMatches: Int
+	var totalMatches: Int
 
 	/// The file currently being scanned, if any.
-	public var currentFile: String?
+	var currentFile: String?
 
 	/// Whether the search is complete.
-	public var isComplete: Bool
+	var isComplete: Bool
 
-	public init(
+	init(
 		filesScanned: Int = 0,
 		filesMatched: Int = 0,
 		totalMatches: Int = 0,
@@ -216,39 +216,39 @@ public struct SearchProgress: Sendable {
 /// Enumerates files in the search paths, applies glob filters, and searches
 /// each matching file using a `TextFinder`. Reports results via callbacks.
 @MainActor
-public final class ProjectSearchEngine: Sendable {
+final class ProjectSearchEngine: Sendable {
 	/// Configuration for this search.
-	public let config: ProjectSearchConfig
+	let config: ProjectSearchConfig
 
 	/// The results tree (root → file groups → matches).
-	public private(set) var results: SearchResultNode
+	private(set) var results: SearchResultNode
 
 	/// Current progress.
-	public private(set) var progress: SearchProgress
+	private(set) var progress: SearchProgress
 
 	/// Whether the search has been cancelled.
-	public private(set) var isCancelled: Bool = false
+	private(set) var isCancelled: Bool = false
 
 	/// Callback when new matches are found.
-	public var onMatchesFound: (([DocumentMatch]) -> Void)?
+	var onMatchesFound: (([DocumentMatch]) -> Void)?
 
 	/// Callback when progress updates.
-	public var onProgressUpdate: ((SearchProgress) -> Void)?
+	var onProgressUpdate: ((SearchProgress) -> Void)?
 
 	/// Callback when search completes.
-	public var onComplete: ((SearchProgress) -> Void)?
+	var onComplete: ((SearchProgress) -> Void)?
 
 	/// The background search task.
 	private var searchTask: Task<Void, Never>?
 
-	public init(config: ProjectSearchConfig) {
+	init(config: ProjectSearchConfig) {
 		self.config = config
 		results = SearchResultNode(type: .root)
 		progress = SearchProgress()
 	}
 
 	/// Start the search. Can be awaited for completion.
-	public func start() {
+	func start() {
 		isCancelled = false
 		results = SearchResultNode(type: .root)
 		progress = SearchProgress()
@@ -259,7 +259,7 @@ public final class ProjectSearchEngine: Sendable {
 	}
 
 	/// Cancel the ongoing search.
-	public func cancel() {
+	func cancel() {
 		isCancelled = true
 		searchTask?.cancel()
 	}

@@ -126,43 +126,43 @@ public struct FindMatch: Sendable, Equatable, Identifiable {
 // MARK: - Document Match
 
 /// A match within a specific document, including context excerpt — equivalent to `OakDocumentMatch`.
-public struct DocumentMatch: Sendable, Identifiable {
-	public let id = UUID()
+struct DocumentMatch: Sendable, Identifiable {
+	let id = UUID()
 
 	/// The document identifier (UUID).
-	public var documentID: UUID
+	var documentID: UUID
 
 	/// The document path, if any.
-	public var documentPath: String?
+	var documentPath: String?
 
 	/// The document display name.
-	public var displayName: String
+	var displayName: String
 
 	/// The byte range of the match.
-	public var byteRange: Range<Int>
+	var byteRange: Range<Int>
 
 	/// The line:column range for display.
-	public var lineRange: LineColumnRange
+	var lineRange: LineColumnRange
 
 	/// The 0-based line number of the match.
-	public var lineNumber: Int
+	var lineNumber: Int
 
 	/// Regex captures (named groups).
-	public var captures: [String: String]
+	var captures: [String: String]
 
 	/// Context excerpt around the match.
-	public var excerpt: String
+	var excerpt: String
 
 	/// Byte offset of the excerpt start within the document.
-	public var excerptOffset: Int
+	var excerptOffset: Int
 
 	/// Whether the excerpt was truncated at the beginning.
-	public var headTruncated: Bool
+	var headTruncated: Bool
 
 	/// Whether the excerpt was truncated at the end.
-	public var tailTruncated: Bool
+	var tailTruncated: Bool
 
-	public init(
+	init(
 		documentID: UUID,
 		documentPath: String? = nil,
 		displayName: String,
