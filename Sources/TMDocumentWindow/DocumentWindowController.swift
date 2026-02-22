@@ -159,6 +159,8 @@ public class DocumentWindowController: NSWindowController, NSMenuItemValidation 
 		window.titlebarAppearsTransparent = false
 		window.isReleasedWhenClosed = false
 		window.minSize = NSSize(width: 400, height: 300)
+		window.collectionBehavior = [.fullScreenPrimary]
+		window.isRestorable = false
 		window.center()
 
 		super.init(window: window)

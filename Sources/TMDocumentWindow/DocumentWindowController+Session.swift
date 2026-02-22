@@ -241,6 +241,12 @@ public extension DocumentWindowController {
 				lastWindow = controller.window
 			}
 
+			if project.isFullScreen {
+				controller.window?.toggleFullScreen(nil)
+			} else if project.isZoomed {
+				controller.window?.zoom(nil)
+			}
+
 			// Restore file browser state.
 			if let stateData = project.fileBrowserState,
 			   let plist = try? PropertyListSerialization.propertyList(

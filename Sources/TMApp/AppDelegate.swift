@@ -71,6 +71,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency BundleMenuAc
 
 	func applicationDidFinishLaunching(_: Notification) {
 		NSApp.mainMenu = MainMenuBuilder.buildMainMenu()
+		NSApp.registerServicesMenuSendTypes([.string], returnTypes: [.string])
 		loadDefaultTheme()
 		loadKeyBindings()
 		loadBundles()
@@ -145,6 +146,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency BundleMenuAc
 		for controller in DocumentWindowController.allControllers.values {
 			controller.checkForExternalChanges()
 		}
+	}
+
+	func application(_: NSApplication, shouldRestoreSecureState _: NSCoder) -> Bool {
+		false
 	}
 
 	func applicationShouldHandleReopen(_: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
