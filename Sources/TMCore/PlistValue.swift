@@ -211,9 +211,9 @@ public typealias PlistDictionary = [String: PlistValue]
 // MARK: - PlistIO
 
 /// Load and save property lists using Foundation serialization.
-public enum PlistIO {
+enum PlistIO {
 	/// The serialization format for saving.
-	public enum Format {
+	enum Format {
 		case binary
 		case xml
 	}
@@ -221,7 +221,7 @@ public enum PlistIO {
 	/// Load a property list from a file path.
 	///
 	/// Returns `nil` when the file cannot be read or parsed.
-	public static func load(contentsOfFile path: String) -> PlistDictionary? {
+	static func load(contentsOfFile path: String) -> PlistDictionary? {
 		guard let data = try? Data(contentsOf: URL(fileURLWithPath: path)) else {
 			return nil
 		}
@@ -229,7 +229,7 @@ public enum PlistIO {
 	}
 
 	/// Parse a property list from raw data.
-	public static func parse(data: Data) -> PlistValue? {
+	static func parse(data: Data) -> PlistValue? {
 		guard let obj = try? PropertyListSerialization.propertyList(
 			from: data, options: [], format: nil,
 		) else {
@@ -239,14 +239,14 @@ public enum PlistIO {
 	}
 
 	/// Parse a property list from a UTF‑8 string.
-	public static func parse(string: String) -> PlistValue? {
+	static func parse(string: String) -> PlistValue? {
 		guard let data = string.data(using: .utf8) else { return nil }
 		return parse(data: data)
 	}
 
 	/// Save a plist dictionary to a file in the given format.
 	@discardableResult
-	public static func save(
+	static func save(
 		_ plist: PlistValue,
 		toFile path: String,
 		format: Format = .binary,

@@ -5,18 +5,18 @@ import Foundation
 /// Serializes `PlistValue` into the ASCII (OpenStep) plist format.
 ///
 /// Replaces the C++ `boost::to_s(plist::any_t)` and related pretty‑printing code.
-public enum PlistSerializer {
+enum PlistSerializer {
 	/// Formatting options for serialization.
-	public struct Options: OptionSet, Sendable {
-		public let rawValue: Int
-		public init(rawValue: Int) {
+	struct Options: OptionSet, Sendable {
+		let rawValue: Int
+		init(rawValue: Int) {
 			self.rawValue = rawValue
 		}
 
 		/// Prefer single‑quoted strings where possible.
-		public static let preferSingleQuotedStrings = Options(rawValue: 1 << 0)
+		static let preferSingleQuotedStrings = Options(rawValue: 1 << 0)
 		/// Emit everything on a single line.
-		public static let singleLine = Options(rawValue: 1 << 1)
+		static let singleLine = Options(rawValue: 1 << 1)
 	}
 
 	/// Serialize a plist value to an ASCII plist string.
@@ -26,7 +26,7 @@ public enum PlistSerializer {
 	///   - options: Formatting options.
 	///   - keySortOrder: Optional key ordering for dictionary output.
 	/// - Returns: ASCII plist string representation.
-	public static func serialize(
+	static func serialize(
 		_ value: PlistValue,
 		options: Options = [],
 		keySortOrder: [String] = [],

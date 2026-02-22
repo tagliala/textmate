@@ -7,7 +7,7 @@ import Foundation
 /// Deltas track which keys changed and which were deleted,
 /// including across nested dictionary structures.  Key paths
 /// are dot‑separated with `\` escaping for keys that contain dots.
-public enum PlistDelta {
+enum PlistDelta {
 	// MARK: Create delta
 
 	/// Compute a delta between two plist dictionaries.
@@ -19,7 +19,7 @@ public enum PlistDelta {
 	///  - `"uuid"`:    preserved from `oldDict` if present
 	///
 	/// Nested dictionaries are diffed recursively.
-	public static func createDelta(
+	static func createDelta(
 		old oldDict: PlistDictionary,
 		new newDict: PlistDictionary,
 	) -> PlistDictionary {
@@ -45,7 +45,7 @@ public enum PlistDelta {
 	/// replace the result entirely.
 	///
 	/// Returns an empty dictionary when no non‑delta base was found.
-	public static func mergeDelta(plists: [PlistDictionary]) -> PlistDictionary {
+	static func mergeDelta(plists: [PlistDictionary]) -> PlistDictionary {
 		var result = PlistDictionary()
 		var didFindNonDelta = false
 

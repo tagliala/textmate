@@ -2,9 +2,9 @@ import Foundation
 
 /// Port of C++ `path::intermediate_t` (io/src/intermediate.h, intermediate.mm).
 /// Provides atomic file writing strategies for safe saves.
-public final class AtomicFileWriter: @unchecked Sendable {
+final class AtomicFileWriter: @unchecked Sendable {
 	/// Strategy for atomic saves.
-	public enum AtomicMode: Sendable {
+	enum AtomicMode: Sendable {
 		/// Always use atomic saves via NSFileManager replacement directory.
 		case always
 		/// Use atomic saves only for external (non-internal) volumes.
@@ -25,7 +25,7 @@ public final class AtomicFileWriter: @unchecked Sendable {
 	///   - destination: The final path where the file should appear.
 	///   - mode: When to use atomic save strategies.
 	///   - permissions: POSIX file permissions for the new file (default: `0o644`).
-	public init(
+	init(
 		destination: String,
 		mode: AtomicMode = .always,
 		permissions: mode_t = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH,
@@ -43,7 +43,7 @@ public final class AtomicFileWriter: @unchecked Sendable {
 	///
 	/// - Parameter data: The data to write.
 	/// - Throws: If the write operation fails.
-	public func write(_ data: Data) throws {
+	func write(_ data: Data) throws {
 		let strategy = chooseStrategy()
 
 		switch strategy {
@@ -57,7 +57,7 @@ public final class AtomicFileWriter: @unchecked Sendable {
 	}
 
 	/// Write string content atomically.
-	public func write(_ string: String, encoding: String.Encoding = .utf8) throws {
+	func write(_ string: String, encoding: String.Encoding = .utf8) throws {
 		guard let data = string.data(using: encoding) else {
 			throw AtomicWriteError.encodingFailed
 		}
@@ -66,7 +66,7 @@ public final class AtomicFileWriter: @unchecked Sendable {
 
 	// MARK: - Errors
 
-	public enum AtomicWriteError: Error, Sendable {
+	enum AtomicWriteError: Error, Sendable {
 		case encodingFailed
 		case createDirectoryFailed(String)
 		case openFailed(String)

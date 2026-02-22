@@ -3,12 +3,12 @@ import Foundation
 /// Port of C++ `path` namespace (io/src/path.h, path.cc, entries.h/cc, move_path.h/cc).
 /// Provides path string manipulation, resolution, file system queries, extended attributes,
 /// directory scanning, and copy/move/remove operations.
-public enum PathUtilities: Sendable {
+enum PathUtilities: Sendable {
 	// MARK: - String Manipulation
 
 	/// Remove `./`, `../`, and `//` from path. Preserves `..` segments
 	/// that go beyond root (e.g. `/../..`), matching C++ `path::normalize` behavior.
-	public static func normalize(_ path: String) -> String {
+	static func normalize(_ path: String) -> String {
 		guard !path.isEmpty else { return path }
 
 		let isAbsolute = path.hasPrefix("/")
@@ -41,20 +41,20 @@ public enum PathUtilities: Sendable {
 	}
 
 	/// Return the last component of the path. `/Users/me/foo.html.erb` → `foo.html.erb`
-	public static func name(_ p: String) -> String {
+	static func name(_ p: String) -> String {
 		let path = normalize(p)
 		guard let idx = path.lastIndex(of: "/") else { return path }
 		return String(path[path.index(after: idx)...])
 	}
 
 	/// Return the parent directory. `/Users/me/foo.html.erb` → `/Users/me`
-	public static func parent(_ p: String) -> String {
+	static func parent(_ p: String) -> String {
 		guard p != "/" else { return p }
 		return join(p, "..")
 	}
 
 	/// Strip the last extension. `/Users/me/foo.html.erb` → `/Users/me/foo.html`
-	public static func stripExtension(_ p: String) -> String {
+	static func stripExtension(_ p: String) -> String {
 		let path = normalize(p)
 		let ext = `extension`(path)
 		guard !ext.isEmpty else { return path }
@@ -62,7 +62,7 @@ public enum PathUtilities: Sendable {
 	}
 
 	/// Strip all compound extensions. `/Users/me/foo.html.erb` → `/Users/me/foo`
-	public static func stripExtensions(_ p: String) -> String {
+	static func stripExtensions(_ p: String) -> String {
 		let path = normalize(p)
 		let ext = extensions(path)
 		guard !ext.isEmpty else { return path }
@@ -70,7 +70,7 @@ public enum PathUtilities: Sendable {
 	}
 
 	/// Return the last extension including dot. `/Users/me/foo.html.erb` → `.erb`
-	public static func `extension`(_ p: String) -> String {
+	static func `extension`(_ p: String) -> String {
 		let filename = name(normalize(p))
 		guard let dotIdx = filename.lastIndex(of: ".") else { return "" }
 		return String(filename[dotIdx...])
@@ -78,7 +78,7 @@ public enum PathUtilities: Sendable {
 
 	/// Return compound extensions. `/Users/me/foo.html.erb` → `.html.erb`
 	/// Only merges consecutive extensions when the inner one is purely lowercase ASCII.
-	public static func extensions(_ p: String) -> String {
+	static func extensions(_ p: String) -> String {
 		let filename = name(normalize(p))
 		guard let dotIdx = filename.lastIndex(of: ".") else { return "" }
 
@@ -97,7 +97,7 @@ public enum PathUtilities: Sendable {
 
 	/// Shell-escape a path. Special characters are backslash-escaped,
 	/// newlines are wrapped in single quotes.
-	public static func escape(_ path: String) -> String {
+	static func escape(_ path: String) -> String {
 		let safeChars = Set<Character>("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-.,:/@")
 		var result = ""
 		for scalar in path.unicodeScalars {
@@ -115,7 +115,7 @@ public enum PathUtilities: Sendable {
 
 	/// Split a shell-quoted string into individual "words", handling single/double
 	/// quotes and backslash escaping.
-	public static func unescape(_ str: String) -> [String] {
+	static func unescape(_ str: String) -> [String] {
 		var result = [""]
 		var isEscaped = false
 		var singleQuoted = false
@@ -142,7 +142,7 @@ public enum PathUtilities: Sendable {
 
 	/// Return a score for how well `ext` matches the end of `path`.
 	/// Smaller non-zero values indicate a better match; 0 means no match.
-	public static func rank(_ path: String, extension ext: String) -> Int {
+	static func rank(_ path: String, extension ext: String) -> Int {
 		guard path.count >= ext.count, path.hasSuffix(ext) else { return 0 }
 		if path.count == ext.count { return ext.count }
 
@@ -157,7 +157,7 @@ public enum PathUtilities: Sendable {
 
 	/// Join two paths. If `path` is absolute, normalize it alone;
 	/// otherwise join onto `base`.
-	public static func join(_ base: String, _ path: String) -> String {
+	static func join(_ base: String, _ path: String) -> String {
 		if !path.isEmpty, path.first == "/" {
 			return normalize(path)
 		}
@@ -165,19 +165,19 @@ public enum PathUtilities: Sendable {
 	}
 
 	/// Join an array of path components.
-	public static func join(_ components: [String]) -> String {
+	static func join(_ components: [String]) -> String {
 		normalize(components.joined(separator: "/"))
 	}
 
 	/// Check whether `path` is an absolute, valid path (no `..` escaping root).
-	public static func isAbsolute(_ path: String) -> Bool {
+	static func isAbsolute(_ path: String) -> Bool {
 		guard !path.isEmpty, path.first == "/" else { return false }
 		let p = normalize(path)
 		return p != "/.." && !p.hasPrefix("/../")
 	}
 
 	/// Check whether `child` is a descendant of (or equal to) `parent`.
-	public static func isChild(_ nonNormalizedChild: String, of nonNormalizedParent: String) -> Bool {
+	static func isChild(_ nonNormalizedChild: String, of nonNormalizedParent: String) -> Bool {
 		let child = normalize(nonNormalizedChild)
 		let parentPath = normalize(nonNormalizedParent)
 		return child.hasPrefix(parentPath)
@@ -185,7 +185,7 @@ public enum PathUtilities: Sendable {
 	}
 
 	/// Replace the home-directory prefix with `~`.
-	public static func withTilde(_ p: String) -> String {
+	static func withTilde(_ p: String) -> String {
 		let base = home()
 		var path = normalize(p)
 		if p.count > 1, p.hasSuffix("/") {
@@ -200,7 +200,7 @@ public enum PathUtilities: Sendable {
 	}
 
 	/// Compute the relative path from `base` to `path`.
-	public static func relativeTo(_ p: String, base b: String) -> String? {
+	static func relativeTo(_ p: String, base b: String) -> String? {
 		guard !b.isEmpty else { return p.isEmpty ? nil : p }
 		guard !p.isEmpty else { return nil }
 
@@ -229,7 +229,7 @@ public enum PathUtilities: Sendable {
 	}
 
 	/// Display name for a path, optionally including `n` ancestor directory names.
-	public static func displayName(_ p: String, numberOfParents n: Int = 0) -> String {
+	static func displayName(_ p: String, numberOfParents n: Int = 0) -> String {
 		let path = normalize(p)
 		var res = systemDisplayName(path)
 
@@ -251,7 +251,7 @@ public enum PathUtilities: Sendable {
 
 	/// For each path, compute the minimum number of parent-directory components
 	/// needed to distinguish it from other paths in the list.
-	public static func disambiguate(_ paths: [String]) -> [Int] {
+	static func disambiguate(_ paths: [String]) -> [Int] {
 		guard !paths.isEmpty else { return [] }
 		var indices = Array(0 ..< paths.count)
 
@@ -295,7 +295,7 @@ public enum PathUtilities: Sendable {
 	}
 
 	/// Generate a non-colliding filename. Returns `nil` if no unique name found within 500 attempts.
-	public static func unique(_ requestedPath: String, suffix: String = "") -> String? {
+	static func unique(_ requestedPath: String, suffix: String = "") -> String? {
 		guard exists(requestedPath) else { return requestedPath }
 
 		let dir = parent(requestedPath)
@@ -324,13 +324,13 @@ public enum PathUtilities: Sendable {
 	// MARK: - Symlink & Alias Resolution
 
 	/// Normalize path and follow all symlinks and macOS aliases.
-	public static func resolve(_ path: String) -> String {
+	static func resolve(_ path: String) -> String {
 		var seen = Set<String>()
 		return resolveLinks(normalize(path), resolveParent: true, seen: &seen)
 	}
 
 	/// Normalize path and follow only the leaf symlink/alias (parent may be a link).
-	public static func resolveHead(_ path: String) -> String {
+	static func resolveHead(_ path: String) -> String {
 		var seen = Set<String>()
 		return resolveLinks(normalize(path), resolveParent: false, seen: &seen)
 	}
@@ -338,27 +338,27 @@ public enum PathUtilities: Sendable {
 	// MARK: - Stat-based Queries
 
 	/// Check if path exists (follows symlinks).
-	public static func exists(_ path: String) -> Bool {
+	static func exists(_ path: String) -> Bool {
 		access(path, F_OK) == 0
 	}
 
 	/// Check if path is readable by current user.
-	public static func isReadable(_ path: String) -> Bool {
+	static func isReadable(_ path: String) -> Bool {
 		access(path, R_OK) == 0
 	}
 
 	/// Check if path is writable by current user.
-	public static func isWritable(_ path: String) -> Bool {
+	static func isWritable(_ path: String) -> Bool {
 		access(path, W_OK) == 0
 	}
 
 	/// Check if path is executable by current user and is not a directory.
-	public static func isExecutable(_ path: String) -> Bool {
+	static func isExecutable(_ path: String) -> Bool {
 		access(path, X_OK) == 0 && !isDirectory(path)
 	}
 
 	/// Check if path is a directory (resolves head symlinks).
-	public static func isDirectory(_ path: String) -> Bool {
+	static func isDirectory(_ path: String) -> Bool {
 		var buf = stat()
 		let resolved = resolveHead(path)
 		guard lstat(resolved, &buf) == 0 else { return false }
@@ -366,14 +366,14 @@ public enum PathUtilities: Sendable {
 	}
 
 	/// Check if path is on a local (non-network) volume.
-	public static func isLocal(_ path: String) -> Bool {
+	static func isLocal(_ path: String) -> Bool {
 		let url = URL(fileURLWithPath: path, isDirectory: isDirectory(path))
 		guard let values = try? url.resourceValues(forKeys: [.volumeIsLocalKey]) else { return false }
 		return values.volumeIsLocal ?? false
 	}
 
 	/// Get the device ID for the path's filesystem.
-	public static func device(_ path: String) -> dev_t {
+	static func device(_ path: String) -> dev_t {
 		var buf = stat()
 		guard stat(path, &buf) == 0 else { return ~0 }
 		return buf.st_dev
@@ -382,7 +382,7 @@ public enum PathUtilities: Sendable {
 	// MARK: - Content I/O
 
 	/// Read entire file as a string. Returns `nil` on error.
-	public static func content(_ path: String) -> String? {
+	static func content(_ path: String) -> String? {
 		guard let fd = openForReading(path) else { return nil }
 		defer { close(fd) }
 
@@ -399,7 +399,7 @@ public enum PathUtilities: Sendable {
 
 	/// Write data to a file (via intermediate write for safety). Returns success.
 	@discardableResult
-	public static func setContent(_ path: String, data: Data) -> Bool {
+	static func setContent(_ path: String, data: Data) -> Bool {
 		guard makeDir(parent(path)) else { return false }
 		do {
 			try data.write(to: URL(fileURLWithPath: path), options: .atomic)
@@ -411,7 +411,7 @@ public enum PathUtilities: Sendable {
 
 	/// Write string content to a file.
 	@discardableResult
-	public static func setContent(_ path: String, string: String) -> Bool {
+	static func setContent(_ path: String, string: String) -> Bool {
 		guard let data = string.data(using: .utf8) else { return false }
 		return setContent(path, data: data)
 	}
@@ -419,7 +419,7 @@ public enum PathUtilities: Sendable {
 	// MARK: - Extended Attributes
 
 	/// Get a single extended attribute value from a resolved path.
-	public static func getAttr(_ p: String, name attrName: String) -> String? {
+	static func getAttr(_ p: String, name attrName: String) -> String? {
 		let path = resolve(p)
 		let size = getxattr(path, attrName, nil, 0, 0, 0)
 		guard size > 0 else { return nil }
@@ -431,7 +431,7 @@ public enum PathUtilities: Sendable {
 	}
 
 	/// Set or remove an extended attribute.
-	public static func setAttr(_ p: String, name attrName: String, value: String?) {
+	static func setAttr(_ p: String, name attrName: String, value: String?) {
 		let path = resolve(p)
 		if let value {
 			let bytes = Array(value.utf8)
@@ -442,7 +442,7 @@ public enum PathUtilities: Sendable {
 	}
 
 	/// Get all extended attributes for a file.
-	public static func attributes(_ path: String) -> [String: String] {
+	static func attributes(_ path: String) -> [String: String] {
 		var result: [String: String] = [:]
 		guard let fd = openForReading(path) else { return result }
 		defer { close(fd) }
@@ -475,7 +475,7 @@ public enum PathUtilities: Sendable {
 
 	/// Set multiple extended attributes on a file.
 	@discardableResult
-	public static func setAttributes(_ path: String, attributes: [String: String]) -> Bool {
+	static func setAttributes(_ path: String, attributes: [String: String]) -> Bool {
 		guard !attributes.isEmpty else { return true }
 		guard let fd = openForReading(path) else { return false }
 		defer { close(fd) }
@@ -496,13 +496,13 @@ public enum PathUtilities: Sendable {
 
 	/// Create a symbolic link.
 	@discardableResult
-	public static func link(from: String, to: String) -> Bool {
+	static func link(from: String, to: String) -> Bool {
 		symlink(from, to) == 0
 	}
 
 	/// Create directory and all intermediate directories.
 	@discardableResult
-	public static func makeDir(_ path: String) -> Bool {
+	static func makeDir(_ path: String) -> Bool {
 		guard !exists(path) else { return isDirectory(path) }
 		makeDir(parent(path))
 		mkdir(path, S_IRWXU | S_IRWXG | S_IRWXO)
@@ -510,7 +510,7 @@ public enum PathUtilities: Sendable {
 	}
 
 	/// Move a file to the macOS Trash. Returns the URL of the trashed item.
-	public static func moveToTrash(_ path: String) -> URL? {
+	static func moveToTrash(_ path: String) -> URL? {
 		let url = URL(fileURLWithPath: path)
 		var resultURL: NSURL?
 		do {
@@ -523,7 +523,7 @@ public enum PathUtilities: Sendable {
 
 	/// Rename or copy across filesystems with parent directory creation.
 	@discardableResult
-	public static func renameOrCopy(from src: String, to dst: String, createParent: Bool = true) -> Bool {
+	static func renameOrCopy(from src: String, to dst: String, createParent: Bool = true) -> Bool {
 		if createParent, !makeDir(parent(dst)) {
 			return false
 		}
@@ -538,7 +538,7 @@ public enum PathUtilities: Sendable {
 	}
 
 	/// Duplicate a file, generating a unique name if `dst` is nil.
-	public static func duplicate(_ src: String, dst: String? = nil, overwrite _: Bool = false) -> String? {
+	static func duplicate(_ src: String, dst: String? = nil, overwrite _: Bool = false) -> String? {
 		let target: String
 		if let dst {
 			target = dst
@@ -554,7 +554,7 @@ public enum PathUtilities: Sendable {
 
 	/// Recursively copy a file or directory.
 	@discardableResult
-	public static func copy(from src: String, to dst: String) -> Bool {
+	static func copy(from src: String, to dst: String) -> Bool {
 		guard copyfile(src, dst, nil, copyfile_flags_t(COPYFILE_ALL | COPYFILE_NOFOLLOW_SRC)) == 0 else {
 			return false
 		}
@@ -579,7 +579,7 @@ public enum PathUtilities: Sendable {
 
 	/// Move a file or directory, handling cross-device moves via copy + remove.
 	@discardableResult
-	public static func move(from src: String, to dst: String, overwrite: Bool = false) -> Bool {
+	static func move(from src: String, to dst: String, overwrite: Bool = false) -> Bool {
 		guard exists(src) else { return false }
 
 		if exists(dst), !overwrite {
@@ -604,7 +604,7 @@ public enum PathUtilities: Sendable {
 
 	/// Recursively remove a file or directory.
 	@discardableResult
-	public static func remove(_ path: String) -> Bool {
+	static func remove(_ path: String) -> Bool {
 		var buf = stat()
 		guard lstat(path, &buf) == 0 else { return false }
 
@@ -617,17 +617,17 @@ public enum PathUtilities: Sendable {
 	// MARK: - Directory Scanning
 
 	/// Result from scanning a directory.
-	public struct DirectoryEntry: Sendable {
-		public let name: String
-		public let type: EntryType
+	struct DirectoryEntry: Sendable {
+		let name: String
+		let type: EntryType
 
-		public enum EntryType: Sendable {
+		enum EntryType: Sendable {
 			case regular, directory, symlink, other
 		}
 	}
 
 	/// List directory contents, optionally filtering with a glob pattern.
-	public static func entries(_ path: String, glob globPattern: String? = nil) -> [DirectoryEntry] {
+	static func entries(_ path: String, glob globPattern: String? = nil) -> [DirectoryEntry] {
 		guard let contents = try? FileManager.default.contentsOfDirectory(atPath: path) else {
 			return []
 		}
@@ -666,17 +666,17 @@ public enum PathUtilities: Sendable {
 	// MARK: - System Directories
 
 	/// Current user's home directory.
-	public static func home() -> String {
+	static func home() -> String {
 		FileManager.default.homeDirectoryForCurrentUser.path
 	}
 
 	/// Current working directory.
-	public static func cwd() -> String? {
+	static func cwd() -> String? {
 		FileManager.default.currentDirectoryPath
 	}
 
 	/// Temporary directory, optionally creating a unique temp file.
-	public static func temp(file: String? = nil, content: String? = nil) -> String {
+	static func temp(file: String? = nil, content: String? = nil) -> String {
 		let base = NSTemporaryDirectory()
 		guard let file else { return base }
 
@@ -692,7 +692,7 @@ public enum PathUtilities: Sendable {
 	}
 
 	/// User cache directory, optionally with a file component.
-	public static func cache(file: String? = nil) -> String {
+	static func cache(file: String? = nil) -> String {
 		let dirs = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)
 		let base = dirs.first?.path ?? NSTemporaryDirectory()
 		guard let file else { return base }
@@ -701,12 +701,12 @@ public enum PathUtilities: Sendable {
 	}
 
 	/// User's Desktop directory.
-	public static func desktop() -> String {
+	static func desktop() -> String {
 		home() + "/Desktop"
 	}
 
 	/// List mounted volumes (excluding hidden volumes like /dev).
-	public static func volumes() -> [String] {
+	static func volumes() -> [String] {
 		let urls = FileManager.default.mountedVolumeURLs(
 			includingResourceValuesForKeys: [.volumeIsLocalKey],
 			options: [.skipHiddenVolumes],

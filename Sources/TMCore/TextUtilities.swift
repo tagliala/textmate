@@ -3,7 +3,7 @@ import Foundation
 // MARK: - HTML Entity Decoding
 
 /// HTML named entity decoding, base32/64 decoding, ROT13, URL encode/decode.
-public enum TextDecode {
+enum TextDecode {
 	// swiftlint:disable comma
 	private static let htmlEntityMap: [String: String] = [
 		"AElig": "Æ", "Aacute": "Á", "Acirc": "Â", "Agrave": "À",
@@ -81,7 +81,7 @@ public enum TextDecode {
 	// swiftlint:enable comma
 
 	/// Decode HTML entities in a string (e.g. `&amp;` → `&`).
-	public static func htmlEntities(_ src: String) -> String {
+	static func htmlEntities(_ src: String) -> String {
 		var result = ""
 		result.reserveCapacity(src.count)
 		var i = src.startIndex
@@ -118,7 +118,7 @@ public enum TextDecode {
 	}
 
 	/// Decode a Base32-encoded string (RFC 4648).
-	public static func base32(_ src: String) -> Data {
+	static func base32(_ src: String) -> Data {
 		var result = Data()
 		var value: UInt32 = 0
 		var bits: UInt32 = 0
@@ -145,7 +145,7 @@ public enum TextDecode {
 	}
 
 	/// Decode a Base64-encoded string.
-	public static func base64(_ src: String) -> Data {
+	static func base64(_ src: String) -> Data {
 		let table = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
 
 		var result = Data()
@@ -167,7 +167,7 @@ public enum TextDecode {
 	}
 
 	/// Apply ROT13 cipher to ASCII letters.
-	public static func rot13(_ src: String) -> String {
+	static func rot13(_ src: String) -> String {
 		var result = ""
 		result.reserveCapacity(src.count)
 		for ch in src {
@@ -189,7 +189,7 @@ public enum TextDecode {
 	}
 
 	/// Decode URL percent-encoded components (also converts `+` to space).
-	public static func urlPart(_ src: String) -> String {
+	static func urlPart(_ src: String) -> String {
 		var result = ""
 		result.reserveCapacity(src.count)
 		let utf8 = Array(src.utf8)
@@ -229,9 +229,9 @@ public enum TextDecode {
 
 // MARK: - URL Encoding
 
-public enum TextEncode {
+enum TextEncode {
 	/// Percent-encode a string for use in a URL, preserving characters in `excluding`.
-	public static func urlPart(
+	static func urlPart(
 		_ src: String, excluding: String = "",
 	) -> String {
 		let safe = Set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_.!~*'()")
@@ -253,7 +253,7 @@ public enum TextEncode {
 
 // MARK: - Format Size
 
-public extension TextUtilities {
+extension TextUtilities {
 	/// Format a byte count as a human-readable string (e.g. "1.5 MiB").
 	///
 	/// Uses binary units (KiB, MiB, GiB) matching the C++ implementation.
@@ -272,7 +272,7 @@ public extension TextUtilities {
 
 // MARK: - East Asian Width
 
-public extension TextUtilities {
+extension TextUtilities {
 	/// Whether a Unicode scalar has East Asian Wide or Fullwidth property,
 	/// occupying two columns in a monospaced terminal/editor.
 	///
@@ -381,9 +381,9 @@ extension TextUtilities {
 // MARK: - Text Utilities Namespace
 
 /// Namespace for text processing utilities.
-public enum TextUtilities {
+enum TextUtilities {
 	/// Column width of a Unicode scalar (1 or 2 for east-asian-width characters).
-	public static func columnWidth(of scalar: Unicode.Scalar) -> Int {
+	static func columnWidth(of scalar: Unicode.Scalar) -> Int {
 		isEastAsianWidth(scalar) ? 2 : 1
 	}
 
@@ -397,7 +397,7 @@ public enum TextUtilities {
 	///   - tabSize: Number of columns per tab stop.
 	///   - prefixSize: Additional indent applied after the first break.
 	/// - Returns: UTF-8 byte offsets where soft line breaks should be inserted.
-	public static func softBreaks(
+	static func softBreaks(
 		in string: String, width: Int, tabSize: Int = 4, prefixSize: Int = 0,
 	) -> [Int] {
 		var result = [Int]()
@@ -454,7 +454,7 @@ public enum TextUtilities {
 	///
 	/// Runs of uppercase characters become lowercase and vice versa.
 	/// Port of `text::opposite_case()` from case.cc.
-	public static func oppositeCase(_ string: String) -> String {
+	static func oppositeCase(_ string: String) -> String {
 		guard !string.isEmpty else { return "" }
 
 		var result = ""
@@ -493,12 +493,12 @@ public enum TextUtilities {
 	}
 
 	/// Whether a character is a "word character" (letter, digit, or underscore).
-	public static func isWordChar(_ ch: Character) -> Bool {
+	static func isWordChar(_ ch: Character) -> Bool {
 		ch.isLetter || ch.isNumber || ch == "_"
 	}
 
 	/// Whether a character is whitespace (space, tab, newline, etc.).
-	public static func isWhitespace(_ ch: Character) -> Bool {
+	static func isWhitespace(_ ch: Character) -> Bool {
 		ch.isWhitespace
 	}
 }
@@ -508,15 +508,15 @@ public enum TextUtilities {
 /// Describes an indentation style (tabs or spaces, with size configuration).
 ///
 /// Port of `text::indent_t` from indent.{h,cc}.
-public struct IndentStyle: Sendable, Equatable {
+struct IndentStyle: Sendable, Equatable {
 	/// Number of columns each visual tab stop occupies.
-	public var tabSize: Int
+	var tabSize: Int
 	/// Number of columns per indent level.
-	public var indentSize: Int
+	var indentSize: Int
 	/// If true, use spaces instead of tabs.
-	public var softTabs: Bool
+	var softTabs: Bool
 
-	public init(tabSize: Int = 4, indentSize: Int = 4, softTabs: Bool = false) {
+	init(tabSize: Int = 4, indentSize: Int = 4, softTabs: Bool = false) {
 		self.tabSize = tabSize
 		self.indentSize = indentSize
 		self.softTabs = softTabs
@@ -525,7 +525,7 @@ public struct IndentStyle: Sendable, Equatable {
 	/// Create an indent string at the given column for a number of indent units.
 	///
 	/// Port of `text::indent_t::create()` from indent.cc.
-	public func create(atColumn: Int = 0, units: Int = 1) -> String {
+	func create(atColumn: Int = 0, units: Int = 1) -> String {
 		let baseColumn = atColumn - (atColumn % indentSize)
 		let desiredColumn = baseColumn + units * indentSize
 

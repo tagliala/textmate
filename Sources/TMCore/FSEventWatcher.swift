@@ -4,13 +4,13 @@ import Foundation
 /// (io/src/events.h, events.cc).
 /// Wraps FSEventStream for watching file system changes.
 /// Default implementation for optional EventHandler method.
-public extension FSEventWatcher.EventHandler {
+extension FSEventWatcher.EventHandler {
 	func setReplayingHistory(_: Bool, observedPath _: String, eventId _: UInt64) {}
 }
 
-public final class FSEventWatcher: @unchecked Sendable {
+final class FSEventWatcher: @unchecked Sendable {
 	/// Callback protocol for file system events.
-	public protocol EventHandler: AnyObject, Sendable {
+	protocol EventHandler: AnyObject, Sendable {
 		/// Called when a path changes. `observedPath` is the root being watched.
 		func didChange(path: String, observedPath: String, eventId: UInt64, recursive: Bool)
 		/// Called when history replay starts or stops.
@@ -218,9 +218,9 @@ public final class FSEventWatcher: @unchecked Sendable {
 	// MARK: - Singleton
 
 	/// Shared FSEventWatcher instance.
-	public static let shared = FSEventWatcher()
+	static let shared = FSEventWatcher()
 
-	public init() {}
+	init() {}
 
 	// MARK: - Public API
 
@@ -230,7 +230,7 @@ public final class FSEventWatcher: @unchecked Sendable {
 	///   - callback: Handler to receive change notifications.
 	///   - eventId: Start from this event ID (`FSEventStreamEventId.max` for "since now").
 	///   - latency: Coalescing latency in seconds (default 1.0).
-	public func watch(
+	func watch(
 		_ path: String,
 		callback: EventHandler,
 		eventId: FSEventStreamEventId = FSEventStreamEventId(kFSEventStreamEventIdSinceNow),
@@ -254,7 +254,7 @@ public final class FSEventWatcher: @unchecked Sendable {
 	}
 
 	/// Stop watching a path for a specific callback.
-	public func unwatch(_ path: String, callback: EventHandler) {
+	func unwatch(_ path: String, callback: EventHandler) {
 		lock.lock()
 		defer { lock.unlock() }
 		if let idx = streams.firstIndex(where: { $0.requestedPath == path && $0.callback === callback }) {

@@ -10,21 +10,21 @@ import Foundation
 /// Example: if tab stop 2 contains a mirror of tab stop 1, then node 2 depends
 /// on node 1. When tab stop 1 is edited, `touch(1)` returns `{1, 2}` and
 /// `topologicalOrder()` yields `[1, 2]` so mirrors are updated in order.
-public struct DependencyGraph: Sendable {
+struct DependencyGraph: Sendable {
 	/// Adjacency: node → set of nodes it depends on.
 	private var dependencies: [Int: Set<Int>] = [:]
 
-	public init() {}
+	init() {}
 
 	/// Registers a node in the graph.
-	public mutating func addNode(_ node: Int) {
+	mutating func addNode(_ node: Int) {
 		if dependencies[node] == nil {
 			dependencies[node] = []
 		}
 	}
 
 	/// Adds a dependency edge: `node` depends on `dependsOn`.
-	public mutating func addEdge(from node: Int, dependsOn: Int) {
+	mutating func addEdge(from node: Int, dependsOn: Int) {
 		dependencies[node, default: []].insert(dependsOn)
 	}
 
@@ -32,7 +32,7 @@ public struct DependencyGraph: Sendable {
 	///
 	/// Walks reverse edges to find every node that directly or indirectly
 	/// depends on `node`.
-	public func touch(_ node: Int) -> Set<Int> {
+	func touch(_ node: Int) -> Set<Int> {
 		guard dependencies[node] != nil else { return [] }
 		var result = Set<Int>()
 		var active = [node]
@@ -53,7 +53,7 @@ public struct DependencyGraph: Sendable {
 	/// on appear earlier in the result.
 	///
 	/// Uses Kahn's algorithm.
-	public func topologicalOrder() -> [Int] {
+	func topologicalOrder() -> [Int] {
 		var remaining = dependencies
 		var result: [Int] = []
 
