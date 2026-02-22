@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 // Swift-native regular expression engine for TextMate grammar parsing.
 //
@@ -117,6 +118,8 @@ public struct OnigmoMatch: Sendable {
 /// The name `OnigmoPattern` is retained for API compatibility with the
 /// rest of the grammar engine, even though the underlying engine is now ICU.
 public final class OnigmoPattern: @unchecked Sendable {
+	private static let logger = Logger(subsystem: "com.macromates.TextMate", category: "OnigmoPattern")
+
 	/// The compiled NSRegularExpression, or `nil` if compilation failed.
 	private let regex: NSRegularExpression?
 
@@ -149,6 +152,7 @@ public final class OnigmoPattern: @unchecked Sendable {
 				from: translated,
 			)
 		} catch {
+			Self.logger.warning("Failed to compile regex pattern \(pattern): \(error)")
 			regex = nil
 			namedGroups = []
 		}

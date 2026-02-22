@@ -32,7 +32,7 @@ struct BundleManagerWiringTests {
 	func bundleSystemExposesInstaller() {
 		let system = BundleSystemController()
 		let installer = system.bundleInstaller
-		#expect(installer is BundleInstaller)
+		#expect(installer === system.bundleInstaller)
 	}
 
 	@Test("Manage Bundles… item has no key equivalent")

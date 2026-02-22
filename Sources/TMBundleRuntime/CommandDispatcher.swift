@@ -1,4 +1,5 @@
 import Foundation
+import os
 import TMCompatibility
 
 // MARK: - Command Delegate
@@ -76,6 +77,8 @@ public enum CommandDispatcherState: Sendable, Equatable {
 /// This is the main entry point for executing any bundle command.
 @MainActor
 public final class CommandDispatcher {
+	private static let logger = Logger(subsystem: "com.macromates.TextMate", category: "CommandDispatcher")
+
 	/// The bundle index for looking up items.
 	public let bundleIndex: BundleIndex
 
@@ -236,10 +239,15 @@ public final class CommandDispatcher {
 		let fm = FileManager.default
 
 		// Ensure cache directory exists.
-		try? fm.createDirectory(
-			atPath: scriptCacheDirectory,
-			withIntermediateDirectories: true,
-		)
+		do {
+			try fm.createDirectory(
+				atPath: scriptCacheDirectory,
+				withIntermediateDirectories: true,
+			)
+		} catch {
+			Self.logger.error("Failed to create script cache directory: \(error)")
+			return nil
+		}
 
 		// SHA-256 hash of script content for content-addressing.
 		let scriptData = Data(command.command.utf8)
@@ -251,10 +259,14 @@ public final class CommandDispatcher {
 		if !fm.fileExists(atPath: scriptPath) {
 			fm.createFile(atPath: scriptPath, contents: scriptData)
 			// Make executable.
-			try? fm.setAttributes(
-				[.posixPermissions: 0o700],
-				ofItemAtPath: scriptPath,
-			)
+			do {
+				try fm.setAttributes(
+					[.posixPermissions: 0o700],
+					ofItemAtPath: scriptPath,
+				)
+			} catch {
+				Self.logger.error("Failed to set script permissions: \(error)")
+			}
 		}
 
 		return scriptPath

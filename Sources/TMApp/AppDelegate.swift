@@ -1,4 +1,5 @@
 import AppKit
+import os
 import TMBundleRuntime
 import TMBundleUI
 import TMCompatibility
@@ -18,6 +19,8 @@ import TMTheme
 @main
 @MainActor
 class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency BundleMenuActionTarget {
+	private static let logger = Logger(subsystem: "com.macromates.TextMate", category: "AppDelegate")
+
 	/// Application entry point.
 	///
 	/// Bootstraps `NSApplication` with our `AppDelegate`. This is functionally
@@ -199,7 +202,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency BundleMenuAc
 		do {
 			currentTheme = try ThemeLoader.load(from: url)
 		} catch {
-			NSLog("Failed to load default theme: \(error)")
+			Self.logger.error("Failed to load default theme: \(error)")
 		}
 	}
 
@@ -260,7 +263,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency BundleMenuAc
 			UserDefaults.standard.set(uuid, forKey: Self.themeUUIDKey)
 			applyThemeToAllWindows()
 		} catch {
-			NSLog("Failed to load theme \(uuid): \(error)")
+			Self.logger.error("Failed to load theme \(uuid): \(error)")
 		}
 	}
 
@@ -561,7 +564,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency BundleMenuAc
 			try server.start()
 			rmateServer = server
 		} catch {
-			NSLog("Failed to start rmate server: \(error)")
+			Self.logger.error("Failed to start rmate server: \(error)")
 		}
 	}
 
