@@ -166,6 +166,7 @@ public enum EditorAction: String, Sendable, CaseIterable {
 
 	// MARK: - Other
 
+	case toggleComment
 	case toggleColumnSelection
 	case deselectLast
 	case toggleMacroRecording
@@ -393,6 +394,8 @@ public extension EditorAction {
 		case "previousCompletion:":
 			self = .previousCompletion
 		// Selection manipulation
+		case "toggleComment:":
+			self = .toggleComment
 		case "toggleColumnSelection:":
 			self = .toggleColumnSelection
 		case "deselectLast:":

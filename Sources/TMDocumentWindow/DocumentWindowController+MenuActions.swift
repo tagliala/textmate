@@ -157,6 +157,12 @@ public extension DocumentWindowController {
 		}
 	}
 
+	// MARK: - Toggle Comment
+
+	@objc func toggleComment(_: Any?) {
+		documentEditor?.toggleComment()
+	}
+
 	// MARK: - Folding
 
 	@objc func toggleCurrentFolding(_: Any?) {

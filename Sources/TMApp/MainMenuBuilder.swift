@@ -651,6 +651,12 @@ enum MainMenuBuilder {
 		)
 		menu.addItem(.separator())
 		menu.addItem(
+			title: String(localized: "Toggle Comment", comment: "Text menu item"),
+			action: NSSelectorFromString("toggleComment:"),
+			key: "/",
+		)
+		menu.addItem(.separator())
+		menu.addItem(
 			title: String(localized: "Reformat Text", comment: "Text menu item"),
 			action: NSSelectorFromString("reformatText:"),
 		)

@@ -1024,3 +1024,86 @@ struct EditorSoftLineMovementTests {
 		#expect(head.offset == 11)
 	}
 }
+
+// MARK: - Toggle Comment Tests
+
+@Suite("Editor — Toggle Comment")
+struct ToggleCommentTests {
+	@Test("toggleLineComment adds prefix to single line")
+	func addCommentSingleLine() {
+		let editor = Editor(text: "hello\n")
+		editor.selections = SelectionState(caret: TMCore.TextPosition(line: 0, column: 0, offset: 0))
+		editor.toggleLineComment(prefix: "// ")
+		#expect(editor.text == "// hello\n")
+	}
+
+	@Test("toggleLineComment removes prefix from already-commented line")
+	func removeCommentSingleLine() {
+		let editor = Editor(text: "// hello\n")
+		editor.selections = SelectionState(caret: TMCore.TextPosition(line: 0, column: 0, offset: 0))
+		editor.toggleLineComment(prefix: "// ")
+		#expect(editor.text == "hello\n")
+	}
+
+	@Test("toggleLineComment adds prefix to multiple selected lines")
+	func addCommentMultipleLines() {
+		let editor = Editor(text: "aaa\nbbb\nccc\n")
+		// Select lines 0-1.
+		editor.selections = SelectionState([
+			TMCore.TextRange(
+				anchor: TMCore.TextPosition(line: 0, column: 0, offset: 0),
+				head: TMCore.TextPosition(line: 1, column: 3, offset: 7),
+			),
+		])
+		editor.toggleLineComment(prefix: "# ")
+		#expect(editor.text == "# aaa\n# bbb\nccc\n")
+	}
+
+	@Test("toggleLineComment removes prefix from all-commented lines")
+	func removeCommentMultipleLines() {
+		let editor = Editor(text: "# aaa\n# bbb\nccc\n")
+		editor.selections = SelectionState([
+			TMCore.TextRange(
+				anchor: TMCore.TextPosition(line: 0, column: 0, offset: 0),
+				head: TMCore.TextPosition(line: 1, column: 5, offset: 11),
+			),
+		])
+		editor.toggleLineComment(prefix: "# ")
+		#expect(editor.text == "aaa\nbbb\nccc\n")
+	}
+
+	@Test("toggleLineComment preserves indentation when adding")
+	func preserveIndentWhenAdding() {
+		let editor = Editor(text: "\tfoo\n\t\tbar\n")
+		editor.selections = SelectionState([
+			TMCore.TextRange(
+				anchor: TMCore.TextPosition(line: 0, column: 0, offset: 0),
+				head: TMCore.TextPosition(line: 1, column: 4, offset: 9),
+			),
+		])
+		editor.toggleLineComment(prefix: "// ")
+		#expect(editor.text == "\t// foo\n\t// \tbar\n")
+	}
+
+	@Test("toggleLineComment with empty prefix does nothing")
+	func emptyPrefixNoOp() {
+		let editor = Editor(text: "hello\n")
+		editor.selections = SelectionState(caret: TMCore.TextPosition(line: 0, column: 0, offset: 0))
+		editor.toggleLineComment(prefix: "")
+		#expect(editor.text == "hello\n")
+	}
+
+	@Test("toggleLineComment excludes line when selection ends at column 0")
+	func excludeLineAtColumn0() {
+		let editor = Editor(text: "aaa\nbbb\nccc\n")
+		// Selection ends at start of line 2 — should only comment lines 0-1.
+		editor.selections = SelectionState([
+			TMCore.TextRange(
+				anchor: TMCore.TextPosition(line: 0, column: 0, offset: 0),
+				head: TMCore.TextPosition(line: 2, column: 0, offset: 8),
+			),
+		])
+		editor.toggleLineComment(prefix: "// ")
+		#expect(editor.text == "// aaa\n// bbb\nccc\n")
+	}
+}

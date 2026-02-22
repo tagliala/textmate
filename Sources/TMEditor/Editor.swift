@@ -222,6 +222,8 @@ public final class Editor: @unchecked Sendable {
 			performMoveSelection(deltaColumn: 1)
 
 		// MARK: Other
+		case .toggleComment:
+			break // Handled by TMDocumentEditor which has scope/bundle context
 		case .toggleColumnSelection:
 			performToggleColumnSelection()
 		case .deselectLast:
@@ -2068,6 +2070,90 @@ public extension Editor {
 	/// The action name for the current redo step.
 	var redoActionName: String? {
 		undoManager.redoActionName
+	}
+}
+
+// MARK: - Toggle Comment
+
+public extension Editor {
+	/// Toggles line comments on the lines covered by each selection.
+	///
+	/// If all affected lines already start with the comment prefix
+	/// (after optional leading whitespace), the prefix is removed.
+	/// Otherwise the prefix is inserted after the common leading
+	/// whitespace of all affected lines.
+	func toggleLineComment(prefix: String) {
+		let sels = selections.selections
+		guard !prefix.isEmpty, !sels.isEmpty else { return }
+
+		// Collect affected line ranges for each selection.
+		var lineRanges: [(start: Int, end: Int)] = []
+		for sel in sels {
+			let startLine = buffer.convert(offset: sel.start.offset).line
+			var endLine = buffer.convert(offset: sel.end.offset).line
+			// If selection ends at column 0, don't include that line.
+			if endLine > startLine, sel.end.offset == buffer.lineStart(endLine) {
+				endLine -= 1
+			}
+			lineRanges.append((startLine, endLine))
+		}
+
+		// Deduplicate and merge overlapping ranges.
+		let allLines = Set(lineRanges.flatMap { $0.start ... $0.end })
+
+		// Check if ALL lines already have the comment prefix.
+		let trimmedPrefix = String(prefix.reversed().drop(while: { $0 == " " || $0 == "\t" }).reversed())
+		let allCommented = allLines.allSatisfy { line in
+			let lineText = buffer.substring(from: buffer.lineStart(line), to: buffer.lineEnd(line))
+			let stripped = lineText.drop(while: { $0 == " " || $0 == "\t" })
+			return stripped.hasPrefix(trimmedPrefix)
+		}
+
+		undoManager.beginUndoGroup(selections: selections, actionName: "Comment")
+
+		if allCommented {
+			// Remove comment prefix from all lines, from end to start.
+			for line in allLines.sorted().reversed() {
+				let lineStart = buffer.lineStart(line)
+				let lineText = buffer.substring(from: lineStart, to: buffer.lineEnd(line))
+				let wsCount = lineText.prefix(while: { $0 == " " || $0 == "\t" }).count
+				let afterWS = lineStart + wsCount
+				// Remove the prefix (including trailing space if present).
+				let remaining = String(lineText.dropFirst(wsCount))
+				let removeLen: Int
+				if remaining.hasPrefix(prefix) {
+					removeLen = prefix.utf8.count
+				} else if remaining.hasPrefix(trimmedPrefix) {
+					removeLen = trimmedPrefix.utf8.count
+				} else {
+					continue
+				}
+				buffer.replace(from: afterWS, to: afterWS + removeLen, with: "")
+			}
+		} else {
+			// Find minimum indentation across non-empty lines.
+			var minIndent = Int.max
+			for line in allLines {
+				let lineText = buffer.substring(from: buffer.lineStart(line), to: buffer.lineEnd(line))
+				let stripped = lineText.drop(while: { $0 == " " || $0 == "\t" })
+				// Skip empty/whitespace-only lines for indent calculation.
+				if stripped.isEmpty || stripped.first == "\n" || stripped.first == "\r" {
+					continue
+				}
+				let wsPrefix = lineText.prefix(while: { $0 == " " || $0 == "\t" })
+				minIndent = min(minIndent, wsPrefix.utf8.count)
+			}
+			if minIndent == Int.max { minIndent = 0 }
+
+			// Insert comment prefix at minIndent position, from end to start.
+			for line in allLines.sorted().reversed() {
+				let lineStart = buffer.lineStart(line)
+				let insertPos = lineStart + minIndent
+				buffer.replace(from: insertPos, to: insertPos, with: prefix)
+			}
+		}
+
+		undoManager.endUndoGroup(selections: selections)
 	}
 }
 

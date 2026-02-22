@@ -1,4 +1,5 @@
 import AppKit
+import TMBundle
 import TMBundleRuntime
 import TMCompatibility
 import TMCore
@@ -472,6 +473,47 @@ public final class TMDocumentEditor {
 		editor.redo()
 		syncAfterEdit()
 	}
+
+	// MARK: - Toggle Comment
+
+	/// Toggles line comment on the current selection using grammar-aware
+	/// comment settings from the bundle index.
+	public func toggleComment() {
+		guard let bundleIndex else { return }
+		let scope = syntaxHighlighter.activeScope ?? ""
+		let context = ScopeContext(scope)
+
+		let prefItems = bundleIndex.query(BundleQuery(kinds: .settings))
+		var bestRank: Double = -1
+		var lineComment: String?
+
+		for item in prefItems {
+			let selector = ScopeSelector(item.scopeSelector)
+			guard let rank = selector.doesMatch(context), rank > bestRank else { continue }
+			guard let plist = item.plist,
+			      let settingsDict = plist["settings"] as? [String: Any]
+			else { continue }
+
+			// Extract TM_COMMENT_START from direct key or shellVariables.
+			var comment: String?
+			if let direct = settingsDict["TM_COMMENT_START"] as? String {
+				comment = direct
+			} else if let vars = settingsDict["shellVariables"] as? [[String: Any]] {
+				comment = vars.first(where: { $0["name"] as? String == "TM_COMMENT_START" })?["value"] as? String
+			}
+			if comment != nil {
+				bestRank = rank
+				lineComment = comment
+			}
+		}
+
+		guard let lineComment, !lineComment.isEmpty else { return }
+
+		beginChangeGrouping()
+		editor.toggleLineComment(prefix: lineComment)
+		endChangeGrouping()
+		syncAfterEdit()
+	}
 }
 
 // MARK: - EditorViewAction → EditorAction Mapping
@@ -626,6 +668,12 @@ extension TMDocumentEditor: EditorViewDelegate {
 		let effectiveName = selectorName == "cancelOperation:" ? "complete:" : selectorName
 
 		if let action = EditorAction(selector: effectiveName) {
+			// Toggle comment requires bundle-aware scope lookup, so handle it here.
+			if action == .toggleComment {
+				toggleComment()
+				return
+			}
+
 			let isCompletion = action == .complete || action == .nextCompletion || action == .previousCompletion
 			let needsGroup = action.isDeletion || action.isClipboard || action.isTextTransform || isCompletion
 			if needsGroup { beginChangeGrouping() }
