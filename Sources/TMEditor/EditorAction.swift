@@ -103,6 +103,7 @@ public enum EditorAction: String, Sendable, CaseIterable {
 	case paste
 	case pasteNext
 	case pastePrevious
+	case pasteWithoutReindent
 	case pasteFromHistoryAndFind
 	case yank
 
@@ -316,6 +317,8 @@ public extension EditorAction {
 			self = .pasteNext
 		case "pastePrevious:":
 			self = .pastePrevious
+		case "pasteWithoutReindent:":
+			self = .pasteWithoutReindent
 		case "yank:":
 			self = .yank
 		case "copySelectionToFindPboard:":
@@ -490,7 +493,7 @@ public extension EditorAction {
 	var isClipboard: Bool {
 		switch self {
 		case .cut, .copy, .copySelectionToFindClipboard, .copySelectionToReplaceClipboard,
-		     .paste, .pasteNext, .pastePrevious, .pasteFromHistoryAndFind, .yank:
+		     .paste, .pasteNext, .pastePrevious, .pasteWithoutReindent, .pasteFromHistoryAndFind, .yank:
 			true
 		default:
 			false

@@ -136,6 +136,12 @@ enum MainMenuBuilder {
 			key: "w",
 			modifiers: [.command, .shift],
 		)
+		menu.addItem(
+			title: String(localized: "Close All Tabs", comment: "File menu item"),
+			action: NSSelectorFromString("performCloseAllTabs:"),
+			key: "w",
+			modifiers: [.command, .option, .control],
+		)
 		menu.addItem(.separator())
 		menu.addItem(
 			title: String(localized: "Save", comment: "File menu item"),
@@ -153,6 +159,10 @@ enum MainMenuBuilder {
 			action: #selector(AppDelegate.saveAllDocuments(_:)),
 			key: "s",
 			modifiers: [.command, .option],
+		)
+		menu.addItem(
+			title: String(localized: "Revert", comment: "File menu item"),
+			action: NSSelectorFromString("revertDocumentToSaved:"),
 		)
 		menu.addItem(.separator())
 		menu.addItem(
@@ -217,6 +227,13 @@ enum MainMenuBuilder {
 			key: "v",
 			modifiers: [.command, .shift],
 		)
+		let pasteWithoutIndentItem = pasteMenu.addItem(
+			title: String(localized: "Paste Without Indenting", comment: "Edit menu item"),
+			action: NSSelectorFromString("pasteWithoutReindent:"),
+			key: "v",
+			modifiers: [.command, .control],
+		)
+		pasteWithoutIndentItem.isAlternate = true
 		let pasteItem = menu.addItem(
 			title: String(localized: "Paste", comment: "Edit menu item"),
 			action: nil,
@@ -397,6 +414,10 @@ enum MainMenuBuilder {
 			key: "w",
 			modifiers: [.command, .option],
 		)
+		menu.addItem(
+			title: String(localized: "Allow Scroll Past End", comment: "View menu item"),
+			action: NSSelectorFromString("toggleScrollPastEnd:"),
+		)
 		menu.addItem(.separator())
 
 		// Tab Size submenu
@@ -555,6 +576,13 @@ enum MainMenuBuilder {
 			title: String(localized: "Go to Related File", comment: "Navigate menu item"),
 			action: NSSelectorFromString("goToRelatedFile:"),
 			key: String(Character(UnicodeScalar(NSUpArrowFunctionKey)!)),
+			modifiers: [.command, .option],
+		)
+		menu.addItem(.separator())
+		menu.addItem(
+			title: String(localized: "Move Focus to File Browser", comment: "Navigate menu item"),
+			action: NSSelectorFromString("moveFocus:"),
+			key: String(Character(UnicodeScalar(0x0009))), // Tab
 			modifiers: [.command, .option],
 		)
 

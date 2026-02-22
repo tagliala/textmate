@@ -35,6 +35,18 @@ public extension DocumentWindowController {
 		scrollView.reflectScrolledClipView(clipView)
 	}
 
+	// MARK: - Revert
+
+	@objc func revertDocumentToSaved(_: Any?) {
+		guard let doc = selectedDocument, doc.path != nil else { return }
+		Task { @MainActor in
+			try? await doc.reload(mergeChanges: false)
+			documentEditor?.reloadFromDocument()
+			updateWindowTitle()
+			updateTabBar()
+		}
+	}
+
 	// MARK: - Undo / Redo
 
 	@objc func undo(_: Any?) {
@@ -63,6 +75,14 @@ public extension DocumentWindowController {
 		editorView.layoutManager.softWrap.toggle()
 		editorView.needsLayout = true
 		editorView.needsDisplay = true
+	}
+
+	// MARK: - Scroll Past End
+
+	@objc func toggleScrollPastEnd(_: Any?) {
+		editorView.layoutManager.scrollPastEnd.toggle()
+		UserDefaults.standard.set(editorView.layoutManager.scrollPastEnd, forKey: "scrollPastEnd")
+		editorView.needsLayout = true
 	}
 
 	// MARK: - Show Invisibles (Editor)
@@ -161,6 +181,18 @@ public extension DocumentWindowController {
 
 	@objc func toggleComment(_: Any?) {
 		documentEditor?.toggleComment()
+	}
+
+	// MARK: - Move Focus
+
+	@objc func moveFocus(_: Any?) {
+		guard let w = window else { return }
+		let outlineView = fileBrowserController.outlineView
+		if w.firstResponder === outlineView {
+			w.makeFirstResponder(editorView)
+		} else {
+			w.makeFirstResponder(outlineView)
+		}
 	}
 
 	// MARK: - Folding

@@ -446,6 +446,11 @@ public class DocumentWindowController: NSWindowController, NSMenuItemValidation 
 		case NSSelectorFromString("toggleShowInvisibles:"):
 			menuItem.state = editorView.showInvisibles ? .on : .off
 			return true
+		case NSSelectorFromString("toggleScrollPastEnd:"):
+			menuItem.title = editorView.layoutManager.scrollPastEnd
+				? String(localized: "Disallow Scroll Past End", comment: "View menu item")
+				: String(localized: "Allow Scroll Past End", comment: "View menu item")
+			return true
 		case NSSelectorFromString("takeTabSizeFrom:"):
 			menuItem.state = menuItem.tag == editorView.layoutManager.tabSize ? .on : .off
 			return true
@@ -481,6 +486,8 @@ public class DocumentWindowController: NSWindowController, NSMenuItemValidation 
 		case NSSelectorFromString("goToRelatedFile:"),
 		     NSSelectorFromString("revealFileInProject:"):
 			return selectedDocument?.path != nil
+		case NSSelectorFromString("revertDocumentToSaved:"):
+			return selectedDocument?.path != nil && selectedDocument?.isModified == true
 		case NSSelectorFromString("goToProjectFolder:"):
 			return projectPath != nil
 		case NSSelectorFromString("goToNextBookmark:"),
@@ -650,6 +657,7 @@ public class DocumentWindowController: NSWindowController, NSMenuItemValidation 
 
 	private func setupEditorView() {
 		editorView.layoutManager.setFont(.monospacedSystemFont(ofSize: 13, weight: .regular))
+		editorView.layoutManager.scrollPastEnd = UserDefaults.standard.bool(forKey: "scrollPastEnd")
 		editorView.translatesAutoresizingMaskIntoConstraints = false
 
 		scrollView.documentView = editorView

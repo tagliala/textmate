@@ -174,6 +174,8 @@ public final class Editor: @unchecked Sendable {
 			performPastePrevious()
 		case .pasteFromHistoryAndFind:
 			performPasteFromHistoryAndFind()
+		case .pasteWithoutReindent:
+			performPasteWithoutReindent()
 		case .yank:
 			performYank()
 
@@ -868,6 +870,14 @@ extension Editor {
 
 	private func performPasteFromHistoryAndFind() {
 		performPaste()
+	}
+
+	private func performPasteWithoutReindent() {
+		guard let entry = clipboards.general.current() else { return }
+		undoManager.beginUndoGroup(selections: selections, actionName: "Paste")
+		let newRanges = replaceSelections(with: entry.text)
+		selections = newRanges
+		undoManager.endUndoGroup(selections: selections)
 	}
 
 	private func performYank() {
