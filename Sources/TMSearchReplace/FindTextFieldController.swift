@@ -181,7 +181,7 @@ private final class HistoryPopoverViewController: NSViewController, NSTableViewD
 
 	@available(*, unavailable)
 	required init?(coder _: NSCoder) {
-		fatalError()
+		fatalError("init(coder:) is not supported")
 	}
 
 	override func loadView() {

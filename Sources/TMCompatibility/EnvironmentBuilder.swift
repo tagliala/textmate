@@ -119,15 +119,19 @@ public struct EnvironmentBuilder: Sendable {
 		public var pid: Int32?
 		/// Path to the TextMate support folder.
 		public var supportPath: String?
+		/// Path to the `mate` CLI tool.
+		public var matePath: String?
 
 		public init(
 			appPath: String? = nil,
 			pid: Int32? = nil,
 			supportPath: String? = nil,
+			matePath: String? = nil,
 		) {
 			self.appPath = appPath
 			self.pid = pid
 			self.supportPath = supportPath
+			self.matePath = matePath
 		}
 	}
 
@@ -215,6 +219,9 @@ public struct EnvironmentBuilder: Sendable {
 		}
 		if let supportPath = app.supportPath {
 			env["TM_SUPPORT_PATH"] = supportPath
+		}
+		if let matePath = app.matePath {
+			env["TM_MATE"] = matePath
 		}
 
 		return env

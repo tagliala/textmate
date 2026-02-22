@@ -130,11 +130,24 @@ public final class CommandDispatcher {
 			return
 		}
 		command.fixShebang()
-		await execute(command: command, bundleName: bundleName(for: item))
+
+		// Compute per-item environment variables (TM_BUNDLE_SUPPORT, etc).
+		var bundleVars: [String: String] = [
+			"TM_BUNDLE_ITEM_NAME": item.name,
+			"TM_BUNDLE_ITEM_UUID": item.uuid,
+		]
+		if let bundle = bundleIndex.bundle(uuid: item.bundleUUID) {
+			let supportPath = (bundle.path as NSString).appendingPathComponent("Support")
+			if FileManager.default.fileExists(atPath: supportPath) {
+				bundleVars["TM_BUNDLE_SUPPORT"] = supportPath
+			}
+		}
+
+		await execute(command: command, bundleName: bundleName(for: item), bundleVariables: bundleVars)
 	}
 
 	/// Executes a pre-parsed `BundleCommand`.
-	public func execute(command: BundleCommand, bundleName: String = "") async {
+	public func execute(command: BundleCommand, bundleName: String = "", bundleVariables: [String: String] = [:]) async {
 		guard state == .idle else { return }
 
 		// 1. Security check.
@@ -181,7 +194,10 @@ public final class CommandDispatcher {
 			return
 		}
 
-		let environment = delegate.environment
+		var environment = delegate.environment
+		for (key, value) in bundleVariables {
+			environment[key] = value
+		}
 		let workingDirectory = delegate.workingDirectory
 
 		// 4. Gather input.

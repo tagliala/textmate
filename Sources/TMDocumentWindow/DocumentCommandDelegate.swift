@@ -341,6 +341,7 @@ extension DocumentWindowController: CommandDispatcherDelegate {
 		let appCtx = EnvironmentBuilder.AppContext(
 			appPath: Bundle.main.bundlePath,
 			pid: ProcessInfo.processInfo.processIdentifier,
+			matePath: Bundle.main.path(forAuxiliaryExecutable: "mate"),
 		)
 
 		var env = EnvironmentBuilder.buildFull(

@@ -151,7 +151,7 @@ public final class FindPanelController: NSWindowController, FindServer, Sendable
 
 	@available(*, unavailable)
 	required init?(coder _: NSCoder) {
-		fatalError()
+		fatalError("init(coder:) is not supported")
 	}
 
 	// MARK: - Public API
