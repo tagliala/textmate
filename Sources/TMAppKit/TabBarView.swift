@@ -302,6 +302,8 @@ public protocol TabBarViewDelegate: AnyObject {
 	func tabBarView(_ tabBarView: TabBarView, didReceiveTabFrom sourceWindowID: UUID, tabIndex: Int, dropIndex: Int)
 	/// Called when a tab is dragged out of the tab bar (tear-off).
 	func tabBarView(_ tabBarView: TabBarView, didTearOffTabAt index: Int, screenPoint: NSPoint)
+	/// Called when a tab is right-clicked; return a context menu or nil.
+	func tabBarView(_ tabBarView: TabBarView, contextMenuForTabAt index: Int) -> NSMenu?
 }
 
 /// Default no-op implementations.
@@ -310,6 +312,9 @@ public extension TabBarViewDelegate {
 	func tabBarView(_: TabBarView, didReceiveFileDrop _: [URL]) {}
 	func tabBarView(_: TabBarView, didReceiveTabFrom _: UUID, tabIndex _: Int, dropIndex _: Int) {}
 	func tabBarView(_: TabBarView, didTearOffTabAt _: Int, screenPoint _: NSPoint) {}
+	func tabBarView(_: TabBarView, contextMenuForTabAt _: Int) -> NSMenu? {
+		nil
+	}
 }
 
 // MARK: - TabButton
@@ -380,6 +385,15 @@ private class TabButton: NSView {
 		selectAction?(tabIndex)
 		// Start drag tracking — if the mouse moves more than 3px, begin drag
 		dragStartLocation = convert(event.locationInWindow, from: nil)
+	}
+
+	override func rightMouseDown(with event: NSEvent) {
+		// Select the right-clicked tab, then ask the tab bar for a context menu.
+		selectAction?(tabIndex)
+		let ownerTabBar = superview?.superview?.superview as? TabBarView
+		if let menu = ownerTabBar?.delegate?.tabBarView(ownerTabBar!, contextMenuForTabAt: tabIndex) {
+			NSMenu.popUpContextMenu(menu, with: event, for: self)
+		}
 	}
 
 	private var dragStartLocation: NSPoint = .zero

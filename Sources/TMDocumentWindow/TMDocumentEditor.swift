@@ -812,6 +812,17 @@ extension TMDocumentEditor: EditorViewDelegate {
 		menu.addItem(withTitle: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "")
 		menu.addItem(withTitle: "Paste", action: #selector(NSText.paste(_:)), keyEquivalent: "")
 		menu.addItem(.separator())
+		menu.addItem(
+			withTitle: String(localized: "Fold/Unfold", comment: "Text view context menu"),
+			action: NSSelectorFromString("toggleCurrentFolding:"),
+			keyEquivalent: "",
+		)
+		menu.addItem(
+			withTitle: String(localized: "Filter Through Command…", comment: "Text view context menu"),
+			action: NSSelectorFromString("orderFrontRunCommandWindow:"),
+			keyEquivalent: "",
+		)
+		menu.addItem(.separator())
 		menu.addItem(withTitle: "Select All", action: #selector(NSText.selectAll(_:)), keyEquivalent: "")
 		return menu
 	}

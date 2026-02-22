@@ -46,6 +46,11 @@ enum MainMenuBuilder {
 			key: ",",
 		)
 		menu.addItem(.separator())
+		menu.addItem(
+			title: String(localized: "Check for Update", comment: "App menu: check for update"),
+			action: NSSelectorFromString("checkForUpdates:"),
+		)
+		menu.addItem(.separator())
 
 		let servicesMenu = NSMenu(title: String(localized: "Services", comment: "App menu: services submenu"))
 		let servicesItem = menu.addItem(
@@ -338,6 +343,10 @@ enum MainMenuBuilder {
 			key: "f",
 			modifiers: [.command, .shift],
 		)
+		findMenu.addItem(
+			title: String(localized: "Find in Folder…", comment: "Find submenu item"),
+			action: NSSelectorFromString("orderFrontFindInFolderPanel:"),
+		)
 		findMenu.addItem(.separator())
 		findMenu.addItem(
 			title: String(localized: "Show Find History", comment: "Find submenu item"),
@@ -471,6 +480,8 @@ enum MainMenuBuilder {
 		spellingMenu.addItem(
 			title: String(localized: "Check Spelling as You Type", comment: "Spelling submenu item"),
 			action: NSSelectorFromString("toggleContinuousSpellChecking:"),
+			key: ";",
+			modifiers: [.command, .option],
 		)
 		let spellingItem = menu.addItem(
 			title: String(localized: "Spelling", comment: "Edit menu item"),
@@ -498,6 +509,7 @@ enum MainMenuBuilder {
 			title: String(localized: "Show Fonts", comment: "Font submenu item"),
 			action: #selector(NSFontManager.orderFrontFontPanel(_:)),
 		)
+		fontMenu.addItem(.separator())
 		fontMenu.addItem(
 			title: String(localized: "Bigger", comment: "Font submenu item"),
 			action: NSSelectorFromString("makeTextLarger:"),
@@ -550,10 +562,6 @@ enum MainMenuBuilder {
 			action: NSSelectorFromString("toggleSoftWrap:"),
 			key: "w",
 			modifiers: [.command, .option],
-		)
-		menu.addItem(
-			title: String(localized: "Allow Scroll Past End", comment: "View menu item"),
-			action: NSSelectorFromString("toggleScrollPastEnd:"),
 		)
 		menu.addItem(
 			title: String(localized: "Show Wrap Column", comment: "View menu item"),
@@ -663,6 +671,11 @@ enum MainMenuBuilder {
 		)
 		foldItem.submenu = foldMenu
 
+		menu.addItem(.separator())
+		menu.addItem(
+			title: String(localized: "Toggle Scroll Past End", comment: "View menu item"),
+			action: NSSelectorFromString("toggleScrollPastEnd:"),
+		)
 		menu.addItem(.separator())
 		menu.addItem(
 			title: String(localized: "View Source", comment: "View menu item"),
@@ -1059,7 +1072,7 @@ enum MainMenuBuilder {
 			title: String(localized: "Replay Macro", comment: "Bundles menu item"),
 			action: NSSelectorFromString("replayMacro:"),
 			key: "m",
-			modifiers: [.command, .option, .shift],
+			modifiers: [.command, .shift],
 		)
 		menu.addItem(
 			title: String(localized: "Save Macro…", comment: "Bundles menu item"),

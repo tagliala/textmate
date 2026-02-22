@@ -440,4 +440,53 @@ extension DocumentWindowController: TabBarViewDelegate {
 			activate: true,
 		)
 	}
+
+	public func tabBarView(_: TabBarView, contextMenuForTabAt index: Int) -> NSMenu? {
+		guard index >= 0, index < documents.count else { return nil }
+
+		let menu = NSMenu()
+		menu.addItem(
+			withTitle: String(localized: "New Tab", comment: "Tab context menu"),
+			action: NSSelectorFromString("newDocumentInTab:"),
+			keyEquivalent: "",
+		)
+		menu.addItem(.separator())
+		menu.addItem(
+			withTitle: String(localized: "Close Tab", comment: "Tab context menu"),
+			action: #selector(NSWindow.performClose(_:)),
+			keyEquivalent: "",
+		)
+		let closeOthers = menu.addItem(
+			withTitle: String(localized: "Close Other Tabs", comment: "Tab context menu"),
+			action: NSSelectorFromString("performCloseOtherTabs:"),
+			keyEquivalent: "",
+		)
+		closeOthers.isEnabled = documents.count > 1
+		let closeRight = menu.addItem(
+			withTitle: String(localized: "Close Tabs to the Right", comment: "Tab context menu"),
+			action: NSSelectorFromString("performCloseTabsToTheRight:"),
+			keyEquivalent: "",
+		)
+		closeRight.isEnabled = index < documents.count - 1
+		let closeLeft = menu.addItem(
+			withTitle: String(localized: "Close Tabs to the Left", comment: "Tab context menu"),
+			action: NSSelectorFromString("performCloseTabsToTheLeft:"),
+			keyEquivalent: "",
+		)
+		closeLeft.isEnabled = index > 0
+		menu.addItem(.separator())
+		menu.addItem(
+			withTitle: String(localized: "Move Tab to New Window", comment: "Tab context menu"),
+			action: NSSelectorFromString("moveDocumentToNewWindow:"),
+			keyEquivalent: "",
+		)
+		menu.addItem(.separator())
+		let stickyItem = menu.addItem(
+			withTitle: String(localized: "Sticky", comment: "Tab context menu"),
+			action: NSSelectorFromString("toggleSticky:"),
+			keyEquivalent: "",
+		)
+		stickyItem.state = isDocumentSticky(documents[index]) ? .on : .off
+		return menu
+	}
 }
