@@ -123,6 +123,12 @@ enum MainMenuBuilder {
 			title: String(localized: "Clear Menu", comment: "Open Recent submenu item"),
 			action: NSSelectorFromString("clearRecentDocuments:"),
 		)
+		menu.addItem(
+			title: String(localized: "Open Recent Project…", comment: "File menu item"),
+			action: NSSelectorFromString("openFavorites:"),
+			key: "O",
+			modifiers: [.command, .shift],
+		)
 
 		menu.addItem(.separator())
 		menu.addItem(
@@ -1054,6 +1060,12 @@ enum MainMenuBuilder {
 			action: NSSelectorFromString("replayMacro:"),
 			key: "m",
 			modifiers: [.command, .option, .shift],
+		)
+		menu.addItem(
+			title: String(localized: "Save Macro…", comment: "Bundles menu item"),
+			action: NSSelectorFromString("saveScratchMacro:"),
+			key: "m",
+			modifiers: [.command, .control],
 		)
 
 		return item

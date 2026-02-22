@@ -420,6 +420,19 @@ class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency BundleMenuAc
 		chooser.showAndEnumerate(relativeTo: frame)
 	}
 
+	private var favoriteChooser: FavoriteChooserController?
+
+	@objc func openFavorites(_: Any?) {
+		let frame = currentWindowController()?.window?.frame
+			?? NSApp.keyWindow?.frame
+			?? NSRect(x: 200, y: 200, width: 800, height: 600)
+
+		let chooser = FavoriteChooserController()
+		chooser.delegate = self
+		chooser.showWindow(relativeTo: frame)
+		favoriteChooser = chooser
+	}
+
 	@objc func showBundleItemChooser(_: Any?) {
 		guard let frame = currentWindowController()?.window?.frame ?? NSApp.keyWindow?.frame else {
 			return
@@ -726,6 +739,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency BundleMenuAc
 		if isDir.boolValue {
 			controller.setProjectRoot(url)
 			controller.restoreProjectState()
+			RecentProjectsManager.shared.noteProjectOpened(path: url.path)
 		} else {
 			controller.openFile(at: url)
 			RecentDocumentsManager.shared.noteDocumentOpened(path: url.path)
@@ -752,5 +766,22 @@ extension AppDelegate: RMateServerDelegate {
 		if let sel = request.selection {
 			windowControllers.last?.navigateToSelectionString(sel)
 		}
+	}
+}
+
+// MARK: - ChooserPanelDelegate
+
+extension AppDelegate: ChooserPanelDelegate {
+	func chooserPanel(_: ChooserPanelController, didSelectItems items: [any ChooserItem]) {
+		for item in items {
+			if let favorite = item as? FavoriteChooserItem {
+				openURL(URL(fileURLWithPath: favorite.path))
+			}
+		}
+		favoriteChooser = nil
+	}
+
+	func chooserPanelDidCancel(_: ChooserPanelController) {
+		favoriteChooser = nil
 	}
 }

@@ -1,5 +1,6 @@
 #if canImport(AppKit)
 import AppKit
+import TMBundleRuntime
 import TMBundleUI
 import TMCompatibility
 import TMCore
@@ -702,6 +703,75 @@ public extension DocumentWindowController {
 	/// Replays the last recorded macro.
 	@objc func replayMacro(_: Any?) {
 		documentEditor?.replayMacro()
+	}
+
+	/// Saves the last recorded macro as a .tmMacro bundle item.
+	@objc func saveScratchMacro(_: Any?) {
+		guard let macro = documentEditor?.macroRecorder.lastMacro else { return }
+
+		let alert = NSAlert()
+		alert.messageText = String(localized: "Save Macro", comment: "Save macro dialog title")
+		alert.informativeText = String(localized: "Enter a name for the macro:", comment: "Save macro dialog prompt")
+		alert.addButton(withTitle: String(localized: "Save", comment: "Save button"))
+		alert.addButton(withTitle: String(localized: "Cancel", comment: "Cancel button"))
+
+		let nameField = NSTextField(frame: NSRect(x: 0, y: 0, width: 300, height: 24))
+		nameField.stringValue = macro.name
+		alert.accessoryView = nameField
+		alert.window.initialFirstResponder = nameField
+
+		guard alert.runModal() == .alertFirstButtonReturn else { return }
+
+		let macroName = nameField.stringValue.isEmpty ? "Untitled Macro" : nameField.stringValue
+		let macroUUID = UUID().uuidString
+
+		// Build the commands array matching C++ format.
+		let commands: [[String: Any]] = macro.actions.map { recorded in
+			var dict: [String: Any] = ["command": recorded.action.rawValue + ":"]
+			if let text = recorded.text {
+				dict["argument"] = text
+			}
+			return dict
+		}
+
+		let plist: [String: Any] = [
+			"name": macroName,
+			"uuid": macroUUID,
+			"commands": commands,
+		]
+
+		// Save to user bundles directory under a "Macros" bundle.
+		let bundlePath = (BundleLocations.userBundlesPath as NSString)
+			.appendingPathComponent("Macros.tmbundle")
+		let macrosDir = (bundlePath as NSString).appendingPathComponent("Macros")
+		let filePath = (macrosDir as NSString)
+			.appendingPathComponent("\(macroUUID).tmMacro")
+
+		let fm = FileManager.default
+		do {
+			try fm.createDirectory(atPath: macrosDir, withIntermediateDirectories: true)
+
+			// Ensure info.plist exists for the bundle.
+			let infoPlistPath = (bundlePath as NSString).appendingPathComponent("info.plist")
+			if !fm.fileExists(atPath: infoPlistPath) {
+				let infoPlist: [String: Any] = [
+					"name": "Macros",
+					"uuid": UUID().uuidString,
+				]
+				let infoData = try PropertyListSerialization.data(
+					fromPropertyList: infoPlist, format: .xml, options: 0,
+				)
+				try infoData.write(to: URL(fileURLWithPath: infoPlistPath))
+			}
+
+			let data = try PropertyListSerialization.data(
+				fromPropertyList: plist, format: .xml, options: 0,
+			)
+			try data.write(to: URL(fileURLWithPath: filePath))
+		} catch {
+			let errorAlert = NSAlert(error: error)
+			errorAlert.runModal()
+		}
 	}
 }
 

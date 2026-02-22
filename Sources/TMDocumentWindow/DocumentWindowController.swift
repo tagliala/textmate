@@ -490,6 +490,8 @@ public class DocumentWindowController: NSWindowController, NSMenuItemValidation 
 			return true
 		case NSSelectorFromString("replayMacro:"):
 			return documentEditor?.macroRecorder.lastMacro != nil
+		case NSSelectorFromString("saveScratchMacro:"):
+			return documentEditor?.macroRecorder.lastMacro != nil
 		case NSSelectorFromString("undo:"):
 			if let name = documentEditor?.editor.undoActionName {
 				menuItem.title = String(localized: "Undo \\(name)", comment: "Edit menu item with action name")
