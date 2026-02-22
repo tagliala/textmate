@@ -224,6 +224,7 @@ public class DocumentWindowController: NSWindowController, NSMenuItemValidation 
 
 	/// Set the project root for the file browser.
 	public func setProjectRoot(_ url: URL) {
+		projectPath = url.path
 		fileBrowserController.goToURL(url)
 		window?.title = url.lastPathComponent
 	}

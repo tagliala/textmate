@@ -85,7 +85,17 @@ class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency BundleMenuAc
 		recoverBackupsIfNeeded()
 		FindPasteboard.shared.restoreHistory()
 		AppPreferencesWindowController.shared.configure(bundleInstaller: bundleSystem.bundleInstaller)
-		restoreWindowState() ?? newDocument(nil)
+
+		let defaults = UserDefaults.standard
+		if !defaults.bool(forKey: PreferencesKeys.disableSessionRestore) {
+			restoreWindowState()
+		}
+		if DocumentWindowController.allControllers.isEmpty,
+		   !defaults.bool(forKey: PreferencesKeys.disableNewDocumentAtStartup)
+		{
+			newDocument(nil)
+		}
+
 		backupManager.start()
 	}
 
@@ -156,7 +166,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency BundleMenuAc
 	}
 
 	func applicationShouldHandleReopen(_: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-		if !flag {
+		if !flag,
+		   !UserDefaults.standard.bool(forKey: PreferencesKeys.disableNewDocumentAtReactivation)
+		{
 			newDocument(nil)
 		}
 		return true
@@ -170,6 +182,20 @@ class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency BundleMenuAc
 				openURL(url)
 			}
 		}
+	}
+
+	// MARK: - Dock Menu
+
+	func applicationDockMenu(_: NSApplication) -> NSMenu? {
+		let menu = NSMenu()
+		menu.addItem(
+			NSMenuItem(
+				title: String(localized: "New File", comment: "Dock menu item"),
+				action: #selector(newDocument(_:)),
+				keyEquivalent: "",
+			),
+		)
+		return menu
 	}
 
 	// MARK: - Bundles
@@ -530,10 +556,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency BundleMenuAc
 	}
 
 	/// Restore full session (documents, tabs, window frames, file browser
-	/// state). Falls back to nil when no session is saved on disk.
+	/// state). Returns true if session was restored.
 	@discardableResult
-	private func restoreWindowState() -> Void? {
-		guard DocumentWindowController.restoreSession() else { return nil }
+	private func restoreWindowState() -> Bool {
+		guard DocumentWindowController.restoreSession() else { return false }
 		// Populate our tracking array with the restored controllers.
 		windowControllers = DocumentWindowController.sortedControllers
 		// Apply theme and bundle index to all restored windows.
@@ -542,7 +568,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency BundleMenuAc
 			controller.commandDispatcher = bundleSystem.commandDispatcher
 			applyTheme(to: controller)
 		}
-		return ()
+		return true
 	}
 
 	// MARK: - txmt:// URL Scheme
@@ -699,6 +725,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency BundleMenuAc
 
 		if isDir.boolValue {
 			controller.setProjectRoot(url)
+			controller.restoreProjectState()
 		} else {
 			controller.openFile(at: url)
 			RecentDocumentsManager.shared.noteDocumentOpened(path: url.path)

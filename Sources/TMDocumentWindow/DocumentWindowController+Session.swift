@@ -36,6 +36,8 @@ public extension DocumentWindowController {
 		public var displayName: String?
 		public var isSelected: Bool = false
 		public var isSticky: Bool = false
+		public var selection: String?
+		public var scrollPosition: [CGFloat]?
 	}
 
 	/// Top-level session container.
@@ -103,6 +105,11 @@ public extension DocumentWindowController {
 
 			docInfo.isSelected = (i == selectedTabIndex)
 			docInfo.isSticky = stickyDocumentIdentifiers.contains(doc.id)
+			docInfo.selection = doc.selection
+			if i == selectedTabIndex {
+				let origin = scrollView.contentView.bounds.origin
+				docInfo.scrollPosition = [origin.x, origin.y]
+			}
 			info.documents.append(docInfo)
 		}
 
@@ -207,14 +214,19 @@ public extension DocumentWindowController {
 
 			// Restore documents.
 			var docs: [TMDocument] = []
+			var selectedScrollPos: [CGFloat]?
 			for docInfo in project.documents {
 				let doc = if let path = docInfo.path {
 					TMDocument(path: path, fileType: docInfo.fileType)
 				} else {
 					TMDocument(fileType: docInfo.fileType)
 				}
+				doc.selection = docInfo.selection
 				if docInfo.isSticky {
 					controller.setDocument(doc, sticky: true)
+				}
+				if docInfo.isSelected {
+					selectedScrollPos = docInfo.scrollPosition
 				}
 				docs.append(doc)
 			}
@@ -264,6 +276,17 @@ public extension DocumentWindowController {
 
 			// Open the selected document.
 			controller.openAndSelectDocument(docs[controller.selectedTabIndex], activate: true)
+
+			// Restore selection and scroll position for the selected document.
+			if let sel = docs[controller.selectedTabIndex].selection {
+				controller.navigateToSelectionString(sel)
+			}
+			if let pos = selectedScrollPos, pos.count == 2 {
+				let point = NSPoint(x: pos[0], y: pos[1])
+				controller.scrollView.contentView.scroll(to: point)
+				controller.scrollView.reflectScrolledClipView(controller.scrollView.contentView)
+			}
+
 			restored = true
 		}
 
@@ -295,5 +318,36 @@ public extension DocumentWindowController {
 		let key = "ProjectState:\(path)"
 		guard let data = UserDefaults.standard.data(forKey: key) else { return nil }
 		return try? JSONDecoder().decode(SessionWindowInfo.self, from: data)
+	}
+
+	/// Restore documents/tabs from saved project state for the current project path.
+	///
+	/// Call after ``setProjectRoot(_:)`` so that ``projectPath`` is set.
+	/// - Returns: `true` if project state was found and documents were restored.
+	@discardableResult
+	public func restoreProjectState() -> Bool {
+		guard let path = projectPath,
+		      let state = Self.loadProjectState(for: path)
+		else { return false }
+
+		var docs: [TMDocument] = []
+		for docInfo in state.documents {
+			let doc = if let path = docInfo.path {
+				TMDocument(path: path, fileType: docInfo.fileType)
+			} else {
+				TMDocument(fileType: docInfo.fileType)
+			}
+			doc.selection = docInfo.selection
+			docs.append(doc)
+		}
+		guard !docs.isEmpty else { return false }
+
+		documents = docs
+		selectedTabIndex = min(
+			state.selectedTabIndex,
+			max(docs.count - 1, 0),
+		)
+		openAndSelectDocument(docs[selectedTabIndex], activate: true)
+		return true
 	}
 }
