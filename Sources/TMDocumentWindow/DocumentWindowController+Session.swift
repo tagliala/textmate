@@ -325,7 +325,7 @@ public extension DocumentWindowController {
 	/// Call after ``setProjectRoot(_:)`` so that ``projectPath`` is set.
 	/// - Returns: `true` if project state was found and documents were restored.
 	@discardableResult
-	public func restoreProjectState() -> Bool {
+	func restoreProjectState() -> Bool {
 		guard let path = projectPath,
 		      let state = Self.loadProjectState(for: path)
 		else { return false }

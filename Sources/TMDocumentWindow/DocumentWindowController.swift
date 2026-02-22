@@ -155,7 +155,8 @@ public class DocumentWindowController: NSWindowController, NSMenuItemValidation 
 			backing: .buffered,
 			defer: false,
 		)
-		window.setFrameAutosaveName("DocumentWindow")
+		// Frame autosave disabled — session restore handles window positions.
+		// Using a single shared name caused all windows to fight over one size.
 		window.titlebarAppearsTransparent = false
 		window.isReleasedWhenClosed = false
 		window.minSize = NSSize(width: 400, height: 300)
@@ -174,6 +175,15 @@ public class DocumentWindowController: NSWindowController, NSMenuItemValidation 
 		setupLayout()
 		tabBarView.windowIdentifier = identifier
 		wireDocumentEditor()
+
+		// Restore persisted font size (overridden later by .tm_properties if set).
+		let savedSize = UserDefaults.standard.double(forKey: "editorFontSize")
+		if savedSize >= 6, savedSize <= 72 {
+			editorView.layoutManager.setFont(
+				.monospacedSystemFont(ofSize: CGFloat(savedSize), weight: .regular),
+			)
+			gutterView.font = .monospacedSystemFont(ofSize: CGFloat(savedSize), weight: .regular)
+		}
 
 		// Set ourselves as the window delegate for lifecycle events.
 		window.delegate = self

@@ -1229,6 +1229,29 @@ extension TMDocumentEditor {
 
 		return SpellCheckService.shared.suggestions(for: word, language: spellingLanguage)
 	}
+
+	/// Returns the misspelled word at a given point, or nil if none.
+	func misspelledWord(at point: NSPoint) -> String? {
+		guard let view = editorView else { return nil }
+		let localPoint = view.convert(point, from: nil)
+		let (line, idx) = view.layoutManager.characterIndex(at: localPoint)
+
+		guard let lineText = view.layoutManager.lineText(line), !lineText.isEmpty else { return nil }
+
+		let chars = Array(lineText)
+		var wordStart = min(idx, chars.count - 1)
+		var wordEnd = wordStart
+
+		while wordStart > 0, chars[wordStart - 1].isLetter || chars[wordStart - 1] == "'" {
+			wordStart -= 1
+		}
+		while wordEnd < chars.count, chars[wordEnd].isLetter || chars[wordEnd] == "'" {
+			wordEnd += 1
+		}
+
+		guard wordEnd > wordStart else { return nil }
+		return String(chars[wordStart ..< wordEnd])
+	}
 }
 
 // MARK: - Spell Delegate Methods
@@ -1244,6 +1267,20 @@ public extension TMDocumentEditor {
 
 	func editorView(_: EditorView, spellingSuggestionsAt point: NSPoint) -> [String] {
 		spellingSuggestions(at: point)
+	}
+
+	func editorView(_: EditorView, misspelledWordAt point: NSPoint) -> String? {
+		misspelledWord(at: point)
+	}
+
+	func editorView(_: EditorView, learnWord word: String) {
+		SpellCheckService.shared.learnWord(word)
+		recheckSpelling()
+	}
+
+	func editorView(_: EditorView, ignoreWord word: String) {
+		NSSpellChecker.shared.ignoreWord(word, inSpellDocumentWithTag: spellDocumentTag.value())
+		recheckSpelling()
 	}
 }
 

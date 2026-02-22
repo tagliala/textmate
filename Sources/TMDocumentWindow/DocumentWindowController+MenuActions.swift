@@ -102,6 +102,7 @@ public extension DocumentWindowController {
 		)
 		gutterView.font = .monospacedSystemFont(ofSize: newSize, weight: .regular)
 		editorView.needsDisplay = true
+		UserDefaults.standard.set(newSize, forKey: "editorFontSize")
 	}
 
 	@objc func makeTextSmaller(_: Any?) {
@@ -112,6 +113,7 @@ public extension DocumentWindowController {
 		)
 		gutterView.font = .monospacedSystemFont(ofSize: newSize, weight: .regular)
 		editorView.needsDisplay = true
+		UserDefaults.standard.set(newSize, forKey: "editorFontSize")
 	}
 
 	@objc func makeTextStandardSize(_: Any?) {
@@ -120,6 +122,7 @@ public extension DocumentWindowController {
 		)
 		gutterView.font = .monospacedSystemFont(ofSize: 13, weight: .regular)
 		editorView.needsDisplay = true
+		UserDefaults.standard.removeObject(forKey: "editorFontSize")
 	}
 
 	// MARK: - Show Wrap Column

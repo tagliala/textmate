@@ -66,24 +66,29 @@ struct MenuActionsTests {
 
 	@Test("makeTextLarger increases font size")
 	func makeTextLarger() {
+		UserDefaults.standard.removeObject(forKey: "editorFontSize")
 		let controller = DocumentWindowController()
 		let initialSize = controller.editorView.layoutManager.font.pointSize
 
 		controller.makeTextLarger(nil)
 		#expect(controller.editorView.layoutManager.font.pointSize == initialSize + 1)
+		UserDefaults.standard.removeObject(forKey: "editorFontSize")
 	}
 
 	@Test("makeTextSmaller decreases font size")
 	func makeTextSmaller() {
+		UserDefaults.standard.removeObject(forKey: "editorFontSize")
 		let controller = DocumentWindowController()
 		let initialSize = controller.editorView.layoutManager.font.pointSize
 
 		controller.makeTextSmaller(nil)
 		#expect(controller.editorView.layoutManager.font.pointSize == initialSize - 1)
+		UserDefaults.standard.removeObject(forKey: "editorFontSize")
 	}
 
 	@Test("makeTextStandardSize resets to 13pt")
 	func makeTextStandardSize() {
+		UserDefaults.standard.removeObject(forKey: "editorFontSize")
 		let controller = DocumentWindowController()
 
 		// Change font size first
@@ -97,20 +102,24 @@ struct MenuActionsTests {
 
 	@Test("makeTextLarger clamps at 72pt")
 	func fontSizeUpperBound() {
+		UserDefaults.standard.removeObject(forKey: "editorFontSize")
 		let controller = DocumentWindowController()
 		controller.editorView.layoutManager.setFont(.monospacedSystemFont(ofSize: 72, weight: .regular))
 
 		controller.makeTextLarger(nil)
 		#expect(controller.editorView.layoutManager.font.pointSize == 72)
+		UserDefaults.standard.removeObject(forKey: "editorFontSize")
 	}
 
 	@Test("makeTextSmaller clamps at 6pt")
 	func fontSizeLowerBound() {
+		UserDefaults.standard.removeObject(forKey: "editorFontSize")
 		let controller = DocumentWindowController()
 		controller.editorView.layoutManager.setFont(.monospacedSystemFont(ofSize: 6, weight: .regular))
 
 		controller.makeTextSmaller(nil)
 		#expect(controller.editorView.layoutManager.font.pointSize == 6)
+		UserDefaults.standard.removeObject(forKey: "editorFontSize")
 	}
 
 	// MARK: - Tab Size
@@ -290,6 +299,7 @@ struct SettingsIntegrationTests {
 
 	@Test("applySettings sets font size")
 	func applyFontSize() {
+		UserDefaults.standard.removeObject(forKey: "editorFontSize")
 		let controller = DocumentWindowController()
 
 		// Default font size should be 13pt

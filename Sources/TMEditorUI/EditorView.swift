@@ -786,6 +786,14 @@ public class EditorView: NSView, @preconcurrency NSTextInputClient, NSMenuItemVa
 		delegate?.editorView(self, doCommandBySelector: NSSelectorFromString("pastePrevious:"))
 	}
 
+	@objc public func pasteWithoutReindent(_: Any?) {
+		delegate?.editorView(self, doCommandBySelector: NSSelectorFromString("pasteWithoutReindent:"))
+	}
+
+	@objc public func toggleColumnSelection(_: Any?) {
+		delegate?.editorView(self, doCommandBySelector: NSSelectorFromString("toggleColumnSelection:"))
+	}
+
 	override public func uppercaseWord(_: Any?) {
 		delegate?.editorView(self, doCommandBySelector: NSSelectorFromString("uppercaseWord:"))
 	}
@@ -918,13 +926,41 @@ public class EditorView: NSView, @preconcurrency NSTextInputClient, NSMenuItemVa
 				let point = convert(event.locationInWindow, from: nil)
 				let suggestions = delegate?.editorView(self, spellingSuggestionsAt: point) ?? []
 				if !suggestions.isEmpty {
-					for (i, suggestion) in suggestions.prefix(5).enumerated() {
+					var insertIndex = 0
+					for suggestion in suggestions.prefix(5) {
 						let item = NSMenuItem(title: suggestion, action: #selector(applySuggestion(_:)), keyEquivalent: "")
 						item.target = self
 						item.representedObject = suggestion
-						menu.insertItem(item, at: i)
+						menu.insertItem(item, at: insertIndex)
+						insertIndex += 1
 					}
-					menu.insertItem(.separator(), at: min(suggestions.count, 5))
+					menu.insertItem(.separator(), at: insertIndex)
+					insertIndex += 1
+
+					// Learn / Ignore items for the misspelled word.
+					let word = delegate?.editorView(self, misspelledWordAt: point) ?? ""
+					if !word.isEmpty {
+						let learnItem = NSMenuItem(
+							title: String(localized: "Learn Spelling", comment: "Spelling context menu"),
+							action: #selector(learnSpelling(_:)),
+							keyEquivalent: "",
+						)
+						learnItem.target = self
+						learnItem.representedObject = word
+						menu.insertItem(learnItem, at: insertIndex)
+						insertIndex += 1
+
+						let ignoreItem = NSMenuItem(
+							title: String(localized: "Ignore Spelling", comment: "Spelling context menu"),
+							action: #selector(contextIgnoreSpelling(_:)),
+							keyEquivalent: "",
+						)
+						ignoreItem.target = self
+						ignoreItem.representedObject = word
+						menu.insertItem(ignoreItem, at: insertIndex)
+						insertIndex += 1
+						menu.insertItem(.separator(), at: insertIndex)
+					}
 				}
 			}
 			return menu
@@ -936,6 +972,16 @@ public class EditorView: NSView, @preconcurrency NSTextInputClient, NSMenuItemVa
 	@objc private func applySuggestion(_ sender: NSMenuItem) {
 		guard let word = sender.representedObject as? String else { return }
 		delegate?.editorView(self, insertText: word, replacementRange: selectedRange())
+	}
+
+	@objc private func learnSpelling(_ sender: NSMenuItem) {
+		guard let word = sender.representedObject as? String else { return }
+		delegate?.editorView(self, learnWord: word)
+	}
+
+	@objc private func contextIgnoreSpelling(_ sender: NSMenuItem) {
+		guard let word = sender.representedObject as? String else { return }
+		delegate?.editorView(self, ignoreWord: word)
 	}
 
 	// MARK: - Menu Validation
@@ -1304,6 +1350,15 @@ public protocol EditorViewDelegate: AnyObject {
 
 	/// Called to build spelling suggestions for the context menu.
 	func editorView(_ view: EditorView, spellingSuggestionsAt point: NSPoint) -> [String]
+
+	/// Returns the misspelled word at the given view-local point, or nil.
+	func editorView(_ view: EditorView, misspelledWordAt point: NSPoint) -> String?
+
+	/// Called when the user chooses "Learn Spelling" from the context menu.
+	func editorView(_ view: EditorView, learnWord word: String)
+
+	/// Called when the user chooses "Ignore Spelling" from the context menu.
+	func editorView(_ view: EditorView, ignoreWord word: String)
 }
 
 /// Default no-op implementations.
@@ -1352,6 +1407,13 @@ public extension EditorViewDelegate {
 	func editorView(_: EditorView, spellingSuggestionsAt _: NSPoint) -> [String] {
 		[]
 	}
+
+	func editorView(_: EditorView, misspelledWordAt _: NSPoint) -> String? {
+		nil
+	}
+
+	func editorView(_: EditorView, learnWord _: String) {}
+	func editorView(_: EditorView, ignoreWord _: String) {}
 }
 
 // MARK: - Editor View Action
