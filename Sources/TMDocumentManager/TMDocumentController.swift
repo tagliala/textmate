@@ -91,6 +91,11 @@ public final class TMDocumentController {
 		}
 		touchLRU(document.id)
 		onDocumentAdded?(document)
+		NotificationCenter.default.post(
+			name: .documentControllerDidAddDocument,
+			object: self,
+			userInfo: ["document": document],
+		)
 	}
 
 	/// Removes a document from the controller.
@@ -101,6 +106,11 @@ public final class TMDocumentController {
 		}
 		lruOrder.removeAll { $0 == document.id }
 		onDocumentRemoved?(document)
+		NotificationCenter.default.post(
+			name: .documentControllerDidRemoveDocument,
+			object: self,
+			userInfo: ["document": document],
+		)
 	}
 
 	// MARK: - Path Updates
@@ -237,4 +247,20 @@ public extension TMDocumentController {
 		let modified = modifiedDocuments.count
 		return "TMDocumentController: \(total) total, \(open) open, \(modified) modified"
 	}
+}
+
+// MARK: - Notification Names
+
+public extension Notification.Name {
+	/// Posted when a document is registered with TMDocumentController.
+	/// `userInfo["document"]` contains the `TMDocument`.
+	static let documentControllerDidAddDocument = Notification.Name(
+		"TMDocumentControllerDidAddDocument",
+	)
+
+	/// Posted when a document is removed from TMDocumentController.
+	/// `userInfo["document"]` contains the `TMDocument`.
+	static let documentControllerDidRemoveDocument = Notification.Name(
+		"TMDocumentControllerDidRemoveDocument",
+	)
 }

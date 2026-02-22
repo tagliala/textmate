@@ -72,6 +72,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency BundleMenuAc
 		loadBundles()
 		startRMateServer()
 		setupRecentDocumentsMenu()
+		observeDocumentRegistry()
 		recoverBackupsIfNeeded()
 		AppPreferencesWindowController.shared.configure(bundleInstaller: bundleSystem.bundleInstaller)
 		restoreWindowState() ?? newDocument(nil)
@@ -577,6 +578,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency BundleMenuAc
 			self?.rebuildRecentDocumentsMenu()
 		}
 		rebuildRecentDocumentsMenu()
+	}
+
+	/// Feed documents registered with TMDocumentController into Recent Documents.
+	private func observeDocumentRegistry() {
+		TMDocumentController.shared.onDocumentAdded = { doc in
+			guard let path = doc.path else { return }
+			RecentDocumentsManager.shared.noteDocumentOpened(path: path)
+		}
 	}
 
 	private func rebuildRecentDocumentsMenu() {
