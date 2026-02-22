@@ -35,7 +35,7 @@ extension DocumentWindowController: FindClient {
 			server.didFind(count: count, of: pattern, atLine: 0, column: 0, wrapped: false)
 
 		case .countInSelection:
-			let count = de.countMatches(pattern: pattern, options: options)
+			let count = de.countMatches(pattern: pattern, options: options, inSelection: true)
 			server.didFind(count: count, of: pattern, atLine: 0, column: 0, wrapped: false)
 
 		case .replace:

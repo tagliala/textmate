@@ -20,4 +20,8 @@ extension DocumentWindowController: FileBrowserDelegate {
 			activate: true,
 		)
 	}
+
+	public func fileBrowserSelectionDidChange(_: FileBrowserViewController) {
+		Self.scheduleSessionBackup()
+	}
 }

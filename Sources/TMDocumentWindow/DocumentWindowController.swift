@@ -55,7 +55,10 @@ public class DocumentWindowController: NSWindowController {
 
 	/// All open documents in tab order.
 	public internal(set) var documents: [TMDocument] = [] {
-		didSet { updateTabBar() }
+		didSet {
+			updateTabBar()
+			Self.scheduleSessionBackup()
+		}
 	}
 
 	/// The index of the currently selected tab.

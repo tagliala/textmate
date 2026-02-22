@@ -12,6 +12,7 @@ import QuickLookUI
 public protocol FileBrowserDelegate: AnyObject {
 	func fileBrowser(_ fileBrowser: FileBrowserViewController, openURLs urls: [URL])
 	func fileBrowser(_ fileBrowser: FileBrowserViewController, closeURL url: URL)
+	func fileBrowserSelectionDidChange(_ fileBrowser: FileBrowserViewController)
 }
 
 // MARK: - File Browser View Controller
@@ -1555,7 +1556,7 @@ public class FileBrowserViewController: NSViewController,
 	}
 
 	public func outlineViewSelectionDidChange(_: Notification) {
-		// Update state for session persistence
+		delegate?.fileBrowserSelectionDidChange(self)
 	}
 
 	// MARK: - NSTextFieldDelegate (Rename)

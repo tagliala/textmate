@@ -44,6 +44,8 @@ public extension DocumentWindowController {
 			selectedTabIndex = idx
 		}
 
+		Self.scheduleSessionBackup()
+
 		Task { @MainActor in
 			do {
 				if document.state != .loaded {

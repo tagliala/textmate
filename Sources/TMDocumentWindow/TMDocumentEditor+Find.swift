@@ -102,7 +102,18 @@ public extension TMDocumentEditor {
 	func countMatches(
 		pattern: String,
 		options: FindOptions,
+		inSelection: Bool = false,
 	) -> Int {
+		if inSelection {
+			var total = 0
+			let sels = editor.selections.selections.sorted { $0.start.offset > $1.start.offset }
+			for sel in sels {
+				let selText = editor.buffer.substring(from: sel.start.offset, to: sel.end.offset)
+				let selSearcher = BufferSearcher(text: selText)
+				total += (try? selSearcher.countMatches(pattern: pattern, options: options)) ?? 0
+			}
+			return total
+		}
 		let searcher = BufferSearcher(text: editor.text)
 		return (try? searcher.countMatches(pattern: pattern, options: options)) ?? 0
 	}

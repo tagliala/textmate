@@ -181,6 +181,7 @@ public extension DocumentWindowController {
 		findPanel.navigationDelegate = self
 		findPanel.documentIdentifier = selectedDocument?.id
 		findPanel.openDocumentPaths = TMDocumentController.shared.documents.compactMap(\.path)
+		findPanel.fileBrowserItems = fileBrowserController.selectedFileURLs.map(\.path)
 		findPanel.showPanel(withSelection: selection)
 	}
 
@@ -192,6 +193,7 @@ public extension DocumentWindowController {
 		findPanel.documentIdentifier = selectedDocument?.id
 		findPanel.navigationDelegate = self
 		findPanel.openDocumentPaths = TMDocumentController.shared.documents.compactMap(\.path)
+		findPanel.fileBrowserItems = fileBrowserController.selectedFileURLs.map(\.path)
 		findPanel.showPanel(withSelection: selection, scope: .project)
 	}
 
