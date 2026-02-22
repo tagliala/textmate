@@ -1,4 +1,5 @@
 import AppKit
+import TMAppKit
 import TMDocumentManager
 
 // MARK: - Tab Management
@@ -351,5 +352,34 @@ public extension DocumentWindowController {
 	private var disposableDocumentID: UUID? {
 		guard let idx = disposableDocumentIndex else { return nil }
 		return documents[idx].id
+	}
+}
+
+// MARK: - TabBarViewDelegate
+
+extension DocumentWindowController: TabBarViewDelegate {
+	public func tabBarView(_: TabBarView, didSelectTabAt index: Int) {
+		guard index >= 0, index < documents.count else { return }
+		openAndSelectDocument(documents[index], activate: true)
+	}
+
+	public func tabBarView(_: TabBarView, didCloseTabAt index: Int) {
+		guard index >= 0, index < documents.count else { return }
+		closeTabsAtIndexes(
+			IndexSet(integer: index),
+			askToSaveChanges: true,
+			createDocumentIfEmpty: true,
+			activate: true,
+		)
+	}
+
+	public func tabBarView(_: TabBarView, didReorderTabFrom fromIndex: Int, to toIndex: Int) {
+		guard fromIndex >= 0, fromIndex < documents.count,
+		      toIndex >= 0, toIndex < documents.count,
+		      fromIndex != toIndex
+		else { return }
+		let doc = documents.remove(at: fromIndex)
+		documents.insert(doc, at: toIndex)
+		selectedTabIndex = toIndex
 	}
 }

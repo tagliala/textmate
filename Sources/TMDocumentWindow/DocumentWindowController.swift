@@ -34,7 +34,7 @@ import TMTheme
 /// └─────────────────────────────────────────┘
 /// ```
 @MainActor
-public class DocumentWindowController: NSWindowController {
+public class DocumentWindowController: NSWindowController, NSMenuItemValidation {
 	public let tabBarView = TabBarView()
 	public let fileBrowserController = FileBrowserViewController()
 	public let gutterView = GutterView()
@@ -465,6 +465,19 @@ public class DocumentWindowController: NSWindowController {
 		case NSSelectorFromString("goToNextBookmark:"),
 		     NSSelectorFromString("goToPreviousBookmark:"):
 			return !gutterView.bookmarkedLines.isEmpty
+		case NSSelectorFromString("moveDocumentToNewWindow:"):
+			return documents.count > 1
+		case NSSelectorFromString("mergeAllWindows:"):
+			return Self.sortedControllers.count > 1
+		case NSSelectorFromString("selectNextTab:"),
+		     NSSelectorFromString("selectPreviousTab:"):
+			return documents.count > 1
+		case NSSelectorFromString("performCloseOtherTabs:"):
+			return documents.count > 1
+		case NSSelectorFromString("performCloseTabsToTheRight:"):
+			return selectedTabIndex < documents.count - 1
+		case NSSelectorFromString("performCloseTabsToTheLeft:"):
+			return selectedTabIndex > 0
 		default:
 			break
 		}
@@ -547,6 +560,7 @@ public class DocumentWindowController: NSWindowController {
 
 		// Tab bar at the top
 		tabBarView.translatesAutoresizingMaskIntoConstraints = false
+		tabBarView.delegate = self
 		contentView.addSubview(tabBarView)
 
 		// Editor area: gutter + text view
@@ -886,6 +900,16 @@ extension DocumentWindowController: NSWindowDelegate {
 		// Remove from the global controller registry.
 		if let id = identifier {
 			Self.allControllers.removeValue(forKey: id)
+		}
+	}
+
+	public func windowDidBecomeKey(_: Notification) {
+		// Update find panel's document identifier to this window's active doc.
+		FindPanelController.shared.documentIdentifier = selectedDocument?.id
+
+		// Refresh status bar in case state changed while another window was key.
+		if let doc = selectedDocument {
+			statusBarView.setTabSettings(useSoftTabs: doc.softTabs, tabSize: doc.tabSize)
 		}
 	}
 }
