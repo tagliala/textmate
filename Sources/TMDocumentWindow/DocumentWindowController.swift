@@ -451,6 +451,15 @@ public class DocumentWindowController: NSWindowController, NSMenuItemValidation 
 				? String(localized: "Disallow Scroll Past End", comment: "View menu item")
 				: String(localized: "Allow Scroll Past End", comment: "View menu item")
 			return true
+		case NSSelectorFromString("toggleShowWrapColumn:"):
+			menuItem.state = editorView.layoutManager.drawWrapColumn ? .on : .off
+			return true
+		case NSSelectorFromString("toggleShowIndentGuides:"):
+			menuItem.state = editorView.layoutManager.drawIndentGuides ? .on : .off
+			return true
+		case NSSelectorFromString("takeWrapColumnFrom:"):
+			menuItem.state = menuItem.tag == editorView.layoutManager.wrapColumn ? .on : .off
+			return true
 		case NSSelectorFromString("takeTabSizeFrom:"):
 			menuItem.state = menuItem.tag == editorView.layoutManager.tabSize ? .on : .off
 			return true
@@ -493,6 +502,12 @@ public class DocumentWindowController: NSWindowController, NSMenuItemValidation 
 		case NSSelectorFromString("goToNextBookmark:"),
 		     NSSelectorFromString("goToPreviousBookmark:"):
 			return !gutterView.bookmarkedLines.isEmpty
+		case NSSelectorFromString("jumpToNextMark:"),
+		     NSSelectorFromString("jumpToPreviousMark:"):
+			if let path = selectedDocument?.path {
+				return MarkTracker.shared.hasMarks(forPath: path)
+			}
+			return false
 		case NSSelectorFromString("moveDocumentToNewWindow:"):
 			return documents.count > 1
 		case NSSelectorFromString("mergeAllWindows:"):
@@ -658,6 +673,8 @@ public class DocumentWindowController: NSWindowController, NSMenuItemValidation 
 	private func setupEditorView() {
 		editorView.layoutManager.setFont(.monospacedSystemFont(ofSize: 13, weight: .regular))
 		editorView.layoutManager.scrollPastEnd = UserDefaults.standard.bool(forKey: "scrollPastEnd")
+		editorView.layoutManager.drawWrapColumn = UserDefaults.standard.bool(forKey: "showWrapColumn")
+		editorView.layoutManager.drawIndentGuides = UserDefaults.standard.bool(forKey: "showIndentGuides")
 		editorView.translatesAutoresizingMaskIntoConstraints = false
 
 		scrollView.documentView = editorView

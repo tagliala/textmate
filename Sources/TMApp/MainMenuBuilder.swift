@@ -418,6 +418,47 @@ enum MainMenuBuilder {
 			title: String(localized: "Allow Scroll Past End", comment: "View menu item"),
 			action: NSSelectorFromString("toggleScrollPastEnd:"),
 		)
+		menu.addItem(
+			title: String(localized: "Show Wrap Column", comment: "View menu item"),
+			action: NSSelectorFromString("toggleShowWrapColumn:"),
+		)
+		menu.addItem(
+			title: String(localized: "Show Indent Guides", comment: "View menu item"),
+			action: NSSelectorFromString("toggleShowIndentGuides:"),
+		)
+
+		// Wrap Column submenu
+		let wrapColumnMenu = NSMenu(
+			title: String(localized: "Wrap Column", comment: "View menu submenu"),
+		)
+		let useWindowItem = wrapColumnMenu.addItem(
+			title: String(localized: "Use Window Frame", comment: "Wrap column submenu item"),
+			action: NSSelectorFromString("takeWrapColumnFrom:"),
+		)
+		useWindowItem.tag = 0
+		wrapColumnMenu.addItem(.separator())
+		let wc40 = wrapColumnMenu.addItem(
+			title: "40",
+			action: NSSelectorFromString("takeWrapColumnFrom:"),
+		)
+		wc40.tag = 40
+		let wc80 = wrapColumnMenu.addItem(
+			title: "80",
+			action: NSSelectorFromString("takeWrapColumnFrom:"),
+		)
+		wc80.tag = 80
+		wrapColumnMenu.addItem(.separator())
+		let wcOther = wrapColumnMenu.addItem(
+			title: String(localized: "Other…", comment: "Wrap column submenu item"),
+			action: NSSelectorFromString("takeWrapColumnFrom:"),
+		)
+		wcOther.tag = -1
+		let wrapColItem = menu.addItem(
+			title: String(localized: "Wrap Column", comment: "View menu item"),
+			action: nil,
+		)
+		wrapColItem.submenu = wrapColumnMenu
+
 		menu.addItem(.separator())
 
 		// Tab Size submenu
@@ -535,6 +576,20 @@ enum MainMenuBuilder {
 			title: String(localized: "Jump to Previous Bookmark", comment: "Navigate menu item"),
 			action: NSSelectorFromString("goToPreviousBookmark:"),
 			key: String(Character(UnicodeScalar(NSF2FunctionKey)!)),
+			modifiers: [.shift],
+		)
+		menu.addItem(.separator())
+
+		menu.addItem(
+			title: String(localized: "Jump to Next Mark", comment: "Navigate menu item"),
+			action: NSSelectorFromString("jumpToNextMark:"),
+			key: String(Character(UnicodeScalar(NSF3FunctionKey)!)),
+			modifiers: [],
+		)
+		menu.addItem(
+			title: String(localized: "Jump to Previous Mark", comment: "Navigate menu item"),
+			action: NSSelectorFromString("jumpToPreviousMark:"),
+			key: String(Character(UnicodeScalar(NSF3FunctionKey)!)),
 			modifiers: [.shift],
 		)
 		menu.addItem(.separator())

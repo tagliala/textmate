@@ -121,6 +121,57 @@ public extension DocumentWindowController {
 		editorView.needsDisplay = true
 	}
 
+	// MARK: - Show Wrap Column
+
+	@objc func toggleShowWrapColumn(_: Any?) {
+		editorView.layoutManager.drawWrapColumn.toggle()
+		UserDefaults.standard.set(editorView.layoutManager.drawWrapColumn, forKey: "showWrapColumn")
+		editorView.needsDisplay = true
+	}
+
+	// MARK: - Show Indent Guides
+
+	@objc func toggleShowIndentGuides(_: Any?) {
+		editorView.layoutManager.drawIndentGuides.toggle()
+		UserDefaults.standard.set(editorView.layoutManager.drawIndentGuides, forKey: "showIndentGuides")
+		editorView.needsDisplay = true
+	}
+
+	// MARK: - Wrap Column
+
+	@objc func takeWrapColumnFrom(_ sender: Any?) {
+		guard let menuItem = sender as? NSMenuItem else { return }
+		let tag = menuItem.tag
+		if tag == -1 {
+			// "Other…" — show input dialog
+			let alert = NSAlert()
+			alert.messageText = String(localized: "Wrap Column", comment: "Wrap column dialog title")
+			alert.informativeText = String(localized: "Enter the column number:", comment: "Wrap column dialog prompt")
+			alert.addButton(withTitle: String(localized: "OK", comment: "Button"))
+			alert.addButton(withTitle: String(localized: "Cancel", comment: "Button"))
+			let input = NSTextField(frame: NSRect(x: 0, y: 0, width: 120, height: 24))
+			input.integerValue = editorView.layoutManager.wrapColumn > 0 ? editorView.layoutManager.wrapColumn : 80
+			alert.accessoryView = input
+			guard let w = window else { return }
+			alert.beginSheetModal(for: w) { [weak self] response in
+				guard response == .alertFirstButtonReturn else { return }
+				let col = input.integerValue
+				if col > 0 {
+					self?.setWrapColumn(col)
+				}
+			}
+		} else {
+			setWrapColumn(tag) // 0 = Use Window Frame
+		}
+	}
+
+	private func setWrapColumn(_ col: Int) {
+		editorView.layoutManager.wrapColumn = col
+		documentEditor?.editor.wrapColumn = max(col, 1)
+		editorView.needsLayout = true
+		editorView.needsDisplay = true
+	}
+
 	// MARK: - Tab Size
 
 	@objc func takeTabSizeFrom(_ sender: Any?) {
@@ -174,6 +225,32 @@ public extension DocumentWindowController {
 		let prev = sorted.last(where: { $0 < currentLine }) ?? sorted.last
 		if let targetLine = prev {
 			goToLine(targetLine)
+		}
+	}
+
+	// MARK: - Jump to Mark
+
+	@objc func jumpToNextMark(_: Any?) {
+		guard let path = selectedDocument?.path else { return }
+		guard let caret = editorView.carets.first else { return }
+		let currentLine = caret.line // 0-based
+		let allLines = MarkTracker.shared.marks(forPath: path)
+			.map(\.line).sorted()
+		let next = allLines.first(where: { $0 > currentLine }) ?? allLines.first
+		if let targetLine = next {
+			goToLine(targetLine + 1) // goToLine expects 1-based
+		}
+	}
+
+	@objc func jumpToPreviousMark(_: Any?) {
+		guard let path = selectedDocument?.path else { return }
+		guard let caret = editorView.carets.first else { return }
+		let currentLine = caret.line // 0-based
+		let allLines = MarkTracker.shared.marks(forPath: path)
+			.map(\.line).sorted()
+		let prev = allLines.last(where: { $0 < currentLine }) ?? allLines.last
+		if let targetLine = prev {
+			goToLine(targetLine + 1)
 		}
 	}
 
