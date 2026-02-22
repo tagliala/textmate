@@ -70,7 +70,7 @@ public enum BundleInstallStatus: Sendable, Equatable {
 /// - Resolves dependencies transitively before download
 /// - Supports install, update, and uninstall operations
 @MainActor
-public final class BundleInstaller: Observable {
+public final class BundleInstaller {
 	/// The directory where managed bundles are installed.
 	public let installDirectory: String
 
@@ -463,12 +463,6 @@ public final class BundleInstaller: Observable {
 		try data.write(to: URL(fileURLWithPath: localIndexPath))
 	}
 }
-
-// MARK: - Observable Protocol
-
-/// Simple observation protocol for SwiftUI/AppKit binding.
-@MainActor
-public protocol Observable: AnyObject {}
 
 // MARK: - Errors
 
