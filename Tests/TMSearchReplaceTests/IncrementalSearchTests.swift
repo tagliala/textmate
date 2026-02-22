@@ -115,17 +115,6 @@ struct IncrementalSearchStateTests {
 		#expect(state.highlightedRanges.isEmpty)
 	}
 
-	@Test("Callback fires after search update")
-	func searchUpdateCallback() {
-		let state = IncrementalSearchState()
-		state.activate(anchorOffset: 0, bufferText: "hello world")
-
-		var callbackFired = false
-		state.onSearchUpdate = { _, _ in callbackFired = true }
-		state.searchString = "hello"
-		#expect(callbackFired)
-	}
-
 	@Test("Has no results is false when inactive")
 	func hasNoResultsInactive() {
 		let state = IncrementalSearchState()

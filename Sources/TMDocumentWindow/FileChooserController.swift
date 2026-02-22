@@ -15,9 +15,6 @@ public final class FileChooserController: ChooserPanelController, NSTableViewDat
 	/// Parameters: file path, optional selection string (line number), optional symbol string.
 	public var onSelectFile: ((String, String?, String?) -> Void)?
 
-	/// Callback invoked when the chooser is dismissed without selection.
-	public var onCancel: (() -> Void)?
-
 	public init(projectPath: String) {
 		state = FileChooserState(projectPath: projectPath)
 		super.init(title: "Open Quickly")
@@ -98,9 +95,7 @@ extension FileChooserController: ChooserPanelDelegate {
 		onSelectFile?(fileItem.path, parsed.selectionString, parsed.symbolString)
 	}
 
-	public func chooserPanelDidCancel(_: ChooserPanelController) {
-		onCancel?()
-	}
+	public func chooserPanelDidCancel(_: ChooserPanelController) {}
 }
 
 #endif

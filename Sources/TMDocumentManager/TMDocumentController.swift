@@ -36,9 +36,6 @@ public final class TMDocumentController {
 	/// Called when a document is added to the registry.
 	public var onDocumentAdded: ((TMDocument) -> Void)?
 
-	/// Called when a document is removed from the registry.
-	public var onDocumentRemoved: ((TMDocument) -> Void)?
-
 	// MARK: - Init
 
 	private init() {}
@@ -105,7 +102,6 @@ public final class TMDocumentController {
 			documentsByPath.removeValue(forKey: canonicalize(path))
 		}
 		lruOrder.removeAll { $0 == document.id }
-		onDocumentRemoved?(document)
 		NotificationCenter.default.post(
 			name: .documentControllerDidRemoveDocument,
 			object: self,

@@ -68,20 +68,6 @@ struct FindStateTests {
 		#expect(state.replaceHistory[0] == "replacement2")
 	}
 
-	@Test("Change observation callback fires")
-	func changeObservation() {
-		let state = FindState()
-		var callCount = 0
-		state.onChanged = { callCount += 1 }
-
-		state.findString = "test"
-		#expect(callCount == 1)
-		state.replaceString = "new"
-		#expect(callCount == 2)
-		state.options = .regularExpression
-		#expect(callCount == 3)
-	}
-
 	@Test("Match references storage")
 	func matchReferences() {
 		let state = FindState()
@@ -153,15 +139,5 @@ struct FindPasteboardTests {
 		let unique = "repl_\(UUID().uuidString)"
 		pasteboard.replaceString = unique
 		#expect(pasteboard.replaceHistory.first == unique)
-	}
-
-	@Test("Change callback fires")
-	func changeCallback() {
-		let pasteboard = FindPasteboard.shared
-		var called = false
-		pasteboard.onChanged = { called = true }
-		pasteboard.findString = "trigger_\(UUID().uuidString)"
-		#expect(called)
-		pasteboard.onChanged = nil
 	}
 }

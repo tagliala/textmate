@@ -38,9 +38,6 @@ public final class IncrementalSearchState: Observable {
 	/// The buffer text to search in.
 	public var bufferText: String = ""
 
-	/// Callback when the search state changes (for UI updates).
-	public var onSearchUpdate: ((FindMatch?, [Range<Int>]) -> Void)?
-
 	/// Whether the last search had no results.
 	public var hasNoResults: Bool {
 		!searchString.isEmpty && currentMatch == nil
@@ -64,7 +61,6 @@ public final class IncrementalSearchState: Observable {
 		searchString = ""
 		currentMatch = nil
 		highlightedRanges = []
-		onSearchUpdate?(nil, [])
 	}
 
 	/// Find the next match from the current position.
@@ -82,7 +78,6 @@ public final class IncrementalSearchState: Observable {
 			fromOffset: current.range.upperBound,
 		), let match = result.firstMatch {
 			currentMatch = match
-			onSearchUpdate?(match, highlightedRanges)
 		}
 	}
 
@@ -101,7 +96,6 @@ public final class IncrementalSearchState: Observable {
 			fromOffset: current.range.lowerBound,
 		), let match = result.firstMatch {
 			currentMatch = match
-			onSearchUpdate?(match, highlightedRanges)
 		}
 	}
 
@@ -111,7 +105,6 @@ public final class IncrementalSearchState: Observable {
 		guard !searchString.isEmpty else {
 			currentMatch = nil
 			highlightedRanges = []
-			onSearchUpdate?(nil, [])
 			return
 		}
 
@@ -140,7 +133,5 @@ public final class IncrementalSearchState: Observable {
 		} else {
 			highlightedRanges = []
 		}
-
-		onSearchUpdate?(currentMatch, highlightedRanges)
 	}
 }

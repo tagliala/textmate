@@ -15,9 +15,6 @@ public final class SymbolChooserController: ChooserPanelController, NSTableViewD
 	/// Parameter: the symbol's selection string (e.g. line number).
 	public var onSelectSymbol: ((String) -> Void)?
 
-	/// Callback invoked when the chooser is dismissed without selection.
-	public var onCancel: (() -> Void)?
-
 	public init() {
 		super.init(title: "Jump to Symbol")
 		delegate = self
@@ -95,9 +92,7 @@ extension SymbolChooserController: ChooserPanelDelegate {
 		onSelectSymbol?(symbolItem.selectionString)
 	}
 
-	public func chooserPanelDidCancel(_: ChooserPanelController) {
-		onCancel?()
-	}
+	public func chooserPanelDidCancel(_: ChooserPanelController) {}
 }
 
 #endif

@@ -91,29 +91,19 @@ public struct DocumentMatchReference: Sendable, Equatable {
 @MainActor
 public final class FindState: Observable {
 	/// The current find string.
-	public var findString: String = "" {
-		didSet { onChanged?() }
-	}
+	public var findString: String = ""
 
 	/// The current replace string.
-	public var replaceString: String = "" {
-		didSet { onChanged?() }
-	}
+	public var replaceString: String = ""
 
 	/// Current search options.
-	public var options: FindOptions = .default {
-		didSet { onChanged?() }
-	}
+	public var options: FindOptions = .default
 
 	/// Current search scope.
-	public var searchScope: SearchScope = .document {
-		didSet { onChanged?() }
-	}
+	public var searchScope: SearchScope = .document
 
 	/// Glob pattern for file filtering in project search.
-	public var fileGlob: String = "" {
-		didSet { onChanged?() }
-	}
+	public var fileGlob: String = ""
 
 	/// Whether the find panel is visible.
 	public var isPanelVisible: Bool = false
@@ -126,9 +116,6 @@ public final class FindState: Observable {
 
 	/// Cross-file match references for Cmd-G cycling.
 	public var matchReferences: [DocumentMatchReference] = []
-
-	/// Change observation callback.
-	public var onChanged: (() -> Void)?
 
 	/// Maximum history entries.
 	private let maxHistory = 30

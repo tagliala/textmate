@@ -19,7 +19,6 @@ public final class FindPasteboard: Observable {
 			if findString != oldValue {
 				pushToSystemPasteboard()
 				addToHistory(findString)
-				onChanged?()
 			}
 		}
 	}
@@ -29,7 +28,6 @@ public final class FindPasteboard: Observable {
 		didSet {
 			if replaceString != oldValue {
 				addToReplaceHistory(replaceString)
-				onChanged?()
 			}
 		}
 	}
@@ -42,9 +40,6 @@ public final class FindPasteboard: Observable {
 
 	/// Options associated with the current find string.
 	public var options: FindOptions = .default
-
-	/// Change observation callback.
-	public var onChanged: (() -> Void)?
 
 	/// Maximum history entries.
 	private let maxHistory = 30

@@ -15,9 +15,6 @@ public final class BundleItemChooserController: ChooserPanelController, NSTableV
 	/// Parameter: the item identifier (UUID).
 	public var onSelectItem: ((String) -> Void)?
 
-	/// Callback invoked when the chooser is dismissed without selection.
-	public var onCancel: (() -> Void)?
-
 	public init() {
 		super.init(title: "Select Bundle Item")
 		delegate = self
@@ -80,9 +77,7 @@ extension BundleItemChooserController: ChooserPanelDelegate {
 		onSelectItem?(bundleItem.itemIdentifier)
 	}
 
-	public func chooserPanelDidCancel(_: ChooserPanelController) {
-		onCancel?()
-	}
+	public func chooserPanelDidCancel(_: ChooserPanelController) {}
 }
 
 #endif

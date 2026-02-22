@@ -209,19 +209,6 @@ struct TMDocumentControllerTests {
 		controller.onDocumentAdded = nil
 	}
 
-	@Test("Document removed callback fires")
-	func removedCallback() {
-		let controller = freshController()
-		var removedCount = 0
-		controller.onDocumentRemoved = { _ in removedCount += 1 }
-
-		let doc = controller.documentForPath("/tmp/cb_remove.txt")
-		controller.forget(doc)
-		#expect(removedCount == 1)
-
-		controller.onDocumentRemoved = nil
-	}
-
 	// MARK: - Cleanup
 
 	@Test("Remove all clears the registry")

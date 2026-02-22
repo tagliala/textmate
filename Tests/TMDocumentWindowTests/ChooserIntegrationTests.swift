@@ -48,16 +48,6 @@ struct FileChooserControllerTests {
 		#expect(selectedLine == nil)
 		#expect(selectedSymbol == nil)
 	}
-
-	@Test("onCancel callback fires on cancel")
-	func cancelCallback() {
-		let controller = FileChooserController(projectPath: "/tmp/TestProject")
-		var cancelled = false
-		controller.onCancel = { cancelled = true }
-
-		controller.chooserPanelDidCancel(controller)
-		#expect(cancelled)
-	}
 }
 
 // MARK: - BundleItemChooserController Tests
