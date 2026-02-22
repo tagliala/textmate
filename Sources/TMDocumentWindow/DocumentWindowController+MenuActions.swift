@@ -330,6 +330,149 @@ public extension DocumentWindowController {
 		FindPasteboard.shared.replaceString = text
 	}
 
+	// MARK: - Incremental Search
+
+	@objc func incrementalSearch(_: Any?) {
+		showLiveSearch()
+	}
+
+	@objc func incrementalSearchPrevious(_: Any?) {
+		showLiveSearch()
+		liveSearchBarDidRequestPrevious(liveSearchBar)
+	}
+
+	// MARK: - Find All / Replace (delegated to FindPanel)
+
+	@objc func findAllInSelection(_: Any?) {
+		let findPanel = FindPanelController.shared
+		findPanel.navigationDelegate = self
+		findPanel.documentIdentifier = selectedDocument?.id
+		findPanel.findAllInSelection()
+	}
+
+	@objc func replace(_: Any?) {
+		FindPanelController.shared.replace()
+	}
+
+	@objc func replaceAndFind(_: Any?) {
+		FindPanelController.shared.replaceAndFind()
+	}
+
+	@objc func replaceAll(_: Any?) {
+		FindPanelController.shared.replaceAll()
+	}
+
+	@objc func replaceAllInSelection(_: Any?) {
+		FindPanelController.shared.replaceAllInSelection()
+	}
+
+	// MARK: - Find Options
+
+	@objc func toggleFindOption(_ sender: Any?) {
+		guard let menuItem = sender as? NSMenuItem else { return }
+		let option = FindOptions(rawValue: UInt32(menuItem.tag))
+		guard let editor = documentEditor?.editor else { return }
+		if editor.findOptions.contains(option) {
+			editor.findOptions.remove(option)
+		} else {
+			editor.findOptions.insert(option)
+		}
+	}
+
+	// MARK: - Show Find History
+
+	@objc func showFindHistory(_: Any?) {
+		let findPanel = FindPanelController.shared
+		findPanel.navigationDelegate = self
+		findPanel.documentIdentifier = selectedDocument?.id
+		findPanel.showFindHistoryPanel()
+	}
+
+	// MARK: - Clipboard History
+
+	@objc func showClipboardHistory(_: Any?) {
+		// Present a simple pasteboard history via a chooser-style alert
+		let history = documentEditor?.editor.clipboards.general
+		guard let history, !history.isEmpty else { return }
+
+		// Collect all entries by navigating through the clipboard
+		var entries: [String] = []
+		if let current = history.current() {
+			entries.append(current.text)
+		}
+		// Navigate backwards to collect older entries
+		while let prev = history.previous() {
+			if entries.contains(prev.text) { break }
+			entries.append(prev.text)
+		}
+		// Reset position back to most recent
+		while history.next() != nil {}
+
+		guard !entries.isEmpty else { return }
+
+		let menu = NSMenu(title: "Clipboard History")
+		for (index, text) in entries.enumerated() {
+			let preview = String(text.prefix(80)).replacingOccurrences(of: "\n", with: "↵")
+			let item = menu.addItem(
+				withTitle: preview,
+				action: #selector(pasteFromClipboardHistory(_:)),
+				keyEquivalent: "",
+			)
+			item.target = self
+			item.tag = index
+		}
+
+		if let event = NSApp.currentEvent, let view = editorView as NSView? {
+			NSMenu.popUpContextMenu(menu, with: event, for: view)
+		}
+	}
+
+	@objc private func pasteFromClipboardHistory(_ sender: Any?) {
+		guard let menuItem = sender as? NSMenuItem else { return }
+		let index = menuItem.tag
+		guard let de = documentEditor else { return }
+		let history = de.editor.clipboards.general
+
+		// Navigate to the entry at the given index
+		// Reset to newest
+		while history.next() != nil {}
+		for _ in 0 ..< index {
+			_ = history.previous()
+		}
+		if let entry = history.current() {
+			de.beginChangeGrouping()
+			de.editor.insertText(entry.text)
+			de.endChangeGrouping()
+			de.syncAfterEdit()
+		}
+	}
+
+	// MARK: - Tab Size Other
+
+	@objc func showTabSizeSelectorPanel(_: Any?) {
+		let alert = NSAlert()
+		alert.messageText = String(localized: "Tab Size", comment: "Tab size dialog title")
+		alert.informativeText = String(localized: "Enter the tab size:", comment: "Tab size dialog prompt")
+		alert.addButton(withTitle: String(localized: "OK", comment: "Button"))
+		alert.addButton(withTitle: String(localized: "Cancel", comment: "Button"))
+		let input = NSTextField(frame: NSRect(x: 0, y: 0, width: 120, height: 24))
+		input.integerValue = editorView.layoutManager.tabSize
+		alert.accessoryView = input
+		guard let w = window else { return }
+		alert.beginSheetModal(for: w) { [weak self] response in
+			guard response == .alertFirstButtonReturn else { return }
+			let size = input.integerValue
+			if size > 0, size <= 32 {
+				self?.documentEditor?.editor.tabSize = size
+				self?.editorView.layoutManager.tabSize = size
+				if let doc = self?.selectedDocument {
+					doc.tabSize = size
+				}
+				self?.editorView.needsDisplay = true
+			}
+		}
+	}
+
 	// MARK: - Go to Line
 
 	@objc func orderFrontGoToLinePanel(_: Any?) {

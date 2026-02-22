@@ -463,6 +463,10 @@ public class DocumentWindowController: NSWindowController, NSMenuItemValidation 
 		case NSSelectorFromString("takeTabSizeFrom:"):
 			menuItem.state = menuItem.tag == editorView.layoutManager.tabSize ? .on : .off
 			return true
+		case NSSelectorFromString("toggleFindOption:"):
+			let option = FindOptions(rawValue: UInt32(menuItem.tag))
+			menuItem.state = documentEditor?.editor.findOptions.contains(option) == true ? .on : .off
+			return true
 		case NSSelectorFromString("toggleContinuousSpellChecking:"):
 			menuItem.state = isSpellCheckingEnabled ? .on : .off
 			return true

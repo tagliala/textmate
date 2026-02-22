@@ -194,6 +194,47 @@ public final class FindPanelController: NSWindowController, FindServer, Sendable
 		performFindOnClient()
 	}
 
+	/// Perform "Find All in Selection" from outside the panel.
+	public func findAllInSelection() {
+		commitFindString()
+		findOperation = .findInSelection
+		performFindOnClient()
+	}
+
+	/// Perform "Replace" from outside the panel.
+	public func replace() {
+		commitFindString()
+		findOperation = .replace
+		performFindOnClient()
+	}
+
+	/// Perform "Replace & Find" from outside the panel.
+	public func replaceAndFind() {
+		commitFindString()
+		findOperation = .replaceAndFind
+		performFindOnClient()
+	}
+
+	/// Perform "Replace All" from outside the panel.
+	public func replaceAll() {
+		commitFindString()
+		findOperation = .replaceAll
+		performFindOnClient()
+	}
+
+	/// Perform "Replace All in Selection" from outside the panel.
+	public func replaceAllInSelection() {
+		commitFindString()
+		findOperation = .replaceAllInSelection
+		performFindOnClient()
+	}
+
+	/// Show find history from outside the panel.
+	public func showFindHistoryPanel() {
+		showPanel()
+		showFindHistory(self)
+	}
+
 	// MARK: - FindServer Callbacks
 
 	public func didFind(count: Int, of searchString: String, atLine: Int, column: Int, wrapped: Bool) {

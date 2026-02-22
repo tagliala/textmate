@@ -111,8 +111,8 @@ struct MainMenuBuilderTests {
 		) }
 		let tabSizeMenu = tabSizeItem?.submenu
 		#expect(tabSizeMenu != nil)
-		let tags = try #require(tabSizeMenu?.items.map(\.tag))
-		#expect(tags == Array(2 ... 8))
+		let tags = try #require(tabSizeMenu?.items.filter { !$0.isSeparatorItem }.map(\.tag))
+		#expect(tags == Array(2 ... 8) + [-1])
 	}
 
 	@Test("View menu has fold submenu with levels 0-9")

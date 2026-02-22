@@ -234,6 +234,13 @@ enum MainMenuBuilder {
 			modifiers: [.command, .control],
 		)
 		pasteWithoutIndentItem.isAlternate = true
+		pasteMenu.addItem(.separator())
+		pasteMenu.addItem(
+			title: String(localized: "Show History", comment: "Paste submenu item"),
+			action: NSSelectorFromString("showClipboardHistory:"),
+			key: "v",
+			modifiers: [.command, .option, .control],
+		)
 		let pasteItem = menu.addItem(
 			title: String(localized: "Paste", comment: "Edit menu item"),
 			action: nil,
@@ -275,6 +282,12 @@ enum MainMenuBuilder {
 			action: #selector(NSText.selectAll(_:)),
 			key: "a",
 		)
+		selectMenu.addItem(.separator())
+		let toggleColItem = selectMenu.addItem(
+			title: String(localized: "Toggle Column Selection", comment: "Select submenu item"),
+			action: NSSelectorFromString("toggleColumnSelection:"),
+		)
+		toggleColItem.keyEquivalentModifierMask = [.option]
 		let selectItem = menu.addItem(
 			title: String(localized: "Select", comment: "Edit menu item"),
 			action: nil,
@@ -296,6 +309,26 @@ enum MainMenuBuilder {
 		)
 		findMenu.addItem(.separator())
 		findMenu.addItem(
+			title: String(localized: "Show Find History", comment: "Find submenu item"),
+			action: NSSelectorFromString("showFindHistory:"),
+			key: "f",
+			modifiers: [.command, .option, .control],
+		)
+		findMenu.addItem(.separator())
+		findMenu.addItem(
+			title: String(localized: "Incremental Search", comment: "Find submenu item"),
+			action: NSSelectorFromString("incrementalSearch:"),
+			key: "s",
+			modifiers: [.control],
+		)
+		findMenu.addItem(
+			title: String(localized: "Incremental Search Previous", comment: "Find submenu item"),
+			action: NSSelectorFromString("incrementalSearchPrevious:"),
+			key: "s",
+			modifiers: [.control, .shift],
+		)
+		findMenu.addItem(.separator())
+		findMenu.addItem(
 			title: String(localized: "Find Next", comment: "Find submenu item"),
 			action: NSSelectorFromString("findNext:"),
 			key: "g",
@@ -305,6 +338,73 @@ enum MainMenuBuilder {
 			action: NSSelectorFromString("findPrevious:"),
 			key: "g",
 			modifiers: [.command, .shift],
+		)
+		findMenu.addItem(
+			title: String(localized: "Find All", comment: "Find submenu item"),
+			action: NSSelectorFromString("findAllInSelection:"),
+			key: "f",
+			modifiers: [.command, .option],
+		)
+		findMenu.addItem(.separator())
+
+		// Find Options submenu
+		let findOptionsMenu = NSMenu(
+			title: String(localized: "Find Options", comment: "Find submenu"),
+		)
+		let ignoreCaseItem = findOptionsMenu.addItem(
+			title: String(localized: "Ignore Case", comment: "Find options item"),
+			action: NSSelectorFromString("toggleFindOption:"),
+			key: "c",
+			modifiers: [.command, .option],
+		)
+		ignoreCaseItem.tag = 2
+		let regexItem = findOptionsMenu.addItem(
+			title: String(localized: "Regular Expression", comment: "Find options item"),
+			action: NSSelectorFromString("toggleFindOption:"),
+			key: "r",
+			modifiers: [.command, .option],
+		)
+		regexItem.tag = 8
+		let ignoreWhitespaceItem = findOptionsMenu.addItem(
+			title: String(localized: "Ignore Whitespace", comment: "Find options item"),
+			action: NSSelectorFromString("toggleFindOption:"),
+		)
+		ignoreWhitespaceItem.tag = 4
+		let wrapAroundItem = findOptionsMenu.addItem(
+			title: String(localized: "Wrap Around", comment: "Find options item"),
+			action: NSSelectorFromString("toggleFindOption:"),
+			key: "a",
+			modifiers: [.command, .option],
+		)
+		wrapAroundItem.tag = 128
+		let findOptionsItem = findMenu.addItem(
+			title: String(localized: "Find Options", comment: "Find submenu item"),
+			action: nil,
+		)
+		findOptionsItem.submenu = findOptionsMenu
+
+		findMenu.addItem(.separator())
+		findMenu.addItem(
+			title: String(localized: "Replace", comment: "Find submenu item"),
+			action: NSSelectorFromString("replace:"),
+			key: "g",
+			modifiers: [.command, .option],
+		)
+		findMenu.addItem(
+			title: String(localized: "Replace & Find", comment: "Find submenu item"),
+			action: NSSelectorFromString("replaceAndFind:"),
+		)
+		findMenu.addItem(
+			title: String(localized: "Replace All", comment: "Find submenu item"),
+			action: NSSelectorFromString("replaceAll:"),
+			key: "g",
+			modifiers: [.command, .control],
+		)
+		findMenu.addItem(
+			title: String(localized: "Replace All in Selection", comment: "Find submenu item"),
+			action: NSSelectorFromString("replaceAllInSelection:"),
+			key: "g",
+			modifiers: [.command, .control, .shift],
 		)
 		findMenu.addItem(.separator())
 		findMenu.addItem(
@@ -470,6 +570,12 @@ enum MainMenuBuilder {
 			)
 			tabItem.tag = size
 		}
+		tabSizeMenu.addItem(.separator())
+		let tabOtherItem = tabSizeMenu.addItem(
+			title: String(localized: "Other…", comment: "Tab size submenu item"),
+			action: NSSelectorFromString("showTabSizeSelectorPanel:"),
+		)
+		tabOtherItem.tag = -1
 		let tabSizeItem = menu.addItem(
 			title: String(localized: "Tab Size", comment: "View menu item"),
 			action: nil,
