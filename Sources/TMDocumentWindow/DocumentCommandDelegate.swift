@@ -4,6 +4,7 @@ import TMCompatibility
 import TMCore
 import TMEditor
 import TMGrammar
+import TMSCM
 
 // MARK: - CommandDispatcherDelegate Conformance
 
@@ -328,8 +329,13 @@ extension DocumentWindowController: CommandDispatcherDelegate {
 			directory: doc.path.map { ($0 as NSString).deletingLastPathComponent },
 		)
 
+		let scmPath = doc.path ?? projectPath
+		let scmVars = scmPath.flatMap { SCMManager.shared.variables(for: $0) }
+
 		let projCtx = EnvironmentBuilder.ProjectContext(
 			projectDirectory: projectPath,
+			scmName: scmVars?.scmName,
+			scmBranch: scmVars?.branch,
 		)
 
 		let appCtx = EnvironmentBuilder.AppContext(
@@ -347,6 +353,17 @@ extension DocumentWindowController: CommandDispatcherDelegate {
 		// Merge file browser variables (TM_SELECTED_FILE, TM_SELECTED_FILES).
 		for (key, value) in fileBrowserController.variables {
 			env[key] = value
+		}
+
+		// Merge user-defined environment variables from Preferences → Variables.
+		if let dicts = UserDefaults.standard.array(forKey: "environmentVariables") as? [[String: Any]] {
+			for dict in dicts {
+				guard let enabled = dict["enabled"] as? Bool, enabled,
+				      let name = dict["name"] as? String, !name.isEmpty,
+				      let value = dict["value"] as? String
+				else { continue }
+				env[name] = value
+			}
 		}
 
 		return env

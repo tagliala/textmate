@@ -95,6 +95,7 @@ public extension DocumentWindowController {
 			var docInfo = SessionDocumentInfo()
 			docInfo.identifier = doc.id.uuidString
 			docInfo.path = doc.path
+			docInfo.fileType = doc.fileType
 
 			if let name = doc.customName ?? doc.path.map({ ($0 as NSString).lastPathComponent }) {
 				docInfo.displayName = name
@@ -208,9 +209,9 @@ public extension DocumentWindowController {
 			var docs: [TMDocument] = []
 			for docInfo in project.documents {
 				let doc = if let path = docInfo.path {
-					TMDocument(path: path)
+					TMDocument(path: path, fileType: docInfo.fileType)
 				} else {
-					TMDocument()
+					TMDocument(fileType: docInfo.fileType)
 				}
 				if docInfo.isSticky {
 					controller.setDocument(doc, sticky: true)
