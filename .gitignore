@@ -2,3 +2,9 @@ build.ninja
 local.rave
 Frameworks/license/src/revoked_serials.cc
 *.bak
+
+# Swift Package Manager
+.build/
+.swiftpm/
+Package.resolved
+.vscode/

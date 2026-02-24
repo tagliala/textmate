@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [swift]
+  pull_request:
+    branches: [swift]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: Build & Test
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_26.2.app || sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
+
+      - name: Resolve dependencies
+        run: swift package resolve
+
+      - name: Build (debug)
+        run: swift build
+
+      - name: Run tests
+        run: swift test
+
+      - name: Build (release)
+        run: swift build -c release
+
+  lint:
+    name: Lint
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install SwiftFormat
+        run: brew install swiftformat
+
+      - name: Check formatting
+        run: swiftformat --lint Sources/ Tests/

@@ -1,0 +1,28 @@
+name: Swift CI
+
+on:
+  push:
+    branches: [swift]
+  pull_request:
+    branches: [swift]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: Build & Test
+    runs-on: macos-26
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Lint with SwiftFormat
+        run: swiftformat --lint Sources/ Tests/
+
+      - name: Build
+        run: swift build
+
+      - name: Test
+        run: swift test

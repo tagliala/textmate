@@ -1,0 +1,19 @@
+# SwiftFormat configuration for TextMate Swift rewrite
+# https://github.com/nicklockwood/SwiftFormat (v0.59.1+)
+
+--swiftversion 6.2
+--indent tabs
+--tabwidth 3
+--maxwidth 120
+--wraparguments before-first
+--wrapparameters before-first
+--wrapcollections before-first
+--wrapconditions after-first
+--semicolons never
+--commas always
+--trimwhitespace always
+--stripunusedargs always
+--importgrouping testable-bottom
+--self remove
+--header strip
+--ifdef no-indent

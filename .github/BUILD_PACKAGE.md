@@ -60,7 +60,7 @@ After the workflow completes successfully:
 This workflow addresses all the requirements from the issue:
 
 - ✅ Manual trigger via `workflow_dispatch`
-- ✅ macOS runner (`macOS-latest`)
+- ✅ macOS runner (`macos-26`)
 - ✅ All Homebrew dependencies installed
 - ✅ Ruby setup with `dbm` gem
 - ✅ Package creation for distribution
