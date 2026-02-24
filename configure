@@ -21,8 +21,9 @@ else
 	done
 
 	for lib in capnp kj; do
-		test -f "$(brew --prefix)/lib/lib${lib}.a" || error "*** dependency missing: ‘$(brew --prefix)/lib/lib${lib}.a’. Install dependency and/or update ‘local.rave’ with correct path."
-	done
+		test -f "$(brew --prefix)/lib/lib${lib}.dylib" || test -f "$(brew --prefix)/lib/lib${lib}.a" \
+		|| error "*** dependency missing: ‘$(brew --prefix)/lib/lib${lib}.{dylib,a}’. Install dependency and/or update ‘local.rave’ with correct path."
+done
 fi
 
 # ========================
