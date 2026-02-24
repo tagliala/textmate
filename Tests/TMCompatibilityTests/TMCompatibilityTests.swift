@@ -259,6 +259,97 @@ struct CommandTypesTests {
 
 // MARK: - RMateServer Tests
 
+// MARK: - PopupDialogHandler Tests
+
+@Suite("PopupDialogHandler")
+@MainActor
+struct PopupDialogHandlerTests {
+	@Test("returns error when no suggestions provided")
+	func noSuggestions() {
+		let handler = PopupDialogHandler()
+		let result = handler.handle(command: "popup", arguments: [], input: nil)
+		#expect(result.exitCode == 1)
+		#expect(result.errorMessage?.contains("No suggestions") == true)
+	}
+
+	@Test("parses suggestions from plist input")
+	func parseSuggestionsFromPlist() throws {
+		let handler = PopupDialogHandler()
+		let plist: [String: Any] = [
+			"suggestions": [
+				["display": "hello", "match": "hello", "insert": "hello()"],
+				["display": "world", "match": "world"],
+			],
+			"returnChoice": true,
+		]
+		let data = try PropertyListSerialization.data(
+			fromPropertyList: plist, format: .xml, options: 0,
+		)
+		// The popup will show a menu at mouse location — in headless tests
+		// the menu returns nil (user cancelled), so we expect nil output.
+		let result = handler.handle(command: "popup", arguments: [], input: data)
+		// Cancelled popup returns exitCode 0, nil output.
+		#expect(result.exitCode == 0)
+	}
+
+	@Test("parses suggestions from --suggestions argument")
+	func parseSuggestionsFromArgs() {
+		let handler = PopupDialogHandler()
+		let plistString = "( { display = law; match = law; }, { display = laws; match = laws; } )"
+		let result = handler.handle(
+			command: "popup",
+			arguments: ["--suggestions", plistString],
+			input: nil,
+		)
+		#expect(result.exitCode == 0)
+	}
+
+	@Test("filters suggestions by alreadyTyped")
+	func filterByAlreadyTyped() throws {
+		let handler = PopupDialogHandler()
+		let plist: [String: Any] = [
+			"suggestions": [
+				["display": "hello", "match": "hello"],
+				["display": "world", "match": "world"],
+			],
+			"alreadyTyped": "xyz",
+		]
+		let data = try PropertyListSerialization.data(
+			fromPropertyList: plist, format: .xml, options: 0,
+		)
+		// No suggestions match "xyz", so result should be empty (not an error).
+		let result = handler.handle(command: "popup", arguments: [], input: data)
+		#expect(result.exitCode == 0)
+		#expect(result.output == nil)
+	}
+
+	@Test("case insensitive filtering excludes non-matching")
+	func caseInsensitiveFilter() throws {
+		let handler = PopupDialogHandler()
+		let plist: [String: Any] = [
+			"suggestions": [
+				["display": "Hello", "match": "Hello"],
+				["display": "World", "match": "World"],
+			],
+			"alreadyTyped": "nomatch",
+			"caseInsensitive": true,
+		]
+		let data = try PropertyListSerialization.data(
+			fromPropertyList: plist, format: .xml, options: 0,
+		)
+		let result = handler.handle(command: "popup", arguments: [], input: data)
+		#expect(result.exitCode == 0)
+		#expect(result.output == nil)
+	}
+
+	@Test("empty input data returns error")
+	func emptyInputData() {
+		let handler = PopupDialogHandler()
+		let result = handler.handle(command: "popup", arguments: [], input: Data())
+		#expect(result.exitCode == 1)
+	}
+}
+
 @Suite("RMateServer")
 struct RMateServerTests {
 	@Test("welcome message has correct format")

@@ -302,6 +302,7 @@ struct DialogShimWiringTests {
 		#expect(commands.contains("menu"))
 		#expect(commands.contains("tooltip"))
 		#expect(commands.contains("filepanel"))
+		#expect(commands.contains("popup"))
 		#expect(commands.contains("help"))
 	}
 

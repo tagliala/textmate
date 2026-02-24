@@ -334,3 +334,52 @@ struct LayoutTests {
 		#expect(bar.isFlipped)
 	}
 }
+
+// MARK: - StatusBarView Vibrancy
+
+@Suite("StatusBarView — Vibrancy")
+@MainActor
+struct VibrancyTests {
+	@Test func isVisualEffectView() {
+		let bar = StatusBarView()
+		// StatusBarView subclasses NSVisualEffectView — validate material is set.
+		let effectView: NSVisualEffectView = bar
+		#expect(effectView.material == .titlebar)
+	}
+
+	@Test func materialIsTitlebar() {
+		let bar = StatusBarView()
+		#expect(bar.material == .titlebar)
+	}
+
+	@Test func blendingModeIsWithinWindow() {
+		let bar = StatusBarView()
+		#expect(bar.blendingMode == .withinWindow)
+	}
+}
+
+// MARK: - StatusBarView Line Label
+
+@Suite("StatusBarView — Line Label")
+@MainActor
+struct LineLabelTests {
+	@Test func hasLineLabelSubview() {
+		let bar = StatusBarView(frame: NSRect(x: 0, y: 0, width: 800, height: 24))
+		// The first NSTextField subview should be the "Line:" label.
+		let labels = bar.subviews.compactMap { $0 as? NSTextField }
+		let lineLabel = labels.first { $0.stringValue == "Line:" }
+		#expect(lineLabel != nil)
+	}
+
+	@Test func lineLabelPrecedesSelectionField() {
+		let bar = StatusBarView(frame: NSRect(x: 0, y: 0, width: 800, height: 24))
+		let labels = bar.subviews.compactMap { $0 as? NSTextField }
+		guard let lineLabelIndex = labels.firstIndex(where: { $0.stringValue == "Line:" }),
+		      let selectionIndex = labels.firstIndex(where: { $0.stringValue == "1:1" })
+		else {
+			#expect(Bool(false), "Expected Line: and selection labels")
+			return
+		}
+		#expect(lineLabelIndex < selectionIndex)
+	}
+}

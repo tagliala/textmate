@@ -9,10 +9,11 @@ import AppKit
 /// Click grammar → grammar chooser, tab size → picker, symbol → symbol list.
 /// Uses system appearance colors — follows light/dark mode automatically.
 @MainActor
-public class StatusBarView: NSView {
+public class StatusBarView: NSVisualEffectView {
 	// MARK: - UI Elements
 
 	private let selectionField = NSTextField(labelWithString: "1:1")
+	private let lineLabel = NSTextField(labelWithString: "Line:")
 	private let grammarPopUp = NSPopUpButton(frame: .zero, pullsDown: false)
 	private let tabSizePopUp = NSPopUpButton(frame: .zero, pullsDown: true)
 	private let symbolPopUp = NSPopUpButton(frame: .zero, pullsDown: false)
@@ -193,9 +194,16 @@ public class StatusBarView: NSView {
 	// MARK: - Private Setup
 
 	private func setupViews() {
-		wantsLayer = true
+		material = .titlebar
+		blendingMode = .withinWindow
 
 		let statusFont = NSFont.systemFont(ofSize: 11)
+
+		// Line label — static prefix before the selection field.
+		lineLabel.font = statusFont
+		lineLabel.textColor = .tertiaryLabelColor
+		lineLabel.translatesAutoresizingMaskIntoConstraints = false
+		addSubview(lineLabel)
 
 		// Selection field — monospaced numbers to avoid jitter.
 		selectionField.font = monospacedNumberFont(base: statusFont)
@@ -294,8 +302,12 @@ public class StatusBarView: NSView {
 		NSLayoutConstraint.activate([
 			heightAnchor.constraint(equalToConstant: statusBarHeight),
 
+			// Line label
+			lineLabel.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 10),
+			lineLabel.centerYAnchor.constraint(equalTo: centerYAnchor),
+
 			// Selection field
-			selectionField.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 10),
+			selectionField.leadingAnchor.constraint(equalTo: lineLabel.trailingAnchor, constant: 2),
 			selectionField.centerYAnchor.constraint(equalTo: centerYAnchor),
 			selectionField.widthAnchor.constraint(greaterThanOrEqualToConstant: 50),
 			selectionField.widthAnchor.constraint(lessThanOrEqualToConstant: 225),
