@@ -10,6 +10,9 @@ for dep in capnp ninja ragel multimarkdown pgrep pkill; do
 	which -s "$dep" || error "*** dependency missing: ‘${dep}’."
 done
 
+which -s bundle || error "*** dependency missing: ‘bundle’."
+bundle check >/dev/null 2>&1 || error "*** Ruby gems missing. Run ‘bundle install’."
+
 if [[ -e local.rave ]]; then
 	echo >&2 "Skipping writing ‘local.rave’: File already exists"
 else

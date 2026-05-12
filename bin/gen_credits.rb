@@ -1,4 +1,4 @@
-#!/usr/bin/env ruby
+#!/usr/bin/env -S bundle exec ruby
 # == Synopsis
 #
 # Module to assist in building the Contributors page using git commit history.
