@@ -16,7 +16,7 @@ The workflow performs the following steps:
 
 1. **Environment Setup**:
    - Checks out the repository with submodules
-   - Sets up Ruby 3.2
+   - Sets up Ruby 4.0
    - Installs required Homebrew dependencies:
      - boost (portable C++ libraries)
      - capnp (Cap'n Proto serialization)
@@ -27,8 +27,8 @@ The workflow performs the following steps:
      - gdbm (GNU Database Manager, needed for Ruby DBM gem)
 
 2. **Ruby Dependencies**:
-   - Installs the `dbm` gem required for credits generation
-   - Verifies the gem can be loaded properly
+   - Runs `bundle install` to install the gems declared in `Gemfile`
+   - Verifies the bundled `dbm` gem can be loaded properly
 
 3. **Build Process**:
    - Runs `./configure` to check dependencies and generate build files
@@ -62,7 +62,7 @@ This workflow addresses all the requirements from the issue:
 - ✅ Manual trigger via `workflow_dispatch`
 - ✅ macOS runner (`macOS-latest`)
 - ✅ All Homebrew dependencies installed
-- ✅ Ruby setup with `dbm` gem
+- ✅ Ruby setup with a Bundler-managed `dbm` gem
 - ✅ Package creation for distribution
 - ✅ Build warnings ignored (errors still cause failure)
 - ✅ Artifact upload for easy download

@@ -33,21 +33,29 @@ All this can be installed using either [Homebrew][] or [MacPorts][]:
 
 ```sh
 # Homebrew
-brew install boost capnp google-sparsehash multimarkdown ninja ragel
+brew install boost capnp gdbm google-sparsehash multimarkdown ninja ragel
 
 # MacPorts
-sudo port install boost capnproto multimarkdown ninja ragel sparsehash
+sudo port install boost capnproto gdbm multimarkdown ninja ragel sparsehash
 ```
+
+The Ruby build scripts use Bundler to load repository-local gems. Install them once from the repository root before running `./configure`:
+
+```sh
+bundle install
+```
+
+Bundler only installs the Ruby gems declared in `Gemfile`. The markdown build step in `bin/gen_html` still requires the external `multimarkdown` command from Homebrew or MacPorts.
 
 After installing dependencies, make sure you have a full checkout (including submodules) and then run `./configure` followed by `ninja`, for example:
 
 ```sh
 git clone --recursive https://github.com/textmate/textmate.git
 cd textmate
-./configure && ninja TextMate/run
+bundle install && ./configure && ninja TextMate/run
 ```
 
-The `./configure` script simply checks that all dependencies can be found, and then calls `bin/rave` to bootstrap a `build.ninja` file with default config set to `release` and default target set to `TextMate`.
+The `./configure` script checks that all dependencies and Bundler-managed Ruby gems can be found, and then calls `bin/rave` to bootstrap a `build.ninja` file with default config set to `release` and default target set to `TextMate`.
 
 ## Building from within TextMate
 
