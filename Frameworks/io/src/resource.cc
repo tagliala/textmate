@@ -13,9 +13,12 @@ namespace path
 		}
 		else if(CFURLRef url = CFURLCreateFromFileSystemRepresentation(kCFAllocatorDefault, (UInt8 const*)path.data(), path.size(), false))
 		{
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 			LSItemInfoRecord info;
 			if(noErr == LSCopyItemInfoForURL(url, kLSRequestTypeCreator, &info))
 				res = info.filetype == kClippingTextType;
+#pragma clang diagnostic pop
 			CFRelease(url);
 		}
 		return res;

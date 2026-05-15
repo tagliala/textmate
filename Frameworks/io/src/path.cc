@@ -815,12 +815,15 @@ namespace path
 			{
 				if(CFURLRef url = CFURLCreateWithString(kCFAllocatorDefault, cf::wrap("https://openradar.appspot.com/10261043"), nullptr))
 				{
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 					if(CFMutableArrayRef urls = CFArrayCreateMutable(kCFAllocatorDefault, 0, &kCFTypeArrayCallBacks))
 					{
 						CFArrayAppendValue(urls, url);
 						LSOpenURLsWithRole(urls, kLSRolesViewer, nullptr, nullptr, nullptr, 0);
 						CFRelease(urls);
 					}
+#pragma clang diagnostic pop
 					CFRelease(url);
 				}
 			}
@@ -861,7 +864,9 @@ namespace path
 			}
 			else
 			{
-				mktemp(&str[0]);
+				int fd = mkstemp(&str[0]);
+				if(fd != -1)
+					close(fd);
 			}
 		}
 		return str;
