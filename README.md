@@ -1,5 +1,18 @@
 # TextMate
 
+## Read-only — moved to TextMate Lives
+
+This fork is now read-only and is no longer maintained. We have moved to
+[TextMate Lives (`textmatelives/textmate`)](https://github.com/textmatelives/textmate).
+
+Please use the new fork for [downloads](https://github.com/textmatelives/textmate/releases),
+[bug reports and feature requests](https://github.com/textmatelives/textmate/issues),
+and [contributions](https://github.com/textmatelives/textmate/pulls).
+
+The source and documentation below are preserved for historical reference.
+For current requirements and build instructions, see the
+[TextMate Lives README](https://github.com/textmatelives/textmate#readme).
+
 ## Download
 
 You can [download TextMate from here](https://macromates.com/download).
