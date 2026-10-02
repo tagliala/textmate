@@ -1,5 +1,11 @@
 # Contributing
 
+This fork is now read-only and is no longer maintained. We have moved to
+[TextMate Lives (`textmatelives/textmate`)](https://github.com/textmatelives/textmate).
+Please submit new issues and pull requests there. The guidelines below are
+preserved for historical reference; follow the new fork's contribution guidelines
+for current development.
+
 You can send pull requests via GitHub. Patches should:
 
 1. Follow the style of the existing code.
