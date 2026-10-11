@@ -38,7 +38,11 @@ static NSString* const kUserDefaultsLastLaunchedVersionKey = @"lastLaunchedVersi
 	alert.informativeText = [NSString stringWithFormat:@"You are now running version %@.", currentVersion];
 
 	[alert addButtonWithTitle:@"Changelog"]; // first added is the default
-	[alert addButtonWithTitle:@"Cancel"];
+
+	// Nothing is being cancelled: the update has happened. AppKit gives a
+	// button titled Cancel the Escape key on its own; OK has to be told.
+	NSButton* ok = [alert addButtonWithTitle:@"OK"];
+	ok.keyEquivalent = @"\e";
 
 	// A sheet, not -runModal. The mate server accepts connections from a
 	// dispatch source on the main queue, and the modal loop does not drain
