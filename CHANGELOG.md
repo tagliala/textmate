@@ -2,6 +2,38 @@ Title: Release Notes
 
 # Changes
 
+## 2026-10-11 (v2.5.0-undead)
+
+Command output tabs, a new app icon, and two fixes. The output tabs went out as two experimental builds first; if you are on the experimental channel, set the channel back to “Normal releases” in Preferences → Software Update to receive this release and the ones after it. See [all changes since v2.4.3-undead](https://github.com/textmatelives/textmate/compare/v2.4.3-undead...v2.5.0-undead).
+
+### HTML Output
+
+* **Output tabs.** Every command’s HTML output opens in a tab, in the pane and in the output window alike; the pane puts the tab bar above the page, the window puts it in the title bar. Tabs drag between strips, a tab dragged out of a strip becomes its own window, and ⌘W closes the selected tab. (`065a9632`, `0d00885f`)
+* **A grip moves the whole strip.** Drag the handle at the left of the tab bar to dock the output below, right or left of the text view, or drop it outside the window to tear the strip off into an output window. Each window keeps its own placement, saved with the project. (`454c8a6b`, `376491d1`)
+* **One tab per document.** A command run from a document reuses that document’s tab rather than the first tab of the same command, and the tab is named after the document. (`6aed68e4`, `48084d53`)
+* **Tabs can follow the document.** With “Output tabs follow the selected document” on, selecting a document reveals its output tab and closing the document closes its tabs. The sub-preference “Document follows the output tab” does the reverse. Both take effect as soon as they are changed. (`550f94eb`, `89e59a05`, `6c34cc0b`, `d46de824`)
+* **Output no longer takes the focus.** Output that opens in the pane or in a window leaves the keyboard focus where it was, unless “Output takes the focus when it opens” is turned on. (`36c1ef6f`, `90ec46ad`, `0a78a52e`)
+* **Shortcuts.** ⌘⌥⇧{ and ⌘⌥⇧} move between output tabs, and ⌘⌥⇧W closes all of them. (`d46de824`, `e863f79e`)
+* **Quieter refreshes.** The page header band is hidden under a tab, and a refreshing page no longer flashes its header or jumps to its anchor. (`54006f67`, `3e3a994d`)
+* **Fixed: ⌘W closed the whole output window after a tab had been closed.** Closing the selected tab removed the view that held the focus, so the window became first responder and the next ⌘W closed it with every remaining tab. The tab that takes the closed one’s place now inherits the focus. Reported by [@tbates](https://github.com/tbates). (`05509beb`)
+
+### Preferences
+
+* **“Command output:”** in Projects gained “Left of text view”, and the setting seeds new windows only; each window keeps its own placement after that. (`376491d1`, `0a78a52e`)
+
+### Appearance
+
+* **A new app icon**, drawn by [@feekApp](https://github.com/feekApp) as an Icon Composer bundle with light and dark variants, in place of the photographic daisy. The About window and the update dialog carry a matching background. [#111](https://github.com/textmatelives/textmate/issues/111). (`a1b2994b`, `6800ce94`)
+* **Fixed: the line between the gutter and the text ignored the theme.** It was painted with the system separator colour, which follows the Light or Dark appearance rather than the theme, so a dark theme on a Mac in Light appearance got a bright stripe. It is the theme’s divider colour again, as upstream has it. Reported by [@q-p](https://github.com/q-p), fixed by [@tbates](https://github.com/tbates) in [#110](https://github.com/textmatelives/textmate/pull/110). [#106](https://github.com/textmatelives/textmate/issues/106). (`2e66e5be`)
+
+### Software Update
+
+* **The post-update notice offers OK and Changelog.** It used to offer Cancel, and there is nothing to cancel once the update has happened. OK is the default and answers Return and Escape; Changelog opens the changes window. Raised by [@tbates](https://github.com/tbates). [#115](https://github.com/textmatelives/textmate/issues/115). (`87c5e424`, `041dcef7`)
+
+### Tabs
+
+* **Fixed: a tab kept its hover look while another window sat over it.** (`8742c222`)
+
 ## 2026-10-06 (v2.4.3-undead)
 
 Two crash fixes and a fix for `mate`, all from [@tbates](https://github.com/tbates). See [all changes since v2.4.2-undead](https://github.com/textmatelives/textmate/compare/v2.4.2-undead...v2.4.3-undead).
