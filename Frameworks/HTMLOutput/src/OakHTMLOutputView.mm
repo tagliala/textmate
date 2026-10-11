@@ -41,7 +41,8 @@ static std::string page_key (NSURL* url)
 {
 	if(self = [super initWithFrame:aRect])
 	{
-		_reusable = YES;
+		_reusable       = YES;
+		_viewIdentifier = [NSUUID UUID];
 	}
 	return self;
 }
@@ -141,12 +142,21 @@ static std::string page_key (NSURL* url)
 	if(_environmentByPage.count(key))
 	{
 		[OakHTMLOutputPageCache.sharedCache setData:[rewritten dataUsingEncoding:NSUTF8StringEncoding] forKey:[NSString stringWithCxxString:key]];
-		[self.webView reload];
+		// Drop a fragment the page set (the preview's scroll_to_here), or the reload scrolls to the anchor before the saved position is put back
+		[self.webView evaluateJavaScript:@"if(location.hash) history.replaceState(null, '', location.href.split('#')[0])" completionHandler:^(id result, NSError* error){
+			[self.webView reload];
+		}];
 	}
 	else
 	{
 		[self.webView loadHTMLString:rewritten baseURL:[NSURL fileURLWithPath:NSHomeDirectory()]];
 	}
+}
+
+- (NSString*)documentPath
+{
+	auto path = _environment.find("TM_FILEPATH");
+	return path != _environment.end() ? [NSString stringWithCxxString:path->second] : nil;
 }
 
 - (NSString*)mainFrameTitle

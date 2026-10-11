@@ -5,6 +5,8 @@
 - (void)setContent:(NSString*)someHTML;
 
 @property (nonatomic, readonly) NSString* mainFrameTitle;
+@property (nonatomic, readonly) NSString* documentPath; // TM_FILEPATH of the environment the page was produced with, if any
+@property (nonatomic, readonly) NSUUID* viewIdentifier; // this view, as opposed to the command it shows
 @property (nonatomic) NSUUID* commandIdentifier; // UUID from initial load request
 @property (nonatomic, getter = isRunningCommand, readonly) BOOL runningCommand;
 @property (nonatomic, getter = isReusable) BOOL reusable;

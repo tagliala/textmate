@@ -16,9 +16,11 @@
 #import <OakFoundation/NSString Additions.h>
 #import <Preferences/Keys.h>
 #import <OakTextView/OakDocumentView.h>
+#import <OakTextView/OakCommandRefresh.h>
 #import <FileBrowser/FileBrowserViewController.h>
 #import <OakCommand/OakCommand.h>
 #import <HTMLOutputWindow/HTMLOutputWindow.h>
+#import <HTMLOutputWindow/OakHTMLOutputDocking.h>
 #import <OakFilterList/FileChooser.h>
 #import <OakSystem/application.h>
 #import <Find/Find.h>
@@ -79,7 +81,7 @@ static void show_command_error (std::string const& message, oak::uuid_t const& u
 	}];
 }
 
-@interface DocumentWindowController () <NSWindowDelegate, NSTouchBarDelegate, OakTabBarViewDelegate, OakTabBarViewDataSource, OakTextViewDelegate, OakUserDefaultsObserver, FileBrowserDelegate, FindDelegate>
+@interface DocumentWindowController () <NSWindowDelegate, NSTouchBarDelegate, OakTabBarViewDelegate, OakTabBarViewDataSource, OakTextViewDelegate, OakUserDefaultsObserver, FileBrowserDelegate, FindDelegate, OakHTMLOutputTabViewDelegate, OakHTMLOutputDockTarget>
 {
 	NSMutableSet<NSUUID*>*                 _stickyDocumentIdentifiers;
 
@@ -106,8 +108,9 @@ static void show_command_error (std::string const& message, oak::uuid_t const& u
 @property (nonatomic) NSRect                      newWindowFrame;
 
 @property (nonatomic) HTMLOutputWindowController* htmlOutputWindowController;
-@property (nonatomic) OakHTMLOutputView*          htmlOutputView;
+@property (nonatomic) OakHTMLOutputTabView*       htmlOutputTabView; // the split pane's tabs
 @property (nonatomic) BOOL                        htmlOutputInWindow;
+@property (nonatomic) NSString*                   htmlOutputPlacement; // bottom, right, left or window: this window's own, seeded from the preference
 
 @property (nonatomic) NSSegmentedControl*         previousNextTouchBarControl;
 
@@ -198,6 +201,8 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 
 		self.layoutView = [[ProjectLayoutView alloc] initWithFrame:NSZeroRect];
 		self.layoutView.documentView = self.documentView;
+		self.htmlOutputPlacement = [NSUserDefaults.standardUserDefaults stringForKey:kUserDefaultsHTMLOutputPlacementKey];
+		[NSNotificationCenter.defaultCenter addObserver:self selector:@selector(outputTabWasSelected:) name:OakHTMLOutputTabViewDidSelectViewNotification object:nil];
 
 		NSUInteger windowStyle = (NSWindowStyleMaskTitled|NSWindowStyleMaskClosable|NSWindowStyleMaskResizable|NSWindowStyleMaskMiniaturizable);
 		self.window = [[NSWindow alloc] initWithContentRect:[NSWindow contentRectForFrameRect:[self frameRectForNewWindow] styleMask:windowStyle] styleMask:windowStyle backing:NSBackingStoreBuffered defer:NO];
@@ -377,7 +382,6 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 
 - (void)userDefaultsDidChange:(NSNotification*)aNotification
 {
-	self.htmlOutputInWindow = [[NSUserDefaults.standardUserDefaults stringForKey:kUserDefaultsHTMLOutputPlacementKey] isEqualToString:@"window"];
 	self.disableFileBrowserWindowResize = [NSUserDefaults.standardUserDefaults boolForKey:kUserDefaultsDisableFileBrowserWindowResizeKey];
 	self.autoRevealFile = [NSUserDefaults.standardUserDefaults boolForKey:kUserDefaultsAutoRevealFileKey];
 	self.documentView.hideStatusBar = [NSUserDefaults.standardUserDefaults boolForKey:kUserDefaultsHideStatusBarKey];
@@ -632,10 +636,10 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 
 - (BOOL)windowShouldClose:(id)sender
 {
-	if(!self.htmlOutputInWindow && _htmlOutputView.isRunningCommand)
+	if(!self.htmlOutputInWindow && [_htmlOutputTabView.htmlOutputViews filteredArrayUsingPredicate:[NSPredicate predicateWithFormat:@"isRunningCommand == YES"]].count)
 	{
-		[_htmlOutputView stopLoadingWithUserInteraction:YES completionHandler:^(BOOL didStop){
-			if(didStop)
+		[_htmlOutputTabView stopRunningCommandsWithCompletionHandler:^(BOOL didStopAll){
+			if(didStopAll)
 				[sender performSelector:@selector(performClose:) withObject:self afterDelay:0];
 		}];
 		return NO;
@@ -1293,23 +1297,34 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 
 	if(!self.htmlOutputInWindow)
 	{
-		BOOL nonExistingOrNonBusy   = !self.htmlOutputView || !self.htmlOutputView.isRunningCommand;
-		BOOL existsForOurIdentifier = self.htmlOutputView && [self.htmlOutputView.commandIdentifier isEqual:identifier];
-		if(createFlag ? nonExistingOrNonBusy : existsForOurIdentifier)
+		// Each command gets its own tab in the pane, reused across runs
+		OakHTMLOutputView* view = [self.htmlOutputTabView htmlOutputViewForIdentifier:identifier busy:NO];
+		if(!view && createFlag)
+		{
+			view = [[OakHTMLOutputView alloc] initWithFrame:NSZeroRect];
+			[self.htmlOutputTabView addHTMLOutputView:view];
+		}
+		if(view)
 		{
 			self.htmlOutputVisible = YES;
-			return self.htmlOutputView;
+			return view;
 		}
+		return [self.htmlOutputTabView htmlOutputViewForIdentifier:identifier busy:YES];
 	}
 
 	NSMutableArray <OakHTMLOutputView*>* htmlOutputViews = [NSMutableArray array];
 	if(self.htmlOutputWindowController)
-		[htmlOutputViews addObject:self.htmlOutputWindowController.htmlOutputView];
+		[htmlOutputViews addObjectsFromArray:self.htmlOutputWindowController.tabView.htmlOutputViews];
 
+	HTMLOutputWindowController* frontmostController = nil;
 	for(NSWindow* window in [NSApp orderedWindows])
 	{
 		if([window isVisible] && ![window isMiniaturized] && [window.delegate isKindOfClass:[HTMLOutputWindowController class]])
-			[htmlOutputViews addObject:[(HTMLOutputWindowController*)window.delegate htmlOutputView]];
+		{
+			HTMLOutputWindowController* controller = (HTMLOutputWindowController*)window.delegate;
+			frontmostController = frontmostController ?: controller;
+			[htmlOutputViews addObjectsFromArray:controller.tabView.htmlOutputViews];
+		}
 	}
 
 	NSArray* allHTMLViews = [htmlOutputViews filteredArrayUsingPredicate:[NSPredicate predicateWithFormat:@"needsNewWebView == NO AND isReusable == YES AND commandIdentifier == %@", identifier]];
@@ -1321,6 +1336,8 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 	}
 	else if(createFlag)
 	{
+		if(frontmostController) // a new tab in the output window in front, like a browser
+			return [frontmostController newHTMLOutputView];
 		self.htmlOutputWindowController = [[HTMLOutputWindowController alloc] initWithIdentifier:identifier];
 		return self.htmlOutputWindowController.htmlOutputView;
 	}
@@ -1641,11 +1658,38 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 
 		self.documentView.document = _selectedDocument;
 		[[self class] scheduleSessionBackup:self];
+		[self revealHTMLOutputForDocument:_selectedDocument];
 	}
 	else
 	{
 		self.projectPath = nil;
 	}
+}
+
+// With the preference on, selecting a document brings forward the output tab its page was produced for, wherever that strip is
+- (void)revealHTMLOutputForDocument:(OakDocument*)document
+{
+	if(!document || ![NSUserDefaults.standardUserDefaults boolForKey:kUserDefaultsHTMLOutputFollowsDocumentKey])
+		return;
+
+	OakHTMLOutputView* view = [OakCommandRefresher htmlOutputViewForDocument:document];
+	if(!view && document.path)
+	{
+		NSMutableArray<OakHTMLOutputTabView*>* strips = [NSMutableArray array];
+		if(_htmlOutputTabView)
+			[strips addObject:_htmlOutputTabView];
+		for(NSWindow* window in NSApp.orderedWindows)
+		{
+			if(window.isVisible && [window.delegate isKindOfClass:[HTMLOutputWindowController class]])
+				[strips addObject:[(HTMLOutputWindowController*)window.delegate tabView]];
+		}
+		for(OakHTMLOutputTabView* strip in strips)
+		{
+			if((view = [strip htmlOutputViewForDocumentPath:document.path]))
+				break;
+		}
+	}
+	[view tryToPerform:@selector(revealHTMLOutputView:) with:view];
 }
 
 - (void)setSelectedTabIndex:(NSUInteger)newSelectedTabIndex
@@ -1999,9 +2043,7 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 		}
 		else
 		{
-			if(!self.htmlOutputView || self.htmlOutputView.needsNewWebView)
-				self.htmlOutputView = [[OakHTMLOutputView alloc] initWithFrame:NSZeroRect];
-			self.layoutView.htmlOutputView = self.htmlOutputView;
+			self.layoutView.htmlOutputView = self.htmlOutputTabView;
 		}
 	}
 	else
@@ -2015,6 +2057,14 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 	}
 }
 
+- (void)setHtmlOutputPlacement:(NSString*)placement
+{
+	_htmlOutputPlacement = placement ?: @"bottom";
+	self.htmlOutputInWindow = [_htmlOutputPlacement isEqualToString:@"window"];
+	if(!self.htmlOutputInWindow)
+		self.layoutView.htmlOutputPlacement = [_htmlOutputPlacement isEqualToString:@"right"] ? ProjectLayoutHTMLOutputRight : [_htmlOutputPlacement isEqualToString:@"left"] ? ProjectLayoutHTMLOutputLeft : ProjectLayoutHTMLOutputBelow;
+}
+
 - (void)setHtmlOutputInWindow:(BOOL)showInWindowFlag
 {
 	if(_htmlOutputInWindow == showInWindowFlag)
@@ -2023,13 +2073,92 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 	if(_htmlOutputInWindow = showInWindowFlag)
 	{
 		self.layoutView.htmlOutputView = nil;
-		self.htmlOutputView = nil;
+		self.htmlOutputTabView = nil;
 	}
 	else
 	{
 		self.htmlOutputWindowController = nil;
 	}
 }
+
+- (OakHTMLOutputTabView*)htmlOutputTabView
+{
+	if(!_htmlOutputTabView)
+	{
+		_htmlOutputTabView = [[OakHTMLOutputTabView alloc] initWithFrame:NSZeroRect];
+		_htmlOutputTabView.delegate = self;
+	}
+	return _htmlOutputTabView;
+}
+
+- (void)htmlOutputTabViewDidRemoveLastView:(OakHTMLOutputTabView*)tabView
+{
+	if(tabView == _htmlOutputTabView)
+		self.htmlOutputVisible = NO;
+}
+
+- (void)htmlOutputTabView:(OakHTMLOutputTabView*)tabView didTearOffIntoWindowController:(HTMLOutputWindowController*)controller
+{
+	if(tabView != _htmlOutputTabView)
+		return;
+	self.htmlOutputPlacement        = @"window"; // output keeps going to the window the tabs went to
+	self.htmlOutputWindowController = controller;
+}
+
+// ===========================
+// = OakHTMLOutputDockTarget =
+// ===========================
+
+- (NSView*)htmlOutputDockAreaView
+{
+	return self.layoutView;
+}
+
+- (void)dockHTMLOutputTabView:(OakHTMLOutputTabView*)tabView atEdge:(OakHTMLOutputDockEdge)edge
+{
+	self.htmlOutputPlacement = edge == OakHTMLOutputDockEdgeLeft ? @"left" : edge == OakHTMLOutputDockEdgeRight ? @"right" : @"bottom";
+	self.htmlOutputVisible   = YES; // the pane must be on screen before views move in, or their refreshers stop
+	if(tabView != self.htmlOutputTabView) // a strip from a window or another document window: take its tabs, which empties it
+		[tabView moveHTMLOutputViewsToTabView:self.htmlOutputTabView];
+}
+
+// With both preferences on, picking an output tab selects the document its page was produced for
+- (void)outputTabWasSelected:(NSNotification*)aNotification
+{
+	NSUserDefaults* defaults = NSUserDefaults.standardUserDefaults;
+	if(![defaults boolForKey:kUserDefaultsHTMLOutputFollowsDocumentKey] || ![defaults boolForKey:kUserDefaultsHTMLOutputSelectsDocumentKey])
+		return;
+
+	OakHTMLOutputView* view = aNotification.userInfo[@"view"];
+	OakDocument* document = [OakCommandRefresher documentForHTMLOutputView:view];
+	if(!document && view.documentPath)
+		document = [OakDocumentController.sharedInstance documentWithPath:view.documentPath];
+	if(!document || [document isEqual:self.selectedDocument])
+		return;
+
+	// The window that has the document selects it; a document nobody has opens in the window whose pane the tab is in, or else the front one
+	DocumentWindowController* owner = [DocumentWindowController controllerForDocument:document];
+	BOOL const inMyPane = _htmlOutputTabView && aNotification.object == _htmlOutputTabView;
+	if(owner ? owner == self : (inMyPane || self == [SortedControllers() firstObject]))
+		[self openAndSelectDocument:document activate:NO];
+}
+
+// The output tab shortcuts reach the pane's strip, or the front output window's when there is no pane
+- (OakHTMLOutputTabView*)outputTabViewForShortcuts
+{
+	if(self.layoutView.htmlOutputView)
+		return _htmlOutputTabView;
+	for(NSWindow* window in NSApp.orderedWindows)
+	{
+		if(window.isVisible && [window.delegate isKindOfClass:[HTMLOutputWindowController class]])
+			return [(HTMLOutputWindowController*)window.delegate tabView];
+	}
+	return nil;
+}
+
+- (IBAction)selectNextOutputTab:(id)sender     { [[self outputTabViewForShortcuts] selectNextOutputTab:sender]; }
+- (IBAction)selectPreviousOutputTab:(id)sender { [[self outputTabViewForShortcuts] selectPreviousOutputTab:sender]; }
+- (IBAction)closeAllOutputTabs:(id)sender      { [[self outputTabViewForShortcuts] closeAllOutputTabs:sender]; }
 
 - (IBAction)toggleHTMLOutput:(id)sender
 {
@@ -2363,6 +2492,10 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 		active = self.fileBrowserVisible && [self.fileBrowser validateMenuItem:menuItem];
 	else if([menuItem action] == @selector(moveDocumentToNewWindow:))
 		active = _documents.count > 1;
+	else if([menuItem action] == @selector(selectNextOutputTab:) || [menuItem action] == @selector(selectPreviousOutputTab:))
+		active = [self outputTabViewForShortcuts].htmlOutputViews.count > 1;
+	else if([menuItem action] == @selector(closeAllOutputTabs:))
+		active = [self outputTabViewForShortcuts].htmlOutputViews.count > 0;
 	else if([menuItem action] == @selector(selectNextTab:) || [menuItem action] == @selector(selectPreviousTab:))
 		active = _documents.count > 1;
 	else if([menuItem action] == @selector(revealFileInProject:) || [menuItem action] == @selector(revealFileInProjectByExpandingAncestors:))
@@ -2594,6 +2727,8 @@ static NSUInteger DisableSessionSavingCount = 0;
 		self.fileBrowserWidth = [fileBrowserWidth floatValue];
 	if(NSString* htmlOutputSize = project[@"htmlOutputSize"])
 		self.htmlOutputSize = NSSizeFromString(htmlOutputSize);
+	if(NSString* htmlOutputPlacement = project[@"htmlOutputPlacement"])
+		self.htmlOutputPlacement = htmlOutputPlacement;
 
 	self.defaultProjectPath = project[@"projectPath"];
 	self.projectPath        = project[@"projectPath"];
@@ -2659,6 +2794,7 @@ static NSUInteger DisableSessionSavingCount = 0;
 
 	res[@"miniaturized"]       = @([self.window isMiniaturized]);
 	res[@"htmlOutputSize"]     = NSStringFromSize(self.htmlOutputSize);
+	res[@"htmlOutputPlacement"] = self.htmlOutputPlacement;
 	res[@"fileBrowserVisible"] = @(self.fileBrowserVisible);
 	res[@"fileBrowserWidth"]   = @(self.fileBrowserWidth);
 

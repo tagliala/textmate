@@ -4,6 +4,7 @@
 #import <document/OakDocumentController.h>
 #import <HTMLOutput/HTMLOutput.h>
 #import <settings/settings.h>
+#import <Preferences/Keys.h>
 #import <file/type.h>
 #import <ns/ns.h>
 
@@ -42,6 +43,26 @@ static NSMutableSet<OakCommandRefresher*>* CommandRefreshers = [NSMutableSet set
 	{
 		if([refresher.identifier isEqual:anIdentifier] && (!document || [document isEqual:refresher.document]) && (!window || [window isEqual:refresher.window]))
 			return refresher;
+	}
+	return nil;
+}
+
++ (OakHTMLOutputView*)htmlOutputViewForDocument:(OakDocument*)document
+{
+	for(OakCommandRefresher* refresher in CommandRefreshers)
+	{
+		if(document && [refresher.document isEqual:document] && refresher.command.htmlOutputView)
+			return refresher.command.htmlOutputView;
+	}
+	return nil;
+}
+
++ (OakDocument*)documentForHTMLOutputView:(OakHTMLOutputView*)view
+{
+	for(OakCommandRefresher* refresher in CommandRefreshers)
+	{
+		if(view && refresher.command.htmlOutputView == view)
+			return refresher.document;
 	}
 	return nil;
 }
@@ -114,7 +135,12 @@ static NSMutableSet<OakCommandRefresher*>* CommandRefreshers = [NSMutableSet set
 - (void)observeValueForKeyPath:(NSString*)keyPath ofObject:(id)anObject change:(NSDictionary*)someChanges context:(void*)context
 {
 	if([keyPath isEqualToString:@"visible"])
-		return [self teardown];
+	{
+		// The view re-reports itself visible when it moves to another window, e.g. a tab torn off or dropped elsewhere
+		if(!_command.htmlOutputView.isVisible)
+			[self teardown];
+		return;
+	}
 	[super observeValueForKeyPath:keyPath ofObject:anObject change:someChanges context:context];
 }
 
@@ -160,7 +186,9 @@ static NSMutableSet<OakCommandRefresher*>* CommandRefreshers = [NSMutableSet set
 		[self executeForAction:@"DocumentClosed" afterDelay:NO];
 	}
 
-	[_command closeHTMLOutputView];
+	// With output tabs following their document, the page leaves with it; otherwise it stays, no longer refreshing
+	if([NSUserDefaults.standardUserDefaults boolForKey:kUserDefaultsHTMLOutputFollowsDocumentKey])
+		[_command closeHTMLOutputView];
 	[self teardown];
 }
 
@@ -171,6 +199,7 @@ static NSMutableSet<OakCommandRefresher*>* CommandRefreshers = [NSMutableSet set
 
 - (void)bringHTMLOutputToFront:(id)sender
 {
+	[_command.htmlOutputView tryToPerform:@selector(revealHTMLOutputView:) with:_command.htmlOutputView]; // select its tab
 	[[_command.htmlOutputView window] makeKeyAndOrderFront:sender];
 }
 
