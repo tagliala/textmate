@@ -6,6 +6,7 @@
 #import <OakAppKit/OakTransitionViewController.h>
 #import <OakAppKit/OakUIConstructionFunctions.h>
 #import <OakAppKit/OakScaledContainerView.h>
+#import <CoreServices/CoreServices.h>
 #import <Security/Security.h>
 #import <WebKit/WebKit.h>
 
@@ -340,6 +341,28 @@ static BOOL OakBundleIsSignedByTeam (NSURL* appURL, NSString* expectedTeamID)
 // ==================
 // = SoftwareUpdate =
 // ==================
+
+BOOL OakNoteReplacedBundleAtURL (NSURL* bundleURL)
+{
+	// The replaced bundle keeps its path, and the Dock and Finder notice a new
+	// version there by its modification time (Launch Services Programming
+	// Guide; Sparkle touches the installed bundle for the same reason). The
+	// extracted archive carries the extraction time, which should already be
+	// newer, but the time is set explicitly here so nothing depends on that,
+	// and the bundle is re-registered so Launch Services is told rather than
+	// left to find out.
+	NSError* error;
+	if(![NSFileManager.defaultManager setAttributes:@{ NSFileModificationDate: [NSDate date] } ofItemAtPath:bundleURL.path error:&error])
+	{
+		os_log_error(OS_LOG_DEFAULT, "Unable to update the modification time of %{public}@: %{public}@", bundleURL.path, error.localizedDescription);
+		return NO;
+	}
+
+	if(OSStatus rc = LSRegisterURL((__bridge CFURLRef)bundleURL, true))
+		os_log_error(OS_LOG_DEFAULT, "LSRegisterURL failed for %{public}@: %d", bundleURL.path, (int)rc);
+
+	return YES;
+}
 
 @interface SoftwareUpdate ()
 {
@@ -1027,6 +1050,8 @@ static BOOL OakBundleIsSignedByTeam (NSURL* appURL, NSString* expectedTeamID)
 		NSError* error;
 		if([NSFileManager.defaultManager replaceItemAtURL:NSBundle.mainBundle.bundleURL withItemAtURL:applicationURL backupItemName:nil options:NSFileManagerItemReplacementUsingNewMetadataOnly resultingItemURL:nil error:&error])
 		{
+			OakNoteReplacedBundleAtURL(NSBundle.mainBundle.bundleURL);
+
 			self.progressViewController.messageTextField.stringValue = [NSString stringWithFormat:@"Relaunching %@…", [NSBundle.mainBundle objectForInfoDictionaryKey:@"CFBundleName"]];
 
 			NSString* script = [NSString stringWithFormat:@"{ kill %1$d; while ps -xp %1$d; do if (( ++n == 300 )); then exit; fi; sleep .2; done; open \"$0\" --args $1; } &>/dev/null &", getpid()];
