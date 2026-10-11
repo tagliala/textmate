@@ -37,15 +37,28 @@ static NSString* const kUserDefaultsLastLaunchedVersionKey = @"lastLaunchedVersi
 	alert.messageText     = @"TextMate Has Been Updated";
 	alert.informativeText = [NSString stringWithFormat:@"You are now running version %@.", currentVersion];
 
-	[alert addButtonWithTitle:@"Changelog"]; // first added is the default
-	[alert addButtonWithTitle:@"Cancel"];
+	// OK is first, so it is the default button and takes Return. Nothing is
+	// being cancelled: the update has happened. Escape should mean OK as
+	// well, and a button carries one key equivalent, so a zero-size accessory
+	// button holds Escape and forwards it to OK.
+	NSButton* ok = [alert addButtonWithTitle:@"OK"];
+	[alert addButtonWithTitle:@"Changelog"];
+
+	NSButton* escape = [[NSButton alloc] initWithFrame:NSZeroRect];
+	escape.bordered      = NO;
+	escape.title         = @"";
+	escape.keyEquivalent = @"\e";
+	escape.target        = ok;
+	escape.action        = @selector(performClick:);
+	alert.accessoryView  = [[NSView alloc] initWithFrame:NSZeroRect];
+	[alert.accessoryView addSubview:escape];
 
 	// A sheet, not -runModal. The mate server accepts connections from a
 	// dispatch source on the main queue, and the modal loop does not drain
 	// that queue. mate launches us without activation, so a modal alert also
 	// sits hidden while mate blocks in read().
 	[alert beginSheetModalForWindow:window completionHandler:^(NSModalResponse returnCode) {
-		if(returnCode == NSAlertFirstButtonReturn)
+		if(returnCode == NSAlertSecondButtonReturn)
 			[AboutWindowController.sharedInstance showChangesWindow:nil];
 	}];
 }
