@@ -19,6 +19,12 @@ extern NSString* const kSoftwareUpdateChannelExperimental;
 
 NSComparisonResult OakCompareVersionStrings (NSString* lhsString, NSString* rhsString);
 
+// Called after a bundle has been replaced in place by the updater. The Dock
+// and Finder learn that a bundle at a known path changed through its
+// modification time, so this sets it to now and re-registers the bundle with
+// Launch Services. Returns NO if the modification time could not be set.
+BOOL OakNoteReplacedBundleAtURL (NSURL* bundleURL);
+
 // The update feed is git’s smart-HTTP ref advertisement (the body of
 // GET {repo}.git/info/refs?service=git-upload-pack — what `git ls-remote`
 // uses). Unlike api.github.com it is unmetered, so update checks cannot be
