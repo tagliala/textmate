@@ -2,6 +2,14 @@ Title: Release Notes
 
 # Changes
 
+## 2026-10-11 (v2.5.1-undead)
+
+One fix for the updater. See [all changes since v2.5.0-undead](https://github.com/textmatelives/textmate/compare/v2.5.0-undead...v2.5.1-undead).
+
+### Software Update
+
+* **The Dock and Finder are told about the new version after an update.** The updater replaces TextMate.app in place and relaunches it, and on one Mac the Dock kept the previous icon until the bundle was touched and the Dock restarted. After the replacement, TextMate now sets the bundle’s modification time to the present and re-registers it with Launch Services before relaunching, which is how the system learns that a bundle at a known path has changed. This applies to updates installed by this version onward; a copy that already shows the old icon still needs the touch once. ([#119](https://github.com/textmatelives/textmate/pull/119), `41673f2a`)
+
 ## 2026-10-11 (v2.5.0-undead)
 
 Command output tabs, a new app icon, and two fixes. The output tabs went out as two experimental builds first; if you are on the experimental channel, set the channel back to “Normal releases” in Preferences → Software Update to receive this release and the ones after it. See [all changes since v2.4.3-undead](https://github.com/textmatelives/textmate/compare/v2.4.3-undead...v2.5.0-undead).
