@@ -4,11 +4,11 @@ Title: Release Notes
 
 ## 2026-10-11 (v2.5.1-undead)
 
-One fix for the updater. See [all changes since v2.5.0-undead](https://github.com/textmatelives/textmate/compare/v2.5.0-undead...v2.5.1-undead).
+One fix, for the icon after an update. See [all changes since v2.5.0-undead](https://github.com/textmatelives/textmate/compare/v2.5.0-undead...v2.5.1-undead).
 
 ### Software Update
 
-* **The Dock and Finder are told about the new version after an update.** The updater replaces TextMate.app in place and relaunches it, and on one Mac the Dock kept the previous icon until the bundle was touched and the Dock restarted. After the replacement, TextMate now sets the bundle’s modification time to the present and re-registers it with Launch Services before relaunching, which is how the system learns that a bundle at a known path has changed. This applies to updates installed by this version onward; a copy that already shows the old icon still needs the touch once. ([#119](https://github.com/textmatelives/textmate/pull/119), `41673f2a`)
+* **Fixed: the Dock kept the previous icon after an update.** After v2.5.0 installed itself, Finder showed the new icon and the Dock did not, in its recents section in particular, and restarting the Dock did not help. Two changes: after replacing the bundle, TextMate sets its modification time and re-registers it with Launch Services, which is what keeps Finder current; and on the first launch of a new version it asks Icon Services for its own icon by path and shows that as its Dock image, which is what corrects the Dock. Verified on a machine updating from v2.4.3. ([#119](https://github.com/textmatelives/textmate/pull/119), [#121](https://github.com/textmatelives/textmate/pull/121), `41673f2a`, `ac9374e0`)
 
 ## 2026-10-11 (v2.5.0-undead)
 
