@@ -9,14 +9,14 @@ static proxy_settings_t user_pw_settings (CFStringRef server, CFNumberRef portNu
 	std::string user = NULL_STR, pw = NULL_STR;
 
 	CFTypeRef keys[] = {
-		kSecMatchLimit, kSecReturnRef,
+		kSecMatchLimit, kSecReturnAttributes, kSecReturnData,
 		kSecClass,
 		kSecAttrProtocol,
 		kSecAttrPort,
 		kSecAttrServer
 	};
 	CFTypeRef vals[] = {
-		kSecMatchLimitAll, kCFBooleanTrue,
+		kSecMatchLimitAll, kCFBooleanTrue, kCFBooleanTrue,
 		kSecClassInternetPassword,
 		kSecAttrProtocolHTTPProxy,
 		portNumber,
@@ -31,22 +31,22 @@ static proxy_settings_t user_pw_settings (CFStringRef server, CFNumberRef portNu
 		CFIndex numResults = CFArrayGetCount(results);
 		for(CFIndex i = 0; user == NULL_STR && i < numResults; ++i)
 		{
-			SecKeychainItemRef item = (SecKeychainItemRef)CFArrayGetValueAtIndex(results, i);
-
-			UInt32 tag    = kSecAccountItemAttr;
-			UInt32 format = CSSM_DB_ATTRIBUTE_FORMAT_STRING;
-			SecKeychainAttributeInfo info = { 1, &tag, &format };
-
-			void* data = nullptr;
-			UInt32 dataLen = 0;
-
-			SecKeychainAttributeList* authAttrList = nullptr;
-			if(SecKeychainItemCopyAttributesAndData(item, &info, nullptr, &authAttrList, &dataLen, &data) == noErr)
+			CFDictionaryRef item = (CFDictionaryRef)CFArrayGetValueAtIndex(results, i);
+			
+			// Extract account (username) from attributes
+			CFStringRef accountRef = (CFStringRef)CFDictionaryGetValue(item, kSecAttrAccount);
+			if(accountRef && CFGetTypeID(accountRef) == CFStringGetTypeID())
 			{
-				ASSERT(authAttrList->count == 1 && authAttrList->attr->tag == kSecAccountItemAttr);
-				user = std::string((char const*)authAttrList->attr->data, ((char const*)authAttrList->attr->data) + authAttrList->attr->length);
-				pw   = std::string((char const*)data, ((char const*)data) + dataLen);
-				SecKeychainItemFreeAttributesAndData(authAttrList, data);
+				user = cf::to_s(accountRef);
+			}
+			
+			// Extract password data
+			CFDataRef passwordData = (CFDataRef)CFDictionaryGetValue(item, kSecValueData);
+			if(passwordData && CFGetTypeID(passwordData) == CFDataGetTypeID())
+			{
+				const UInt8* bytes = CFDataGetBytePtr(passwordData);
+				CFIndex length = CFDataGetLength(passwordData);
+				pw = std::string((const char*)bytes, length);
 			}
 		}
 
