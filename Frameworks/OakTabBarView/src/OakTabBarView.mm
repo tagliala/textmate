@@ -1344,7 +1344,7 @@ static void* kOakTabViewSelectedContext  = &kOakTabViewSelectedContext;
 	}
 
 	NSRect createNewTabButtonFrame = _createNewTabButton.frame;
-	CGFloat x = -1, y = NSMinY(self.bounds)+1, height = NSHeight(self.bounds)-1;
+	CGFloat x = -1, y = NSMinY(self.bounds), height = NSHeight(self.bounds);
 
 	for(OakTabFrame* tabFrame in _currentLayout)
 	{
