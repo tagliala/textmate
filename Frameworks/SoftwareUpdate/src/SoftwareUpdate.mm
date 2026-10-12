@@ -612,6 +612,7 @@ BOOL OakNoteReplacedBundleAtURL (NSURL* bundleURL)
 	NSStackView* _buttonStackView;
 }
 @property (nonatomic, getter = isUpdateBadgeVisible) BOOL updateBadgeVisible;
+@property (nonatomic) NSImage* dockImageBeforeUpdateBadge;
 @property (nonatomic) NSDictionary<NSString*, NSString*>* publicKeys;
 
 @property (nonatomic) OakTransitionViewController*  contentViewController;
@@ -875,6 +876,7 @@ BOOL OakNoteReplacedBundleAtURL (NSURL* bundleURL)
 		if(NSImage* dlBadge = [NSImage imageNamed:@"Update Badge" inSameBundleAsClass:[self class]])
 		{
 			NSImage* appIcon = NSApp.applicationIconImage;
+			self.dockImageBeforeUpdateBadge = appIcon;
 			NSApp.applicationIconImage = [NSImage imageWithSize:appIcon.size flipped:NO drawingHandler:^BOOL(NSRect dstRect){
 				NSRect upperRightRect = NSIntersectionRect(dstRect, NSOffsetRect(dstRect, round(NSWidth(dstRect) * 2 / 3), (NSHeight(dstRect) * 2 / 3)));
 				[appIcon drawInRect:dstRect fromRect:NSZeroRect operation:NSCompositingOperationCopy fraction:1];
@@ -885,7 +887,10 @@ BOOL OakNoteReplacedBundleAtURL (NSURL* bundleURL)
 	}
 	else
 	{
-		NSApp.applicationIconImage = nil;
+		// Restore what was there, which may be the image set on the first launch
+		// of a new version (AboutWindowController), not merely the bundle icon.
+		NSApp.applicationIconImage = self.dockImageBeforeUpdateBadge;
+		self.dockImageBeforeUpdateBadge = nil;
 	}
 }
 
