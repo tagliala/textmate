@@ -189,7 +189,7 @@ static NSImage* ImageNamed (NSString* imageName)
 			NSImage* image;
 			if(scmStatus == scm::status::deleted)
 			{
-				image = [NSWorkspace.sharedWorkspace iconForFileType:NSFileTypeForHFSTypeCode((OSType)kUnknownFSObjectIcon)];
+				image = [NSWorkspace.sharedWorkspace iconForContentType:UTTypeData];
 			}
 			else if(url.isFileURL)
 			{
