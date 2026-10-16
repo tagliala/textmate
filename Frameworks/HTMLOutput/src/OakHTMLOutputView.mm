@@ -159,6 +159,13 @@ static std::string page_key (NSURL* url)
 	return path != _environment.end() ? [NSString stringWithCxxString:path->second] : nil;
 }
 
+- (BOOL)canShowCommand:(NSUUID*)aCommandIdentifier forDocumentPath:(NSString*)aPath
+{
+	NSString* documentPath = self.documentPath;
+	BOOL sameDocument = documentPath == aPath || [documentPath isEqualToString:aPath];
+	return self.isReusable && !self.needsNewWebView && [self.commandIdentifier isEqual:aCommandIdentifier] && sameDocument;
+}
+
 - (NSString*)mainFrameTitle
 {
 	if(OakIsEmptyString(self.webView.title))

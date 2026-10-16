@@ -239,11 +239,11 @@ static void* kTabTitleObservationContext = &kTabTitleObservationContext;
 	return controller;
 }
 
-- (OakHTMLOutputView*)htmlOutputViewForIdentifier:(NSUUID*)aCommandIdentifier busy:(BOOL)busyFlag
+- (OakHTMLOutputView*)htmlOutputViewForIdentifier:(NSUUID*)aCommandIdentifier documentPath:(NSString*)aPath busy:(BOOL)busyFlag
 {
 	for(OakHTMLOutputView* view in _views)
 	{
-		if(view.isReusable && !view.needsNewWebView && [view.commandIdentifier isEqual:aCommandIdentifier] && view.isRunningCommand == busyFlag)
+		if([view canShowCommand:aCommandIdentifier forDocumentPath:aPath] && view.isRunningCommand == busyFlag)
 			return view;
 	}
 	return nil;

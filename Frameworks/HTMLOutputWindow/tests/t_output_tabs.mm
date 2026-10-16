@@ -112,12 +112,37 @@ void test_views_are_found_by_the_command_they_show ()
 	view.commandIdentifier = command;
 	add_view(tabView);
 
-	OAK_ASSERT([tabView htmlOutputViewForIdentifier:command busy:NO] == view);
-	OAK_ASSERT([tabView htmlOutputViewForIdentifier:command busy:YES] == nil);
-	OAK_ASSERT([tabView htmlOutputViewForIdentifier:[NSUUID UUID] busy:NO] == nil);
+	OAK_ASSERT([tabView htmlOutputViewForIdentifier:command documentPath:nil busy:NO] == view);
+	OAK_ASSERT([tabView htmlOutputViewForIdentifier:command documentPath:nil busy:YES] == nil);
+	OAK_ASSERT([tabView htmlOutputViewForIdentifier:[NSUUID UUID] documentPath:nil busy:NO] == nil);
 
 	view.reusable = NO; // a refreshing command keeps its view to itself
-	OAK_ASSERT([tabView htmlOutputViewForIdentifier:command busy:NO] == nil);
+	OAK_ASSERT([tabView htmlOutputViewForIdentifier:command documentPath:nil busy:NO] == nil);
+}
+
+// A command run from a document reuses the tab it produced for that document, and
+// no other document’s: a log for one file must not land in the tab holding another’s
+void test_views_are_found_by_command_and_document ()
+{
+	OakHTMLOutputTabView* tabView = [[OakHTMLOutputTabView alloc] initWithFrame:NSMakeRect(0, 0, 600, 400)];
+	NSUUID* command = [NSUUID UUID];
+
+	OakHTMLOutputView* forA = add_view(tabView); // loaded first: a load for a command marks the view running until the command ends
+	[forA loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"about:blank"]] environment:{ { "TM_FILEPATH", "/tmp/a.rb" } } autoScrolls:NO];
+	forA.commandIdentifier = command;
+
+	OakHTMLOutputView* forB = add_view(tabView);
+	[forB loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"about:blank"]] environment:{ { "TM_FILEPATH", "/tmp/b.rb" } } autoScrolls:NO];
+	forB.commandIdentifier = command;
+
+	OakHTMLOutputView* forNone = add_view(tabView); // run without a document, from the file browser say
+	forNone.commandIdentifier = command;
+
+	OAK_ASSERT([tabView htmlOutputViewForIdentifier:command documentPath:@"/tmp/a.rb" busy:NO] == forA);
+	OAK_ASSERT([tabView htmlOutputViewForIdentifier:command documentPath:@"/tmp/b.rb" busy:NO] == forB);
+	OAK_ASSERT([tabView htmlOutputViewForIdentifier:command documentPath:@"/tmp/c.rb" busy:NO] == nil);
+	OAK_ASSERT([tabView htmlOutputViewForIdentifier:command documentPath:nil busy:NO] == forNone);
+	OAK_ASSERT([tabView htmlOutputViewForIdentifier:[NSUUID UUID] documentPath:@"/tmp/a.rb" busy:NO] == nil);
 }
 
 void test_stopping_with_nothing_running_completes_at_once ()
