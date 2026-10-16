@@ -12,6 +12,7 @@
 @property (nonatomic, getter = isRunningCommand, readonly) BOOL runningCommand;
 @property (nonatomic, getter = isVisible, readonly) BOOL visible;
 @property (nonatomic, getter = isReusable) BOOL reusable;
+- (BOOL)canShowCommand:(NSUUID*)aCommandIdentifier forDocumentPath:(NSString*)aPath; // reusable, showing the command, produced for the document (nil for none)
 @property (nonatomic) BOOL disableJavaScriptAPI;
 
 // Asked before a clicked link to a local file the web view cannot render is opened in the editor.

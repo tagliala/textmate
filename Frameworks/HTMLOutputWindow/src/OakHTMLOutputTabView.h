@@ -25,8 +25,8 @@ extern NSNotificationName const OakHTMLOutputTabViewDidSelectViewNotification;
 @property (nonatomic) OakHTMLOutputView* selectedHTMLOutputView;
 
 - (void)addHTMLOutputView:(OakHTMLOutputView*)aView; // appends and selects
-- (OakHTMLOutputView*)htmlOutputViewForIdentifier:(NSUUID*)aCommandIdentifier busy:(BOOL)busyFlag;
-- (OakHTMLOutputView*)htmlOutputViewForDocumentPath:(NSString*)aPath; // the view whose page was produced for the document // a reusable view showing the command, a running one only when asked
+- (OakHTMLOutputView*)htmlOutputViewForIdentifier:(NSUUID*)aCommandIdentifier documentPath:(NSString*)aPath busy:(BOOL)busyFlag; // a reusable view showing the command for the document (nil for none), a running one only when asked
+- (OakHTMLOutputView*)htmlOutputViewForDocumentPath:(NSString*)aPath; // the view whose page was produced for the document
 - (void)insertHTMLOutputView:(OakHTMLOutputView*)aView atIndex:(NSUInteger)anIndex; // takes the view from any other strip, keeping it on screen throughout
 - (void)removeHTMLOutputView:(OakHTMLOutputView*)aView;
 - (HTMLOutputWindowController*)tearOffHTMLOutputView:(OakHTMLOutputView*)aView atScreenPoint:(NSPoint)aPoint; // moves the view into a new window there

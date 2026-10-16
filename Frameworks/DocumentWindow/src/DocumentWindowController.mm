@@ -1289,16 +1289,16 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 	}];
 }
 
-- (OakHTMLOutputView*)htmlOutputView:(BOOL)createFlag forIdentifier:(NSUUID*)identifier
+- (OakHTMLOutputView*)htmlOutputView:(BOOL)createFlag forIdentifier:(NSUUID*)identifier documentPath:(NSString*)documentPath
 {
 	// if createFlag == YES then return (potential new) OakHTMLOutputView where isRunningCommand == NO.
-	// If createFlag == NO and there is non-busy OakHTMLOutputView with commandIdentifier == identifier then return it
-	// otherwise return busy OakHTMLOutputView with commandIdentifier == identifier or nil.
+	// If createFlag == NO and there is non-busy OakHTMLOutputView showing the command for the document then return it
+	// otherwise return busy OakHTMLOutputView showing the command for the document or nil.
 
 	if(!self.htmlOutputInWindow)
 	{
-		// Each command gets its own tab in the pane, reused across runs
-		OakHTMLOutputView* view = [self.htmlOutputTabView htmlOutputViewForIdentifier:identifier busy:NO];
+		// Each command gets its own tab in the pane per document, reused across runs
+		OakHTMLOutputView* view = [self.htmlOutputTabView htmlOutputViewForIdentifier:identifier documentPath:documentPath busy:NO];
 		if(!view && createFlag)
 		{
 			view = [[OakHTMLOutputView alloc] initWithFrame:NSZeroRect];
@@ -1309,7 +1309,7 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 			self.htmlOutputVisible = YES;
 			return view;
 		}
-		return [self.htmlOutputTabView htmlOutputViewForIdentifier:identifier busy:YES];
+		return [self.htmlOutputTabView htmlOutputViewForIdentifier:identifier documentPath:documentPath busy:YES];
 	}
 
 	NSMutableArray <OakHTMLOutputView*>* htmlOutputViews = [NSMutableArray array];
@@ -1327,7 +1327,9 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 		}
 	}
 
-	NSArray* allHTMLViews = [htmlOutputViews filteredArrayUsingPredicate:[NSPredicate predicateWithFormat:@"needsNewWebView == NO AND isReusable == YES AND commandIdentifier == %@", identifier]];
+	NSArray* allHTMLViews = [htmlOutputViews filteredArrayUsingPredicate:[NSPredicate predicateWithBlock:^BOOL(OakHTMLOutputView* view, NSDictionary* bindings){
+		return [view canShowCommand:identifier forDocumentPath:documentPath];
+	}]];
 	NSArray* nonBusyViews = [allHTMLViews filteredArrayUsingPredicate:[NSPredicate predicateWithFormat:@"isRunningCommand == NO"]];
 
 	if(OakHTMLOutputView* view = [nonBusyViews firstObject])

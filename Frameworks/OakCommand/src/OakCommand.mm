@@ -32,7 +32,7 @@ static NSString* const kOakFileHandleURLScheme = @"x-txmt-filehandle";
 - (void)updateEnvironment:(std::map<std::string, std::string>&)res forCommand:(OakCommand*)aCommand;
 - (void)saveAllEditedDocuments:(BOOL)includeAllFlag completionHandler:(void(^)(BOOL didSave))callback;
 
-- (OakHTMLOutputView*)htmlOutputView:(BOOL)createFlag forIdentifier:(NSUUID*)identifier;
+- (OakHTMLOutputView*)htmlOutputView:(BOOL)createFlag forIdentifier:(NSUUID*)identifier documentPath:(NSString*)documentPath;
 - (void)discardHTMLOutputView:(OakHTMLOutputView*)htmlOutputView;
 
 - (void)showToolTip:(NSString*)aToolTip;
@@ -205,10 +205,17 @@ static pid_t run_command (dispatch_group_t rootGroup, std::string const& cmd, in
 	return _bundleCommand.uuid ? [[NSUUID alloc] initWithUUIDString:to_ns(_bundleCommand.uuid)] : nil;
 }
 
+// The document the command runs for, which is the document its output tab belongs to
+- (NSString*)documentPath
+{
+	auto path = _environment.find("TM_FILEPATH");
+	return path != _environment.end() ? to_ns(path->second) : nil;
+}
+
 - (void)writeHTMLOutput:(char const*)bytes length:(size_t)len
 {
 	if(bytes && !_htmlOutputView)
-		_htmlOutputView = [self htmlOutputView:YES forIdentifier:self.identifier];
+		_htmlOutputView = [self htmlOutputView:YES forIdentifier:self.identifier documentPath:self.documentPath];
 
 	if(_updateHTMLViewAtomically)
 	{
@@ -351,7 +358,7 @@ static pid_t run_command (dispatch_group_t rootGroup, std::string const& cmd, in
 	{
 		if(hasHTMLOutput && (_bundleCommand.output_reuse == output_reuse::reuse_busy || _bundleCommand.output_reuse == output_reuse::abort_and_reuse_busy))
 		{
-			_htmlOutputView = [self htmlOutputView:NO forIdentifier:self.identifier];
+			_htmlOutputView = [self htmlOutputView:NO forIdentifier:self.identifier documentPath:self.documentPath];
 			if(_htmlOutputView && _htmlOutputView.isRunningCommand)
 			{
 				BOOL askUser = _bundleCommand.output_reuse != output_reuse::abort_and_reuse_busy;
@@ -612,17 +619,17 @@ static pid_t run_command (dispatch_group_t rootGroup, std::string const& cmd, in
 		callback(YES);
 }
 
-- (OakHTMLOutputView*)htmlOutputView:(BOOL)createFlag forIdentifier:(NSUUID*)identifier
+- (OakHTMLOutputView*)htmlOutputView:(BOOL)createFlag forIdentifier:(NSUUID*)identifier documentPath:(NSString*)documentPath
 {
 	OakHTMLOutputView* view;
 	if(id target = [self targetForAction:_cmd])
 	{
-		view = [target htmlOutputView:createFlag forIdentifier:identifier];
+		view = [target htmlOutputView:createFlag forIdentifier:identifier documentPath:documentPath];
 	}
 	else
 	{
 		view = _htmlOutputWindowController.htmlOutputView;
-		if(view.needsNewWebView || ![view.commandIdentifier isEqual:identifier])
+		if(![view canShowCommand:identifier forDocumentPath:documentPath])
 			view = nil;
 
 		if(createFlag && (!view || view.isRunningCommand))
