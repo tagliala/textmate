@@ -132,6 +132,8 @@ static NSButton* OakCreateHistoryButton (NSString* toolTip)
 @property (nonatomic) BOOL              closeWindowOnSuccess;
 @property (nonatomic) BOOL              performingFolderSearch;
 
+- (BOOL)commitEditing;
+
 // =========================
 // = OakFindProtocolServer =
 // =========================

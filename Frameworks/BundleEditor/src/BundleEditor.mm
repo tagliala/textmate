@@ -67,6 +67,7 @@
 	bundles::item_ptr bundleItem;
 	OakDocument* bundleItemContent;
 }
+- (BOOL)commitEditing;
 - (void)didChangeBundleItems;
 - (void)didChangeModifiedState;
 - (void)resetPanes;
