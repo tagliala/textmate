@@ -12,4 +12,5 @@ if(_resources)
   target_sources(scm PRIVATE ${_resources})
 endif()
 
-textmate_add_tests(scm)
+# FSEvents callbacks arrive on the main queue: run tests on the main thread.
+textmate_add_tests(scm SERIAL)
