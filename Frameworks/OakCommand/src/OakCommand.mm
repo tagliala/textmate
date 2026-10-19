@@ -28,6 +28,12 @@ NSString* const OakCommandErrorDomain                       = @"com.macromates.T
 
 static NSString* const kOakFileHandleURLScheme = @"x-txmt-filehandle";
 
+BOOL OakCommandOutputTakesFocus (std::map<std::string, std::string> const& environment, BOOL outputTakesFocus)
+{
+	// A refresh runs on its own while the user types, so it leaves the focus where it is
+	return outputTakesFocus && environment.find("TM_REFRESH") == environment.end();
+}
+
 @protocol OakCommandDelegate
 - (void)updateEnvironment:(std::map<std::string, std::string>&)res forCommand:(OakCommand*)aCommand;
 - (void)saveAllEditedDocuments:(BOOL)includeAllFlag completionHandler:(void(^)(BOOL didSave))callback;
@@ -641,18 +647,17 @@ static pid_t run_command (dispatch_group_t rootGroup, std::string const& cmd, in
 
 	if(view)
 	{
-		// Output leaves the focus where it is unless the preference says otherwise
-		BOOL const keepFocus = ![NSUserDefaults.standardUserDefaults boolForKey:kUserDefaultsHTMLOutputTakesFocusKey];
-		NSWindow* keyWindow  = NSApp.keyWindow;
+		BOOL const takesFocus = OakCommandOutputTakesFocus(_environment, [NSUserDefaults.standardUserDefaults boolForKey:kUserDefaultsHTMLOutputTakesFocusKey]);
+		NSWindow* keyWindow   = NSApp.keyWindow;
 
 		[view tryToPerform:@selector(revealHTMLOutputView:) with:view]; // select its tab
 		if([view.window.delegate respondsToSelector:@selector(showWindow:)])
 			[view.window.delegate performSelector:@selector(showWindow:) withObject:self];
 
-		if(keepFocus && keyWindow && keyWindow != view.window)
-			[keyWindow makeKeyWindow]; // the output window stays in front, the editor keeps typing
-		else if(!keepFocus)
+		if(takesFocus)
 			[view.window makeFirstResponder:view.webView];
+		else if(keyWindow && keyWindow != view.window)
+			[keyWindow makeKeyWindow]; // the output window stays in front, the editor keeps typing
 	}
 
 	return view;
