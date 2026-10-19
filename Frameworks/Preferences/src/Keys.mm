@@ -21,6 +21,7 @@ static NSDictionary* default_settings ()
 {
 	return @{
 		kUserDefaultsHTMLOutputPlacementKey:     @"window",
+		kUserDefaultsHTMLOutputTakesFocusKey:    @YES,
 		kUserDefaultsFileBrowserPlacementKey:    @"right",
 		kUserDefaultsShowFileExtensionsKey:      @NO,
 		kUserDefaultsEnvironmentVariablesKey:    default_environment(),

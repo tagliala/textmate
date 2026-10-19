@@ -152,6 +152,7 @@
 	[documentFollowsOutputRow addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"H:|-(20)-[box]|" options:0 metrics:nil views:@{ @"box": documentFollowsOutputCheckBox }]];
 	[documentFollowsOutputRow addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"V:|[box]|" options:0 metrics:nil views:@{ @"box": documentFollowsOutputCheckBox }]];
 	showCommandOutputPopUp.toolTip = @"Where new windows show command output. Each window keeps its own placement; drag the output strip by its handle to move it.";
+	outputTakesFocusCheckBox.toolTip = @"Applies to output in the pane and in a window. A command refreshing on its own while you type never moves the focus.";
 
 	MBMenu const fileBrowserPositionMenuItems = {
 		{ @"Left side",  .tag = 0 },
