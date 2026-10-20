@@ -1,0 +1,50 @@
+name: Build chain guard
+
+# Fails a pull request that changes anything executed on a runner holding the
+# Apple signing identity (release.yml and quicklook-validate.yml build the
+# tree with the certificate in a keychain), unless a maintainer has reviewed
+# those files and added the `build-chain-reviewed` label. The label can only
+# be set by someone with write access, so it records a deliberate decision.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  guard:
+    name: Build chain guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 0
+
+      - name: List changed files that run under the signing identity
+        id: changed
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          git diff --name-only "$BASE" "$HEAD" \
+            | grep -E '^(\.github/|cmake/|bin/|.*CMakeLists\.txt$|.*\.cmake$|.*\.entitlements$|Applications/TextMate/Entitlements\.plist$)' \
+            > sensitive.txt || true
+          if [ -s sensitive.txt ]; then
+            echo "hit=true" >> "$GITHUB_OUTPUT"
+            echo "Files that run with the signing identity loaded:"
+            sed 's/^/  /' sensitive.txt
+          else
+            echo "hit=false" >> "$GITHUB_OUTPUT"
+            echo "No build-chain files changed."
+          fi
+
+      - name: Require the build-chain-reviewed label
+        if: steps.changed.outputs.hit == 'true' && !contains(github.event.pull_request.labels.*.name, 'build-chain-reviewed')
+        run: |
+          echo "::error::This pull request changes files that execute on a runner holding the Apple signing identity. A maintainer must review them and add the 'build-chain-reviewed' label."
+          exit 1

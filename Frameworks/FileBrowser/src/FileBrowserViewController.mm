@@ -1153,14 +1153,14 @@ static NSMutableIndexSet* MutableLongestCommonSubsequence (NSArray* lhs, NSArray
 {
 	[super restoreStateWithCoder:state];
 
-	NSArray* newHistory = [state decodeObjectForKey:@"history"];
-	if(newHistory.count)
+	NSArray* newHistory = [state decodeObjectOfClasses:[NSSet setWithObjects:[NSArray class], [NSDictionary class], [NSString class], [NSURL class], [NSNumber class], nil] forKey:@"history"];
+	if([newHistory isKindOfClass:[NSArray class]] && newHistory.count)
 	{
 		self.history      = [newHistory mutableCopy];
 		self.historyIndex = std::clamp<NSInteger>([state decodeIntegerForKey:@"historyIndex"], 0, newHistory.count);
 
-		NSArray<NSURL*>* expandedURLs = [state decodeObjectForKey:@"expandedURLs"];
-		NSArray<NSURL*>* selectedURLs = [state decodeObjectForKey:@"selectedURLs"];
+		NSArray<NSURL*>* expandedURLs = [state decodeArrayOfObjectsOfClass:[NSURL class] forKey:@"expandedURLs"];
+		NSArray<NSURL*>* selectedURLs = [state decodeArrayOfObjectsOfClass:[NSURL class] forKey:@"selectedURLs"];
 		[self expandURLs:expandedURLs selectURLs:selectedURLs];
 	}
 }
@@ -1200,7 +1200,7 @@ static NSMutableIndexSet* MutableLongestCommonSubsequence (NSArray* lhs, NSArray
 
 - (id)sessionState
 {
-	if(NSKeyedArchiver* coder = [[NSKeyedArchiver alloc] init])
+	if(NSKeyedArchiver* coder = [[NSKeyedArchiver alloc] initRequiringSecureCoding:YES])
 	{
 		[self encodeRestorableStateWithCoder:coder];
 		[coder finishEncoding];
@@ -1213,8 +1213,14 @@ static NSMutableIndexSet* MutableLongestCommonSubsequence (NSArray* lhs, NSArray
 {
 	if([state isKindOfClass:[NSData class]])
 	{
-		if(NSCoder* coder = [[NSKeyedUnarchiver alloc] initForReadingWithData:state])
+		NSError* error;
+		if(NSKeyedUnarchiver* coder = [[NSKeyedUnarchiver alloc] initForReadingFromData:state error:&error])
+		{
 			[self restoreStateWithCoder:coder];
+			error = coder.error;
+		}
+		if(error)
+			NSLog(@"%s *** unable to restore file browser state: %@", sel_getName(_cmd), error);
 	}
 	else if([state isKindOfClass:[NSDictionary class]])
 	{

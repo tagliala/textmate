@@ -10,6 +10,9 @@ NS_ENUM(NSInteger) {
 
 @class OakHTMLOutputView;
 
+// Whether the output of a command run with this environment should take the keyboard focus when it is shown: when the preference is on, unless the run is an automatic refresh (TM_REFRESH is set), in the pane and in a window alike.
+BOOL OakCommandOutputTakesFocus (std::map<std::string, std::string> const& environment, BOOL outputTakesFocus);
+
 @interface OakCommand : NSObject
 @property (nonatomic, weak) NSResponder* firstResponder;
 @property (nonatomic, readonly) NSUUID* identifier;
