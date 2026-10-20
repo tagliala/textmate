@@ -364,6 +364,11 @@ BOOL OakNoteReplacedBundleAtURL (NSURL* bundleURL)
 	return YES;
 }
 
+BOOL OakVersionChangedSinceLastLaunch (NSString* lastVersion, NSString* currentVersion)
+{
+	return lastVersion.length && currentVersion.length && ![lastVersion isEqualToString:currentVersion];
+}
+
 @interface SoftwareUpdate ()
 {
 	NSBackgroundActivityScheduler* _updateCheckScheduler;

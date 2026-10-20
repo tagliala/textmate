@@ -92,6 +92,28 @@ BOOL HasDocumentWindow (NSArray* windows)
 @property (nonatomic) BOOL keyWindowHasBackAndForwardActions;
 @end
 
+static NSString* const kUserDefaultsLastLaunchedVersionKey = @"lastLaunchedVersion";
+
+// On the first launch of a new version, show the current icon in the Dock.
+// The Dock can keep the tile it cached for the previous version, in its
+// recents section in particular, and a Dock restart does not refresh it.
+// Icon Services asked by path is what Finder uses and is current.
+static void RefreshDockIconIfUpdated ()
+{
+	NSUserDefaults* defaults = NSUserDefaults.standardUserDefaults;
+	NSString* currentVersion = [NSBundle.mainBundle objectForInfoDictionaryKey:@"CFBundleShortVersionString"];
+	if(!currentVersion.length)
+		return;
+
+	NSString* lastVersion = [defaults stringForKey:kUserDefaultsLastLaunchedVersionKey];
+	[defaults setObject:currentVersion forKey:kUserDefaultsLastLaunchedVersionKey];
+	if(!OakVersionChangedSinceLastLaunch(lastVersion, currentVersion))
+		return;
+
+	if(NSImage* icon = [NSWorkspace.sharedWorkspace iconForFile:NSBundle.mainBundle.bundlePath])
+		NSApp.applicationIconImage = icon;
+}
+
 @implementation AppController
 - (NSMenu*)mainMenu
 {
@@ -589,7 +611,7 @@ BOOL HasDocumentWindow (NSArray* windows)
 	[[selectMenu itemWithTitle:@"Toggle Column Selection"] setActivationString:@"⌥" withFont:nil];
 
 	[TerminalPreferences updateMateIfRequired];
-	[AboutWindowController showUpdateNoticeIfNeeded];
+	RefreshDockIconIfUpdated();
 
 	[OakCommitWindowServer sharedInstance]; // Setup server
 

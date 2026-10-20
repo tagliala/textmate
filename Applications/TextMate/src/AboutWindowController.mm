@@ -4,8 +4,6 @@
 #import <OakFoundation/NSString Additions.h>
 #import <ns/ns.h>
 
-static NSString* const kUserDefaultsLastLaunchedVersionKey = @"lastLaunchedVersion";
-
 @interface AboutWindowController () <NSWindowDelegate, NSToolbarDelegate, WKNavigationDelegate, WKScriptMessageHandler>
 @property (nonatomic, readonly) NSArray<NSString*>* segmentLabels;
 @property (nonatomic) NSToolbar* toolbar;
@@ -19,109 +17,6 @@ static NSString* const kUserDefaultsLastLaunchedVersionKey = @"lastLaunchedVersi
 {
 	static AboutWindowController* sharedInstance = [self new];
 	return sharedInstance;
-}
-
-+ (NSWindow*)hostWindowForUpdateNotice
-{
-	for(NSWindow* window in NSApp.orderedWindows)
-	{
-		if(window.isVisible && !window.isSheet && window.canBecomeKeyWindow)
-			return window;
-	}
-	return nil;
-}
-
-+ (void)beginUpdateNoticeForVersion:(NSString*)currentVersion onWindow:(NSWindow*)window
-{
-	NSAlert* alert        = [[NSAlert alloc] init];
-	alert.messageText     = @"TextMate Has Been Updated";
-	alert.informativeText = [NSString stringWithFormat:@"You are now running version %@.", currentVersion];
-
-	// OK is first, so it is the default button and takes Return. Nothing is
-	// being cancelled: the update has happened. Escape should mean OK as
-	// well, and a button carries one key equivalent, so a zero-size accessory
-	// button holds Escape and forwards it to OK.
-	NSButton* ok = [alert addButtonWithTitle:@"OK"];
-	[alert addButtonWithTitle:@"Changelog"];
-
-	NSButton* escape = [[NSButton alloc] initWithFrame:NSZeroRect];
-	escape.bordered      = NO;
-	escape.title         = @"";
-	escape.keyEquivalent = @"\e";
-	escape.target        = ok;
-	escape.action        = @selector(performClick:);
-	alert.accessoryView  = [[NSView alloc] initWithFrame:NSZeroRect];
-	[alert.accessoryView addSubview:escape];
-
-	// A sheet, not -runModal. The mate server accepts connections from a
-	// dispatch source on the main queue, and the modal loop does not drain
-	// that queue. mate launches us without activation, so a modal alert also
-	// sits hidden while mate blocks in read().
-	[alert beginSheetModalForWindow:window completionHandler:^(NSModalResponse returnCode) {
-		if(returnCode == NSAlertSecondButtonReturn)
-			[AboutWindowController.sharedInstance showChangesWindow:nil];
-	}];
-}
-
-+ (void)presentUpdateNoticeForVersion:(NSString*)currentVersion
-{
-	if(NSWindow* window = [self hostWindowForUpdateNotice])
-	{
-		[self beginUpdateNoticeForVersion:currentVersion onWindow:window];
-		return;
-	}
-
-	// mate starts us with -disableNewDocumentAtStartup, so the document
-	// window does not exist yet. Wait until it does; the server can accept
-	// the connection in the meantime.
-	__block id token = nil;
-	token = [NSNotificationCenter.defaultCenter addObserverForName:NSWindowDidBecomeKeyNotification object:nil queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification* note) {
-		NSWindow* window = note.object;
-		if(![window isKindOfClass:[NSWindow class]] || !window.isVisible || window.isSheet || !window.canBecomeKeyWindow)
-			return;
-		[NSNotificationCenter.defaultCenter removeObserver:token];
-		[self beginUpdateNoticeForVersion:currentVersion onWindow:window];
-	}];
-}
-
-+ (void)showUpdateNoticeIfNeeded
-{
-	// Offers the changelog once, the first time a newly installed version is
-	// run. It does not open the release notes by itself: an app that throws its
-	// own changelog at you on launch is a nuisance, so the window only appears
-	// if the notice is answered with Changelog.
-	//
-	// The trigger is the running version, not the content of the release notes.
-	// A digest of CHANGELOG.html would also fire when the notes changed without
-	// the version doing so, which is not what "you have been updated" means.
-	NSUserDefaults* defaults = NSUserDefaults.standardUserDefaults;
-
-	NSString* currentVersion = [NSBundle.mainBundle objectForInfoDictionaryKey:@"CFBundleShortVersionString"];
-	if(!currentVersion.length)
-		return;
-
-	NSString* lastVersion = [defaults stringForKey:kUserDefaultsLastLaunchedVersionKey];
-	[defaults setObject:currentVersion forKey:kUserDefaultsLastLaunchedVersionKey];
-
-	// Nothing to announce on a first run — no version was left behind to have
-	// come from — nor when relaunching the version already recorded. Any change
-	// counts, in either direction: the update dialog offers downgrades too, so
-	// the wording states the version rather than claiming an upgrade.
-	if(!lastVersion.length || [lastVersion isEqualToString:currentVersion])
-		return;
-
-	// The Dock can keep the tile it cached for the previous version, in its
-	// recents section in particular, and a Dock restart does not refresh it.
-	// Icon Services asked by path is what Finder uses and is current, so show
-	// that as this run’s Dock image.
-	if(NSImage* icon = [NSWorkspace.sharedWorkspace iconForFile:NSBundle.mainBundle.bundlePath])
-		NSApp.applicationIconImage = icon;
-
-	// After this method returns, so a document window from launch (or from the
-	// mate connection that is about to be accepted) can host the sheet.
-	dispatch_async(dispatch_get_main_queue(), ^{
-		[self presentUpdateNoticeForVersion:currentVersion];
-	});
 }
 
 - (id)init
