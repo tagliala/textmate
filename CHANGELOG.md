@@ -2,6 +2,41 @@ Title: Release Notes
 
 # Changes
 
+## 2026-10-20 (v2.6.0-undead)
+
+Quick Look previews are back, the “you have been updated” sheet is gone, and a round of fixes from two contributors. See [all changes since v2.5.1-undead](https://github.com/textmatelives/textmate/compare/v2.5.1-undead...v2.6.0-undead).
+
+### Quick Look
+
+* **Syntax-highlighted previews in Finder again.** macOS 15 stopped loading the old `.qlgenerator` plug-in, so pressing Space on a source file showed a generic icon. TextMate now ships a sandboxed Quick Look preview extension that highlights the file with one of 44 bundled grammars, in Mac Classic or Undead to match the system appearance. The extension cannot read your own bundles from inside its sandbox, so the grammar set is a fixed copy and does not follow your theme or installed grammars. Finder thumbnails, which only macOS 14 still drew from the old plug-in, are not provided. Written by [@tbates](https://github.com/tbates). [#131](https://github.com/textmatelives/textmate/issues/131). (`8fc270d1`, `20a23715`, `e4df1b30`, `63f47a63`, `9340ce72`)
+
+### HTML Output
+
+* **Output takes the focus when it opens.** On by default now; turn it off in Preferences → Projects with “Output takes the focus when it opens”. A command re-running on its own while you type never moves the focus. [#127](https://github.com/textmatelives/textmate/issues/127). (`e8546678`)
+* **One tab per document, for every command.** The v2.5.0 notes described this for commands that refresh themselves; it now holds for all of them. A command run from a document reuses that document’s tab and names the tab after the document. (`f6292ade`)
+
+### File Browser
+
+* **A deleted file shows its own icon, dimmed, under the red badge**, the same treatment a modified file gets, instead of a generic document; a deleted folder shows a dimmed folder. (`4fe5ba10`)
+* **A damaged file browser session no longer stops the window from opening.** The saved state is read with secure coding and an unreadable archive is logged and skipped. By [@tagliala](https://github.com/tagliala). (`a31669e9`)
+
+### Software Update
+
+* **Removed: the “TextMate Has Been Updated” sheet.** The update dialog already shows what changed before it installs, so the sheet on the next launch repeated it. The Dock icon refresh that ran alongside it stays. [#115](https://github.com/textmatelives/textmate/issues/115). (`fd32f4c1`)
+* **Removed: the dead DSA signature check** left over from the api.textmate.org updater. Releases are verified by their Developer ID signature. By [@tagliala](https://github.com/tagliala). (`e69889ca`)
+
+### mate
+
+* **Closing the last document opened with `mate -w` hands the focus back to the terminal again.** The call that did this has been a no-op since macOS 14; it now uses the cooperative activation API. By [@tagliala](https://github.com/tagliala). (`7b6b70d3`)
+
+### Under the hood
+
+Deprecated API work by [@tagliala](https://github.com/tagliala), tracked in [#118](https://github.com/textmatelives/textmate/issues/118): file-system events are delivered on the main dispatch queue instead of a run loop (`d9b4dea6`), temporary files are created atomically instead of with `mktemp` (`30f36631`), the pasteboard type names and the colour drop type are current (`b1a37b65`, `0fb5ccf2`), the `commitEditing` methods are declared through the `NSEditor` protocol (`eb069805`), and the crash reporter’s pre-10.14 notification fallback is gone (`7cf5a9e1`).
+
+### Development
+
+* **Pull requests that change the build chain are flagged.** A check lists any workflow, CMake, script or entitlements change and fails until a maintainer reviews it and adds the `build-chain-reviewed` label, since those files run on the signing machine. (`1f1dc3e6`)
+
 ## 2026-10-11 (v2.5.1-undead)
 
 One fix, for the icon after an update. See [all changes since v2.5.0-undead](https://github.com/textmatelives/textmate/compare/v2.5.0-undead...v2.5.1-undead).
