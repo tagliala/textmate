@@ -361,7 +361,12 @@ namespace // wrap in anonymous namespace to avoid clashing with other callbacks 
 			++*counter;
 			__weak __block id token = [NSNotificationCenter.defaultCenter addObserverForName:OakDocumentWillCloseNotification object:document queue:nil usingBlock:^(NSNotification*){
 				if(--*counter == 0)
-					[terminal activateWithOptions:NSApplicationActivateIgnoringOtherApps];
+				{
+					// NSApplicationActivateIgnoringOtherApps has had no effect since macOS 14,
+					// so hand activation back to the invoking app cooperatively.
+					[NSApp yieldActivationToApplication:terminal];
+					[terminal activateFromApplication:NSRunningApplication.currentApplication options:0];
+				}
 				[NSNotificationCenter.defaultCenter removeObserver:token];
 			}];
 		}
