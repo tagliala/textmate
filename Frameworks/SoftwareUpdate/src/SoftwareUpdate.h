@@ -25,6 +25,12 @@ NSComparisonResult OakCompareVersionStrings (NSString* lhsString, NSString* rhsS
 // Launch Services. Returns NO if the modification time could not be set.
 BOOL OakNoteReplacedBundleAtURL (NSURL* bundleURL);
 
+// YES when the version recorded at the previous launch differs from the one
+// running now. A first run has no record, and the same version relaunched is
+// not an update; any other change counts, downgrades included, since the
+// updater offers those too.
+BOOL OakVersionChangedSinceLastLaunch (NSString* lastVersion, NSString* currentVersion);
+
 // The update feed is git’s smart-HTTP ref advertisement (the body of
 // GET {repo}.git/info/refs?service=git-upload-pack — what `git ls-remote`
 // uses). Unlike api.github.com it is unmetered, so update checks cannot be
