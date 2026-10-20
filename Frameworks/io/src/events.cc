@@ -121,7 +121,8 @@ namespace
 			ASSERT(*stream);
 			if(*stream)
 			{
-				FSEventStreamScheduleWithRunLoop(*stream, CFRunLoopGetCurrent(), kCFRunLoopDefaultMode);
+				// Main queue: callbacks and teardown are main-thread code
+				FSEventStreamSetDispatchQueue(*stream, dispatch_get_main_queue());
 				stream->set_replaying_history(eventId != kFSEventStreamEventIdSinceNow, path, eventId);
 				FSEventStreamStart(*stream);
 			}

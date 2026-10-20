@@ -6,4 +6,5 @@ textmate_framework(io)
 target_link_libraries(io PUBLIC text cf ns regexp crash OakFoundation
   "-framework Carbon" "-framework Security")
 
-textmate_add_tests(io)
+# FSEvents callbacks arrive on the main queue: run tests on the main thread.
+textmate_add_tests(io SERIAL)

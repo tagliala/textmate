@@ -41,7 +41,8 @@ namespace
 				FSEventStreamContext contextInfo = { 0, this, nullptr, nullptr, nullptr };
 				if(_eventStream = FSEventStreamCreate(kCFAllocatorDefault, &fs_events_t::callback, &contextInfo, (__bridge CFArrayRef)pathsToWatch, kFSEventStreamEventIdSinceNow, 0.5, kFSEventStreamCreateFlagNone))
 				{
-					FSEventStreamScheduleWithRunLoop(_eventStream, CFRunLoopGetCurrent(), kCFRunLoopDefaultMode);
+					// Main queue: callbacks and teardown are main-thread code
+					FSEventStreamSetDispatchQueue(_eventStream, dispatch_get_main_queue());
 					FSEventStreamStart(_eventStream);
 				}
 			}
